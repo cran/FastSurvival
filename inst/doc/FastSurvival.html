@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Introduction to FastSurvival</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Introduction to FastSurvival</h1>
+
+
+
+<div id="overview" class="section level1">
+<h1>Overview</h1>
+<p>FastSurvival provides fast alternatives to three standard functions
+in the <code>survival</code> package (<code>survfit()</code>,
+<code>survdiff()</code>, <code>coxph()</code>) together with a clinical
+trial data simulator (<code>simdata_fast()</code>). All functions are
+designed for repeated evaluation inside simulation loops, and the core
+computations are implemented in C++ via <code>Rcpp</code>.</p>
+<p>This vignette has three parts:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Numerical agreement</strong>: confirm that
+<code>survfit_fast()</code>, <code>survdiff_fast()</code>, and
+<code>coxph_fast()</code> return the same numerical results as the
+corresponding functions in the <code>survival</code> package.</li>
+<li><strong>Speed comparison</strong>: measure execution times against
+the <code>survival</code> package using
+<code>microbenchmark</code>.</li>
+<li><strong>Simulation example</strong>: generate data with
+<code>simdata_fast()</code> (<code>nsim = 100</code>) and summarize the
+results of applying the three analysis functions to each simulated
+trial.</li>
+</ol>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(FastSurvival)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(survival)</span></code></pre></div>
+</div>
+<div id="numerical-agreement-with-the-survival-package" class="section level1">
+<h1>1. Numerical agreement with the <code>survival</code> package</h1>
+<p>We use the <code>ovarian</code> dataset bundled with the
+<code>survival</code> package for the agreement checks.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>ord <span class="ot">&lt;-</span> <span class="fu">order</span>(ovarian<span class="sc">$</span>futime)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>t_s <span class="ot">&lt;-</span> ovarian<span class="sc">$</span>futime[ord]</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>e_s <span class="ot">&lt;-</span> ovarian<span class="sc">$</span>fustat[ord]</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>g_s <span class="ot">&lt;-</span> ovarian<span class="sc">$</span>rx[ord]</span></code></pre></div>
+<div id="survfit_fast-versus-survfit-summary" class="section level2">
+<h2>1.1 <code>survfit_fast()</code> versus <code>survfit()</code> +
+<code>summary()</code></h2>
+<p>We evaluate the Kaplan-Meier estimate at the landmark time
+<code>t = 500</code>.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># FastSurvival</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>fit_fast <span class="ot">&lt;-</span> <span class="fu">survfit_fast</span>(t_s, e_s, <span class="at">t_eval =</span> <span class="dv">500</span>, <span class="at">conf.type =</span> <span class="st">&quot;log&quot;</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>fit_fast</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; Kaplan-Meier estimate at a single time point</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt;         survival std.err lower 95% upper 95%</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt; t = 500   0.5961  0.0999    0.4291    0.8279</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt;  Confidence interval type: log</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co"># survival</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>fit_ref <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(futime, fustat) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> ovarian, <span class="at">conf.type =</span> <span class="st">&quot;log&quot;</span>)</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="fu">summary</span>(fit_ref, <span class="at">times =</span> <span class="dv">500</span>)</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; Call: survfit(formula = Surv(futime, fustat) ~ 1, data = ovarian, conf.type = &quot;log&quot;)</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt;  time n.risk n.event survival std.err lower 95% CI upper 95% CI</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt;   500     12      10    0.596  0.0999        0.429        0.828</span></span></code></pre></div>
+<p>The survival estimate, standard error, and confidence interval at
+<code>t = 500</code> agree between the two implementations.</p>
+</div>
+<div id="survdiff_fast-versus-survdiff" class="section level2">
+<h2>1.2 <code>survdiff_fast()</code> versus <code>survdiff()</code></h2>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># FastSurvival (two-sided chi-square statistic)</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>sd_fast <span class="ot">&lt;-</span> <span class="fu">survdiff_fast</span>(ovarian<span class="sc">$</span>futime, ovarian<span class="sc">$</span>fustat, ovarian<span class="sc">$</span>rx,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>                         <span class="at">control =</span> <span class="dv">1</span>, <span class="at">side =</span> <span class="dv">2</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>sd_fast</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; Log-rank test (two-group)</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt;   N = 26</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt;           Observed Expected (O-E)^2/E (O-E)^2/V</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt; control          7   5.2335    0.5962    1.0627</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt; treatment        5   6.7665    0.4612    1.0627</span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt;  Chi-square = 1.063 on 1 df,  p-value = 0.3026</span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co"># survival</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>sd_ref <span class="ot">&lt;-</span> <span class="fu">survdiff</span>(<span class="fu">Surv</span>(futime, fustat) <span class="sc">~</span> rx, <span class="at">data =</span> ovarian)</span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>sd_ref</span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; Call:</span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt; survdiff(formula = Surv(futime, fustat) ~ rx, data = ovarian)</span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt;       N Observed Expected (O-E)^2/E (O-E)^2/V</span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt; rx=1 13        7     5.23     0.596      1.06</span></span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt; rx=2 13        5     6.77     0.461      1.06</span></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt;  Chisq= 1.1  on 1 degrees of freedom, p= 0.3</span></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a></span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;survdiff_fast chi-square:&quot;</span>, <span class="fu">as.numeric</span>(sd_fast), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a><span class="co">#&gt; survdiff_fast chi-square: 1.06274</span></span>
+<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;survdiff      chi-square:&quot;</span>, sd_ref<span class="sc">$</span>chisq,       <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a><span class="co">#&gt; survdiff      chi-square: 1.06274</span></span></code></pre></div>
+<p>The observed and expected counts, the chi-square statistic, and the
+p-value agree.</p>
+</div>
+<div id="coxph_fast-versus-coxph" class="section level2">
+<h2>1.3 <code>coxph_fast()</code> versus <code>coxph()</code></h2>
+<p><code>coxph()</code> treats <code>rx</code> as numeric with
+<code>rx = 1</code> as the reference level, so we set
+<code>control = 1</code> for a consistent comparison.
+<code>coxph_fast()</code> is based on the Pike-Halley Estimator (Homma,
+2025), a closed-form approximation to the Cox partial likelihood
+maximizer; the residual difference is of order O_p(n^{-3/2}).</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># FastSurvival</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>cx_fast <span class="ot">&lt;-</span> <span class="fu">coxph_fast</span>(ovarian<span class="sc">$</span>futime, ovarian<span class="sc">$</span>fustat, ovarian<span class="sc">$</span>rx, <span class="at">control =</span> <span class="dv">1</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>cx_fast</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; Pike-Halley Estimator (closed-form hazard ratio)</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt;          coef exp(coef) se(coef)      z Pr(&gt;|z|)</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt; group -0.5964    0.5508   0.5868 -1.016     0.31</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt; Hazard ratio and 95% Wald confidence interval:</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt;       exp(coef) exp(-coef) lower .95 upper .95</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; group    0.5508     1.8155    0.1744    1.7399</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co"># survival</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>cx_ref <span class="ot">&lt;-</span> <span class="fu">summary</span>(<span class="fu">coxph</span>(<span class="fu">Surv</span>(futime, fustat) <span class="sc">~</span> rx, <span class="at">data =</span> ovarian))</span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a>cx_ref<span class="sc">$</span>coefficients</span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt;        coef exp(coef)  se(coef)         z  Pr(&gt;|z|)</span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; rx -0.59638 0.5508019 0.5869895 -1.015998 0.3096304</span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>cx_ref<span class="sc">$</span>conf.int</span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt;    exp(coef) exp(-coef) lower .95 upper .95</span></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">#&gt; rx 0.5508019   1.815535 0.1743207  1.740371</span></span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;coxph_fast HR :&quot;</span>, cx_fast[<span class="st">&quot;exp(coef)&quot;</span>], <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt; coxph_fast HR : 0.5508019</span></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;coxph      HR :&quot;</span>, cx_ref<span class="sc">$</span>coefficients[, <span class="st">&quot;exp(coef)&quot;</span>], <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a><span class="co">#&gt; coxph      HR : 0.5508019</span></span></code></pre></div>
+<p>The hazard ratio, standard error, and Wald confidence interval agree
+to the expected order of accuracy.</p>
+</div>
+</div>
+<div id="speed-comparison" class="section level1">
+<h1>2. Speed comparison</h1>
+<p>The following benchmark compares <code>FastSurvival</code> against
+the <code>survival</code> package using <code>microbenchmark</code> on
+the <code>ovarian</code> dataset (n = 26). Because the FastSurvival
+functions are designed for use inside simulation loops where the data
+are generated in sorted order, we set <code>presorted = TRUE</code> and
+sort the input once outside the benchmark.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">library</span>(microbenchmark)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>ord <span class="ot">&lt;-</span> <span class="fu">order</span>(ovarian<span class="sc">$</span>futime)</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>t_s <span class="ot">&lt;-</span> ovarian<span class="sc">$</span>futime[ord]</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>e_s <span class="ot">&lt;-</span> ovarian<span class="sc">$</span>fustat[ord]</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>g_s <span class="ot">&lt;-</span> ovarian<span class="sc">$</span>rx[ord]</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>bm <span class="ot">&lt;-</span> <span class="fu">microbenchmark</span>(</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>  <span class="at">survfit_fast  =</span> <span class="fu">survfit_fast</span>(t_s, e_s, <span class="at">t_eval =</span> <span class="dv">500</span>),</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>  <span class="at">survfit       =</span> <span class="fu">summary</span>(<span class="fu">survfit</span>(<span class="fu">Surv</span>(futime, fustat) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> ovarian),</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>                          <span class="at">times =</span> <span class="dv">500</span>),</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>  <span class="at">survdiff_fast =</span> <span class="fu">survdiff_fast</span>(t_s, e_s, g_s, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">side =</span> <span class="dv">2</span>,</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>                                <span class="at">presorted =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>  <span class="at">survdiff      =</span> <span class="fu">survdiff</span>(<span class="fu">Surv</span>(futime, fustat) <span class="sc">~</span> rx, <span class="at">data =</span> ovarian),</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>  <span class="at">coxph_fast    =</span> <span class="fu">coxph_fast</span>(t_s, e_s, g_s, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">presorted =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>  <span class="at">coxph         =</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(futime, fustat) <span class="sc">~</span> rx, <span class="at">data =</span> ovarian),</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>  <span class="at">times =</span> <span class="dv">100</span></span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>)</span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a><span class="fu">print</span>(bm)</span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a><span class="co">#&gt; Unit: microseconds</span></span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a><span class="co">#&gt;           expr    min      lq     mean  median      uq    max neval</span></span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a><span class="co">#&gt;   survfit_fast   13.3   24.00   34.196   29.80   39.10   96.9   100</span></span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a><span class="co">#&gt;        survfit  910.6 1172.15 1454.820 1315.40 1613.55 4482.6   100</span></span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a><span class="co">#&gt;  survdiff_fast    7.8   18.05   24.337   23.50   28.60   51.7   100</span></span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a><span class="co">#&gt;       survdiff  714.7  922.60 1108.567  992.70 1187.30 5118.9   100</span></span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a><span class="co">#&gt;     coxph_fast   13.9   24.45   35.933   35.05   42.75  109.4   100</span></span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a><span class="co">#&gt;          coxph 1053.9 1400.95 1743.869 1522.45 2067.00 4252.7   100</span></span></code></pre></div>
+<p>The exact timings depend on the hardware and the random fluctuation
+inherent in microbenchmarks, but on the <code>ovarian</code> dataset all
+three FastSurvival functions are roughly 40 times faster than their
+counterparts in the <code>survival</code> package. The speed gain
+typically grows with the sample size; on a phase-3 trial sized dataset
+(n = 600, event rate 80%) the speed gains observed in development reach
+roughly 50x for <code>survfit_fast()</code>, 40x for
+<code>survdiff_fast()</code>, and 30x for <code>coxph_fast()</code>.</p>
+</div>
+<div id="simulation-example" class="section level1">
+<h1>3. Simulation example</h1>
+<p>We now generate <code>nsim = 100</code> trials with
+<code>simdata_fast()</code> and apply the three analysis functions to
+each simulated dataset.</p>
+<div id="generate-simulated-data" class="section level2">
+<h2>3.1 Generate simulated data</h2>
+<p>We consider a two-group parallel trial with 100 patients per group,
+12-month accrual, exponential survival with median 18 months in the
+control group and 24 months in the treatment group, and a small constant
+dropout hazard.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="at">nsim     =</span> <span class="dv">100</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">n        =</span> <span class="fu">c</span>(<span class="dv">100</span>, <span class="dv">100</span>),</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="at">a.time   =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">12</span>),</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>  <span class="at">a.rate   =</span> <span class="dv">200</span> <span class="sc">/</span> <span class="dv">12</span>,</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>  <span class="at">e.median =</span> <span class="fu">list</span>(<span class="dv">18</span>, <span class="dv">24</span>),</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>  <span class="at">d.hazard =</span> <span class="fu">list</span>(<span class="fl">0.01</span>, <span class="fl">0.01</span>),</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>  <span class="at">seed     =</span> <span class="dv">42</span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>)</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="fu">head</span>(df)</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt;   sim group accrual_time surv_time dropout_time       tte event calendar_time</span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt; 1   1     1    10.900445  8.599582    48.405809  8.599582     1     19.500027</span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt; 2   1     1     3.967349 14.797314    23.985600 14.797314     1     18.764663</span></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt; 3   1     1    11.411225 21.757974    38.095037 21.757974     1     33.169199</span></span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a><span class="co">#&gt; 4   1     1     2.453655  6.568218   197.635604  6.568218     1      9.021873</span></span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a><span class="co">#&gt; 5   1     1     4.113958 15.996459    13.580202 13.580202     0     17.694159</span></span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a><span class="co">#&gt; 6   1     1     1.103466  1.092207     7.924918  1.092207     1      2.195673</span></span></code></pre></div>
+</div>
+<div id="apply-the-three-analysis-functions-to-each-simulated-trial" class="section level2">
+<h2>3.2 Apply the three analysis functions to each simulated trial</h2>
+<p>For each of the 100 simulated trials, we run:</p>
+<ul>
+<li><code>survfit_fast()</code> on the treatment group to obtain the
+Kaplan-Meier estimate at the landmark time <code>t = 18</code>
+months;</li>
+<li><code>survdiff_fast()</code> to obtain the two-sided chi-square
+statistic and p-value;</li>
+<li><code>coxph_fast()</code> to obtain the hazard ratio estimate and
+its Wald confidence interval.</li>
+</ul>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>nsim   <span class="ot">&lt;-</span> <span class="dv">100</span><span class="dt">L</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>t_land <span class="ot">&lt;-</span> <span class="dv">18</span></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>km_mat <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, <span class="at">nrow =</span> nsim, <span class="at">ncol =</span> <span class="dv">4</span><span class="dt">L</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>                 <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="cn">NULL</span>,</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>                                 <span class="fu">c</span>(<span class="st">&quot;surv&quot;</span>, <span class="st">&quot;std.err&quot;</span>, <span class="st">&quot;lower&quot;</span>, <span class="st">&quot;upper&quot;</span>)))</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>ld_vec <span class="ot">&lt;-</span> <span class="fu">numeric</span>(nsim)   <span class="co"># log-rank chi-square</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>hr_mat <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, <span class="at">nrow =</span> nsim, <span class="at">ncol =</span> <span class="dv">5</span><span class="dt">L</span>,</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>                 <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="cn">NULL</span>,</span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>                                 <span class="fu">c</span>(<span class="st">&quot;coef&quot;</span>, <span class="st">&quot;exp(coef)&quot;</span>, <span class="st">&quot;se(coef)&quot;</span>,</span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>                                   <span class="st">&quot;lower .95&quot;</span>, <span class="st">&quot;upper .95&quot;</span>)))</span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="cf">for</span> (s <span class="cf">in</span> <span class="fu">seq_len</span>(nsim)) {</span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>  d <span class="ot">&lt;-</span> df[df<span class="sc">$</span>sim <span class="sc">==</span> s, ]</span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a>  <span class="co"># Treatment-group KM at t = 18 (sort once)</span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a>  d_trt <span class="ot">&lt;-</span> d[d<span class="sc">$</span>group <span class="sc">==</span> <span class="dv">2</span><span class="dt">L</span>, ]</span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a>  ord_t <span class="ot">&lt;-</span> <span class="fu">order</span>(d_trt<span class="sc">$</span>tte)</span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a>  km_mat[s, ] <span class="ot">&lt;-</span> <span class="fu">unclass</span>(</span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a>    <span class="fu">survfit_fast</span>(d_trt<span class="sc">$</span>tte[ord_t], d_trt<span class="sc">$</span>event[ord_t], <span class="at">t_eval =</span> t_land)</span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a>  )</span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a>  <span class="co"># Pooled sort for log-rank and Cox</span></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a>  ord_p <span class="ot">&lt;-</span> <span class="fu">order</span>(d<span class="sc">$</span>tte)</span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a>  t_p   <span class="ot">&lt;-</span> d<span class="sc">$</span>tte[ord_p]</span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a>  e_p   <span class="ot">&lt;-</span> d<span class="sc">$</span>event[ord_p]</span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a>  g_p   <span class="ot">&lt;-</span> d<span class="sc">$</span>group[ord_p]</span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a>  ld_vec[s] <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(</span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a>    <span class="fu">survdiff_fast</span>(t_p, e_p, g_p, <span class="at">control =</span> <span class="dv">1</span><span class="dt">L</span>, <span class="at">side =</span> <span class="dv">2</span><span class="dt">L</span>, <span class="at">presorted =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a>  )</span>
+<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a>  hr_mat[s, ] <span class="ot">&lt;-</span> <span class="fu">unclass</span>(</span>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a>    <span class="fu">coxph_fast</span>(t_p, e_p, g_p, <span class="at">control =</span> <span class="dv">1</span><span class="dt">L</span>, <span class="at">presorted =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a>  )</span>
+<span id="cb8-35"><a href="#cb8-35" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="summarize-the-results-across-100-simulations" class="section level2">
+<h2>3.3 Summarize the results across 100 simulations</h2>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># Landmark survival in the treatment group at t = 18</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>km_summary <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="at">mean_surv    =</span> <span class="fu">mean</span>(km_mat[, <span class="st">&quot;surv&quot;</span>]),</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  <span class="at">sd_surv      =</span> <span class="fu">sd</span>(km_mat[, <span class="st">&quot;surv&quot;</span>]),</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>  <span class="at">mean_std_err =</span> <span class="fu">mean</span>(km_mat[, <span class="st">&quot;std.err&quot;</span>])</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>)</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>km_summary</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt;    mean_surv      sd_surv mean_std_err </span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt;   0.60114248   0.05336939   0.05108699</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co"># Log-rank test: empirical power at alpha = 0.05 (two-sided)</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>p_logrank   <span class="ot">&lt;-</span> <span class="fu">pchisq</span>(ld_vec, <span class="at">df =</span> <span class="dv">1</span><span class="dt">L</span>, <span class="at">lower.tail =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>power_empir <span class="ot">&lt;-</span> <span class="fu">mean</span>(p_logrank <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;Empirical power (log-rank, two-sided, alpha = 0.05): %.2f</span><span class="sc">\n</span><span class="st">&quot;</span>,</span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>            power_empir))</span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt; Empirical power (log-rank, two-sided, alpha = 0.05): 0.47</span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a></span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co"># Hazard ratio summary</span></span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a>hr_summary <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a>  <span class="at">mean_HR     =</span> <span class="fu">mean</span>(hr_mat[, <span class="st">&quot;exp(coef)&quot;</span>]),</span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a>  <span class="at">sd_HR       =</span> <span class="fu">sd</span>(hr_mat[, <span class="st">&quot;exp(coef)&quot;</span>]),</span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a>  <span class="at">mean_log_HR =</span> <span class="fu">mean</span>(hr_mat[, <span class="st">&quot;coef&quot;</span>]),</span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a>  <span class="at">sd_log_HR   =</span> <span class="fu">sd</span>(hr_mat[, <span class="st">&quot;coef&quot;</span>]),</span>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a>  <span class="at">cover_95    =</span> <span class="fu">mean</span>(hr_mat[, <span class="st">&quot;lower .95&quot;</span>] <span class="sc">&lt;=</span> (<span class="dv">18</span> <span class="sc">/</span> <span class="dv">24</span>) <span class="sc">&amp;</span></span>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a>                     hr_mat[, <span class="st">&quot;upper .95&quot;</span>] <span class="sc">&gt;=</span> (<span class="dv">18</span> <span class="sc">/</span> <span class="dv">24</span>))</span>
+<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a>)</span>
+<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a>hr_summary</span>
+<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="co">#&gt;     mean_HR       sd_HR mean_log_HR   sd_log_HR    cover_95 </span></span>
+<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="co">#&gt;   0.7487242   0.1274661  -0.3031164   0.1655298   0.9300000</span></span></code></pre></div>
+<p>Under exponential survival with medians 18 and 24 months in the
+control and treatment groups, the true hazard ratio is
+<code>(log(2) / 24) / (log(2) / 18) = 18 / 24 = 0.75</code>. Across the
+100 simulated trials, the average treatment-group landmark survival at
+<code>t = 18</code> months was around 0.60, consistent with
+<code>exp(-log(2) * 18 / 24)</code> after accounting for censoring from
+the administrative cutoff and dropout. The average hazard ratio estimate
+from <code>coxph_fast()</code> was close to the true value 0.75, and the
+empirical coverage of the 95% Wald confidence interval was near the
+nominal 95% level. The empirical power of the two-sided log-rank test at
+alpha = 0.05 was around 0.5, reflecting the modest sample size (200
+patients total) relative to the modest treatment effect (HR = 0.75)
+under the chosen accrual and dropout settings.</p>
+</div>
+</div>
+<div id="references" class="section level1">
+<h1>References</h1>
+<p>Homma, G. (2025). One step from Pike to Cox: a closed-form hazard
+ratio estimator. <em>Manuscript under review.</em></p>
+<p>Collett, D. (2014). <em>Modelling Survival Data in Medical
+Research</em> (3rd ed.). Chapman and Hall/CRC.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

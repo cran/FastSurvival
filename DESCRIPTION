@@ -1,0 +1,40 @@
+Package: FastSurvival
+Type: Package
+Title: Fast Kaplan-Meier, Log-Rank, and Hazard Ratio Estimation for
+        Survival Analysis
+Version: 0.1.0
+Authors@R: person(
+    given  = "Gosuke",
+    family = "Homma",
+    role   = c("aut", "cre"),
+    email  = "my.name.is.gosuke@gmail.com"
+  )
+Description: Provides fast alternatives to standard survival analysis functions
+    in the 'survival' package. The package implements a single-time-point
+    Kaplan-Meier estimator (survfit_fast()), a log-rank test (survdiff_fast()),
+    a closed-form hazard ratio estimator based on the Pike-Halley Estimator
+    method (coxph_fast()), and a clinical trial data simulator (simdata_fast()).
+    All functions are designed for repeated evaluation inside large simulation
+    loops, such as adaptive sample-size re-estimation, probability-of-success
+    calculations, and regional consistency evaluation in multi-regional trials.
+    Core computations are implemented in 'C++' via 'Rcpp' for maximum performance.
+    Methodological background is described in Collett (2014, ISBN:9780429196294).
+License: MIT + file LICENSE
+URL: https://github.com/gosukehommaEX/FastSurvival
+BugReports: https://github.com/gosukehommaEX/FastSurvival/issues
+Encoding: UTF-8
+Language: en-US
+Depends: R (>= 4.1.0)
+Imports: dqrng, Rcpp
+LinkingTo: Rcpp, dqrng
+Suggests: survival, microbenchmark, testthat (>= 3.0.0), knitr,
+        rmarkdown
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0
+VignetteBuilder: knitr
+NeedsCompilation: yes
+Packaged: 2026-05-18 23:44:47 UTC; i_lik
+Author: Gosuke Homma [aut, cre]
+Maintainer: Gosuke Homma <my.name.is.gosuke@gmail.com>
+Repository: CRAN
+Date/Publication: 2026-05-27 08:40:07 UTC
