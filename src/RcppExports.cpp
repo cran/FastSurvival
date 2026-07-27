@@ -10,6 +10,96 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// ahr_core
+NumericVector ahr_core(NumericVector time1, IntegerVector status1, NumericVector time2, IntegerVector status2, NumericVector grid);
+RcppExport SEXP _FastSurvival_ahr_core(SEXP time1SEXP, SEXP status1SEXP, SEXP time2SEXP, SEXP status2SEXP, SEXP gridSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type time1(time1SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type status1(status1SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type time2(time2SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type status2(status2SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type grid(gridSEXP);
+    rcpp_result_gen = Rcpp::wrap(ahr_core(time1, status1, time2, status2, grid));
+    return rcpp_result_gen;
+END_RCPP
+}
+// ahsw_core
+NumericVector ahsw_core(const NumericVector& time_sorted, const IntegerVector& event_sorted, double tau);
+RcppExport SEXP _FastSurvival_ahsw_core(SEXP time_sortedSEXP, SEXP event_sortedSEXP, SEXP tauSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type time_sorted(time_sortedSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type event_sorted(event_sortedSEXP);
+    Rcpp::traits::input_parameter< double >::type tau(tauSEXP);
+    rcpp_result_gen = Rcpp::wrap(ahsw_core(time_sorted, event_sorted, tau));
+    return rcpp_result_gen;
+END_RCPP
+}
+// analysis_loop_core
+List analysis_loop_core(const IntegerVector& sim_ptr, const NumericVector& accrual, const NumericVector& tte, const IntegerVector& event, const IntegerVector& j, int look_type, const NumericVector& look_values, const IntegerVector& pop_col, const IntegerVector& pop_level, const IntegerMatrix& sub_mat, const IntegerVector& strata, bool use_strata, bool do_logrank, bool do_coxph, bool do_rmst, bool do_km, bool do_maxcombo, bool do_ahsw, bool do_milestone, bool do_rmw, bool do_ahr, bool do_medsurv, bool do_wkm, bool do_wmst, int weight_scheme, double rho, double gamma, double t_star, const NumericVector& mc_rho, const NumericVector& mc_gamma, double tau, double t_eval, double s_star, double wmst_tau1, double wmst_tau2, int wkm_weight, double medsurv_bw);
+RcppExport SEXP _FastSurvival_analysis_loop_core(SEXP sim_ptrSEXP, SEXP accrualSEXP, SEXP tteSEXP, SEXP eventSEXP, SEXP jSEXP, SEXP look_typeSEXP, SEXP look_valuesSEXP, SEXP pop_colSEXP, SEXP pop_levelSEXP, SEXP sub_matSEXP, SEXP strataSEXP, SEXP use_strataSEXP, SEXP do_logrankSEXP, SEXP do_coxphSEXP, SEXP do_rmstSEXP, SEXP do_kmSEXP, SEXP do_maxcomboSEXP, SEXP do_ahswSEXP, SEXP do_milestoneSEXP, SEXP do_rmwSEXP, SEXP do_ahrSEXP, SEXP do_medsurvSEXP, SEXP do_wkmSEXP, SEXP do_wmstSEXP, SEXP weight_schemeSEXP, SEXP rhoSEXP, SEXP gammaSEXP, SEXP t_starSEXP, SEXP mc_rhoSEXP, SEXP mc_gammaSEXP, SEXP tauSEXP, SEXP t_evalSEXP, SEXP s_starSEXP, SEXP wmst_tau1SEXP, SEXP wmst_tau2SEXP, SEXP wkm_weightSEXP, SEXP medsurv_bwSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const IntegerVector& >::type sim_ptr(sim_ptrSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type accrual(accrualSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type tte(tteSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type event(eventSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type j(jSEXP);
+    Rcpp::traits::input_parameter< int >::type look_type(look_typeSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type look_values(look_valuesSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type pop_col(pop_colSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type pop_level(pop_levelSEXP);
+    Rcpp::traits::input_parameter< const IntegerMatrix& >::type sub_mat(sub_matSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type strata(strataSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_strata(use_strataSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_logrank(do_logrankSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_coxph(do_coxphSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_rmst(do_rmstSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_km(do_kmSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_maxcombo(do_maxcomboSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_ahsw(do_ahswSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_milestone(do_milestoneSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_rmw(do_rmwSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_ahr(do_ahrSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_medsurv(do_medsurvSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_wkm(do_wkmSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_wmst(do_wmstSEXP);
+    Rcpp::traits::input_parameter< int >::type weight_scheme(weight_schemeSEXP);
+    Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
+    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< double >::type t_star(t_starSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type mc_rho(mc_rhoSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type mc_gamma(mc_gammaSEXP);
+    Rcpp::traits::input_parameter< double >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< double >::type t_eval(t_evalSEXP);
+    Rcpp::traits::input_parameter< double >::type s_star(s_starSEXP);
+    Rcpp::traits::input_parameter< double >::type wmst_tau1(wmst_tau1SEXP);
+    Rcpp::traits::input_parameter< double >::type wmst_tau2(wmst_tau2SEXP);
+    Rcpp::traits::input_parameter< int >::type wkm_weight(wkm_weightSEXP);
+    Rcpp::traits::input_parameter< double >::type medsurv_bw(medsurv_bwSEXP);
+    rcpp_result_gen = Rcpp::wrap(analysis_loop_core(sim_ptr, accrual, tte, event, j, look_type, look_values, pop_col, pop_level, sub_mat, strata, use_strata, do_logrank, do_coxph, do_rmst, do_km, do_maxcombo, do_ahsw, do_milestone, do_rmw, do_ahr, do_medsurv, do_wkm, do_wmst, weight_scheme, rho, gamma, t_star, mc_rho, mc_gamma, tau, t_eval, s_star, wmst_tau1, wmst_tau2, wkm_weight, medsurv_bw));
+    return rcpp_result_gen;
+END_RCPP
+}
+// combo_logrank_core
+List combo_logrank_core(const NumericVector& time_sorted, const IntegerVector& event_sorted, const IntegerVector& j_sorted, const NumericVector& rho_vec, const NumericVector& gamma_vec);
+RcppExport SEXP _FastSurvival_combo_logrank_core(SEXP time_sortedSEXP, SEXP event_sortedSEXP, SEXP j_sortedSEXP, SEXP rho_vecSEXP, SEXP gamma_vecSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type time_sorted(time_sortedSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type event_sorted(event_sortedSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type j_sorted(j_sortedSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type rho_vec(rho_vecSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type gamma_vec(gamma_vecSEXP);
+    rcpp_result_gen = Rcpp::wrap(combo_logrank_core(time_sorted, event_sorted, j_sorted, rho_vec, gamma_vec));
+    return rcpp_result_gen;
+END_RCPP
+}
 // km_core
 NumericVector km_core(const NumericVector& t_sorted, const NumericVector& e_sorted, double t_eval);
 RcppExport SEXP _FastSurvival_km_core(SEXP t_sortedSEXP, SEXP e_sortedSEXP, SEXP t_evalSEXP) {
@@ -36,6 +126,36 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// medsurv_core
+NumericMatrix medsurv_core(NumericVector time, IntegerVector event, IntegerVector grp, int ngroup, NumericVector bw);
+RcppExport SEXP _FastSurvival_medsurv_core(SEXP timeSEXP, SEXP eventSEXP, SEXP grpSEXP, SEXP ngroupSEXP, SEXP bwSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type time(timeSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type event(eventSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type grp(grpSEXP);
+    Rcpp::traits::input_parameter< int >::type ngroup(ngroupSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type bw(bwSEXP);
+    rcpp_result_gen = Rcpp::wrap(medsurv_core(time, event, grp, ngroup, bw));
+    return rcpp_result_gen;
+END_RCPP
+}
+// milestone_core
+List milestone_core(NumericVector time, IntegerVector status, IntegerVector grp, double tau, bool presorted);
+RcppExport SEXP _FastSurvival_milestone_core(SEXP timeSEXP, SEXP statusSEXP, SEXP grpSEXP, SEXP tauSEXP, SEXP presortedSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type time(timeSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type status(statusSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type grp(grpSEXP);
+    Rcpp::traits::input_parameter< double >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< bool >::type presorted(presortedSEXP);
+    rcpp_result_gen = Rcpp::wrap(milestone_core(time, status, grp, tau, presorted));
+    return rcpp_result_gen;
+END_RCPP
+}
 // pihe_core
 NumericVector pihe_core(const NumericVector& time_sorted, const IntegerVector& event_sorted, const IntegerVector& j_sorted);
 RcppExport SEXP _FastSurvival_pihe_core(SEXP time_sortedSEXP, SEXP event_sortedSEXP, SEXP j_sortedSEXP) {
@@ -49,56 +169,217 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// rpiece_unif_cpp
-NumericVector rpiece_unif_cpp(int n, const NumericVector& a_time, const NumericVector& cum_p);
-RcppExport SEXP _FastSurvival_rpiece_unif_cpp(SEXP nSEXP, SEXP a_timeSEXP, SEXP cum_pSEXP) {
+// rmst_core
+NumericVector rmst_core(const NumericVector& t_sorted, const NumericVector& e_sorted, double tau);
+RcppExport SEXP _FastSurvival_rmst_core(SEXP t_sortedSEXP, SEXP e_sortedSEXP, SEXP tauSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type n(nSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type a_time(a_timeSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type cum_p(cum_pSEXP);
-    rcpp_result_gen = Rcpp::wrap(rpiece_unif_cpp(n, a_time, cum_p));
+    Rcpp::traits::input_parameter< const NumericVector& >::type t_sorted(t_sortedSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type e_sorted(e_sortedSEXP);
+    Rcpp::traits::input_parameter< double >::type tau(tauSEXP);
+    rcpp_result_gen = Rcpp::wrap(rmst_core(t_sorted, e_sorted, tau));
     return rcpp_result_gen;
 END_RCPP
 }
-// rpiece_exp_cpp
-NumericVector rpiece_exp_cpp(int n, const NumericVector& hazard, const NumericVector& fin_time, const NumericVector& cum_haz);
-RcppExport SEXP _FastSurvival_rpiece_exp_cpp(SEXP nSEXP, SEXP hazardSEXP, SEXP fin_timeSEXP, SEXP cum_hazSEXP) {
+// rmw_core
+NumericVector rmw_core(const NumericVector& time_sorted, const IntegerVector& event_sorted, const IntegerVector& j_sorted, double s_star);
+RcppExport SEXP _FastSurvival_rmw_core(SEXP time_sortedSEXP, SEXP event_sortedSEXP, SEXP j_sortedSEXP, SEXP s_starSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type n(nSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type hazard(hazardSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type fin_time(fin_timeSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type cum_haz(cum_hazSEXP);
-    rcpp_result_gen = Rcpp::wrap(rpiece_exp_cpp(n, hazard, fin_time, cum_haz));
+    Rcpp::traits::input_parameter< const NumericVector& >::type time_sorted(time_sortedSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type event_sorted(event_sortedSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type j_sorted(j_sortedSEXP);
+    Rcpp::traits::input_parameter< double >::type s_star(s_starSEXP);
+    rcpp_result_gen = Rcpp::wrap(rmw_core(time_sorted, event_sorted, j_sorted, s_star));
     return rcpp_result_gen;
 END_RCPP
 }
-// interleave_groups
-DataFrame interleave_groups(const DataFrame& df_ctrl, const DataFrame& df_trt, int nsim, int n_ctrl, int n_trt);
-RcppExport SEXP _FastSurvival_interleave_groups(SEXP df_ctrlSEXP, SEXP df_trtSEXP, SEXP nsimSEXP, SEXP n_ctrlSEXP, SEXP n_trtSEXP) {
+// simdata_core_full
+DataFrame simdata_core_full(int nsim, const IntegerVector& n_grp, const NumericVector& a_time, const IntegerVector& acc_counts_c, const IntegerVector& acc_counts_t, int n_cell, const List& e_haz_c, const List& e_fin_c, const List& e_cum_c, const List& e_haz_t, const List& e_fin_t, const List& e_cum_t, bool has_dropout, const List& d_haz_c, const List& d_fin_c, const List& d_cum_c, const List& d_haz_t, const List& d_fin_t, const List& d_cum_t, const NumericVector& cum_prev_c, const NumericVector& cum_prev_t, const IntegerMatrix& level_table_c, const IntegerMatrix& level_table_t, const CharacterVector& sub_names, bool fixed_alloc, const IntegerVector& fixed_counts_c, const IntegerVector& fixed_counts_t);
+RcppExport SEXP _FastSurvival_simdata_core_full(SEXP nsimSEXP, SEXP n_grpSEXP, SEXP a_timeSEXP, SEXP acc_counts_cSEXP, SEXP acc_counts_tSEXP, SEXP n_cellSEXP, SEXP e_haz_cSEXP, SEXP e_fin_cSEXP, SEXP e_cum_cSEXP, SEXP e_haz_tSEXP, SEXP e_fin_tSEXP, SEXP e_cum_tSEXP, SEXP has_dropoutSEXP, SEXP d_haz_cSEXP, SEXP d_fin_cSEXP, SEXP d_cum_cSEXP, SEXP d_haz_tSEXP, SEXP d_fin_tSEXP, SEXP d_cum_tSEXP, SEXP cum_prev_cSEXP, SEXP cum_prev_tSEXP, SEXP level_table_cSEXP, SEXP level_table_tSEXP, SEXP sub_namesSEXP, SEXP fixed_allocSEXP, SEXP fixed_counts_cSEXP, SEXP fixed_counts_tSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const DataFrame& >::type df_ctrl(df_ctrlSEXP);
-    Rcpp::traits::input_parameter< const DataFrame& >::type df_trt(df_trtSEXP);
     Rcpp::traits::input_parameter< int >::type nsim(nsimSEXP);
-    Rcpp::traits::input_parameter< int >::type n_ctrl(n_ctrlSEXP);
-    Rcpp::traits::input_parameter< int >::type n_trt(n_trtSEXP);
-    rcpp_result_gen = Rcpp::wrap(interleave_groups(df_ctrl, df_trt, nsim, n_ctrl, n_trt));
+    Rcpp::traits::input_parameter< const IntegerVector& >::type n_grp(n_grpSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type a_time(a_timeSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type acc_counts_c(acc_counts_cSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type acc_counts_t(acc_counts_tSEXP);
+    Rcpp::traits::input_parameter< int >::type n_cell(n_cellSEXP);
+    Rcpp::traits::input_parameter< const List& >::type e_haz_c(e_haz_cSEXP);
+    Rcpp::traits::input_parameter< const List& >::type e_fin_c(e_fin_cSEXP);
+    Rcpp::traits::input_parameter< const List& >::type e_cum_c(e_cum_cSEXP);
+    Rcpp::traits::input_parameter< const List& >::type e_haz_t(e_haz_tSEXP);
+    Rcpp::traits::input_parameter< const List& >::type e_fin_t(e_fin_tSEXP);
+    Rcpp::traits::input_parameter< const List& >::type e_cum_t(e_cum_tSEXP);
+    Rcpp::traits::input_parameter< bool >::type has_dropout(has_dropoutSEXP);
+    Rcpp::traits::input_parameter< const List& >::type d_haz_c(d_haz_cSEXP);
+    Rcpp::traits::input_parameter< const List& >::type d_fin_c(d_fin_cSEXP);
+    Rcpp::traits::input_parameter< const List& >::type d_cum_c(d_cum_cSEXP);
+    Rcpp::traits::input_parameter< const List& >::type d_haz_t(d_haz_tSEXP);
+    Rcpp::traits::input_parameter< const List& >::type d_fin_t(d_fin_tSEXP);
+    Rcpp::traits::input_parameter< const List& >::type d_cum_t(d_cum_tSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type cum_prev_c(cum_prev_cSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type cum_prev_t(cum_prev_tSEXP);
+    Rcpp::traits::input_parameter< const IntegerMatrix& >::type level_table_c(level_table_cSEXP);
+    Rcpp::traits::input_parameter< const IntegerMatrix& >::type level_table_t(level_table_tSEXP);
+    Rcpp::traits::input_parameter< const CharacterVector& >::type sub_names(sub_namesSEXP);
+    Rcpp::traits::input_parameter< bool >::type fixed_alloc(fixed_allocSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type fixed_counts_c(fixed_counts_cSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type fixed_counts_t(fixed_counts_tSEXP);
+    rcpp_result_gen = Rcpp::wrap(simdata_core_full(nsim, n_grp, a_time, acc_counts_c, acc_counts_t, n_cell, e_haz_c, e_fin_c, e_cum_c, e_haz_t, e_fin_t, e_cum_t, has_dropout, d_haz_c, d_fin_c, d_cum_c, d_haz_t, d_fin_t, d_cum_t, cum_prev_c, cum_prev_t, level_table_c, level_table_t, sub_names, fixed_alloc, fixed_counts_c, fixed_counts_t));
+    return rcpp_result_gen;
+END_RCPP
+}
+// simdata_core_id
+DataFrame simdata_core_id(int nsim, const IntegerVector& n_grp, const NumericVector& a_time, const IntegerVector& acc_counts_c, const IntegerVector& acc_counts_t, const NumericVector& h01_haz_c, const NumericVector& h01_fin_c, const NumericVector& h01_cum_c, const NumericVector& h01_haz_t, const NumericVector& h01_fin_t, const NumericVector& h01_cum_t, const NumericVector& h02_haz_c, const NumericVector& h02_fin_c, const NumericVector& h02_cum_c, const NumericVector& h02_haz_t, const NumericVector& h02_fin_t, const NumericVector& h02_cum_t, const NumericVector& h12_haz_c, const NumericVector& h12_fin_c, const NumericVector& h12_cum_c, const NumericVector& h12_haz_t, const NumericVector& h12_fin_t, const NumericVector& h12_cum_t, const NumericVector& h12s_haz_c, const NumericVector& h12s_fin_c, const NumericVector& h12s_cum_c, const NumericVector& h12s_haz_t, const NumericVector& h12s_fin_t, const NumericVector& h12s_cum_t, double switch_prop_c, double switch_prop_t, bool has_dropout, const NumericVector& d_haz_c, const NumericVector& d_fin_c, const NumericVector& d_cum_c, const NumericVector& d_haz_t, const NumericVector& d_fin_t, const NumericVector& d_cum_t);
+RcppExport SEXP _FastSurvival_simdata_core_id(SEXP nsimSEXP, SEXP n_grpSEXP, SEXP a_timeSEXP, SEXP acc_counts_cSEXP, SEXP acc_counts_tSEXP, SEXP h01_haz_cSEXP, SEXP h01_fin_cSEXP, SEXP h01_cum_cSEXP, SEXP h01_haz_tSEXP, SEXP h01_fin_tSEXP, SEXP h01_cum_tSEXP, SEXP h02_haz_cSEXP, SEXP h02_fin_cSEXP, SEXP h02_cum_cSEXP, SEXP h02_haz_tSEXP, SEXP h02_fin_tSEXP, SEXP h02_cum_tSEXP, SEXP h12_haz_cSEXP, SEXP h12_fin_cSEXP, SEXP h12_cum_cSEXP, SEXP h12_haz_tSEXP, SEXP h12_fin_tSEXP, SEXP h12_cum_tSEXP, SEXP h12s_haz_cSEXP, SEXP h12s_fin_cSEXP, SEXP h12s_cum_cSEXP, SEXP h12s_haz_tSEXP, SEXP h12s_fin_tSEXP, SEXP h12s_cum_tSEXP, SEXP switch_prop_cSEXP, SEXP switch_prop_tSEXP, SEXP has_dropoutSEXP, SEXP d_haz_cSEXP, SEXP d_fin_cSEXP, SEXP d_cum_cSEXP, SEXP d_haz_tSEXP, SEXP d_fin_tSEXP, SEXP d_cum_tSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type nsim(nsimSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type n_grp(n_grpSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type a_time(a_timeSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type acc_counts_c(acc_counts_cSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type acc_counts_t(acc_counts_tSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h01_haz_c(h01_haz_cSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h01_fin_c(h01_fin_cSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h01_cum_c(h01_cum_cSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h01_haz_t(h01_haz_tSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h01_fin_t(h01_fin_tSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h01_cum_t(h01_cum_tSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h02_haz_c(h02_haz_cSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h02_fin_c(h02_fin_cSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h02_cum_c(h02_cum_cSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h02_haz_t(h02_haz_tSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h02_fin_t(h02_fin_tSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h02_cum_t(h02_cum_tSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h12_haz_c(h12_haz_cSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h12_fin_c(h12_fin_cSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h12_cum_c(h12_cum_cSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h12_haz_t(h12_haz_tSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h12_fin_t(h12_fin_tSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h12_cum_t(h12_cum_tSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h12s_haz_c(h12s_haz_cSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h12s_fin_c(h12s_fin_cSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h12s_cum_c(h12s_cum_cSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h12s_haz_t(h12s_haz_tSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h12s_fin_t(h12s_fin_tSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type h12s_cum_t(h12s_cum_tSEXP);
+    Rcpp::traits::input_parameter< double >::type switch_prop_c(switch_prop_cSEXP);
+    Rcpp::traits::input_parameter< double >::type switch_prop_t(switch_prop_tSEXP);
+    Rcpp::traits::input_parameter< bool >::type has_dropout(has_dropoutSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type d_haz_c(d_haz_cSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type d_fin_c(d_fin_cSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type d_cum_c(d_cum_cSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type d_haz_t(d_haz_tSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type d_fin_t(d_fin_tSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type d_cum_t(d_cum_tSEXP);
+    rcpp_result_gen = Rcpp::wrap(simdata_core_id(nsim, n_grp, a_time, acc_counts_c, acc_counts_t, h01_haz_c, h01_fin_c, h01_cum_c, h01_haz_t, h01_fin_t, h01_cum_t, h02_haz_c, h02_fin_c, h02_cum_c, h02_haz_t, h02_fin_t, h02_cum_t, h12_haz_c, h12_fin_c, h12_cum_c, h12_haz_t, h12_fin_t, h12_cum_t, h12s_haz_c, h12s_fin_c, h12s_cum_c, h12s_haz_t, h12s_fin_t, h12s_cum_t, switch_prop_c, switch_prop_t, has_dropout, d_haz_c, d_fin_c, d_cum_c, d_haz_t, d_fin_t, d_cum_t));
+    return rcpp_result_gen;
+END_RCPP
+}
+// stratified_logrank_core
+NumericVector stratified_logrank_core(const NumericVector& time_sorted, const IntegerVector& event_sorted, const IntegerVector& j_sorted, const IntegerVector& strata_sorted);
+RcppExport SEXP _FastSurvival_stratified_logrank_core(SEXP time_sortedSEXP, SEXP event_sortedSEXP, SEXP j_sortedSEXP, SEXP strata_sortedSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type time_sorted(time_sortedSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type event_sorted(event_sortedSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type j_sorted(j_sortedSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type strata_sorted(strata_sortedSEXP);
+    rcpp_result_gen = Rcpp::wrap(stratified_logrank_core(time_sorted, event_sorted, j_sorted, strata_sorted));
+    return rcpp_result_gen;
+END_RCPP
+}
+// stratified_weighted_logrank_core
+NumericVector stratified_weighted_logrank_core(const NumericVector& time_sorted, const IntegerVector& event_sorted, const IntegerVector& j_sorted, const IntegerVector& strata_sorted, int scheme, double rho, double gamma, double t_star);
+RcppExport SEXP _FastSurvival_stratified_weighted_logrank_core(SEXP time_sortedSEXP, SEXP event_sortedSEXP, SEXP j_sortedSEXP, SEXP strata_sortedSEXP, SEXP schemeSEXP, SEXP rhoSEXP, SEXP gammaSEXP, SEXP t_starSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type time_sorted(time_sortedSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type event_sorted(event_sortedSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type j_sorted(j_sortedSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type strata_sorted(strata_sortedSEXP);
+    Rcpp::traits::input_parameter< int >::type scheme(schemeSEXP);
+    Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
+    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< double >::type t_star(t_starSEXP);
+    rcpp_result_gen = Rcpp::wrap(stratified_weighted_logrank_core(time_sorted, event_sorted, j_sorted, strata_sorted, scheme, rho, gamma, t_star));
+    return rcpp_result_gen;
+END_RCPP
+}
+// weighted_logrank_core
+NumericVector weighted_logrank_core(const NumericVector& time_sorted, const IntegerVector& event_sorted, const IntegerVector& j_sorted, int scheme, double rho, double gamma, double t_star);
+RcppExport SEXP _FastSurvival_weighted_logrank_core(SEXP time_sortedSEXP, SEXP event_sortedSEXP, SEXP j_sortedSEXP, SEXP schemeSEXP, SEXP rhoSEXP, SEXP gammaSEXP, SEXP t_starSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type time_sorted(time_sortedSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type event_sorted(event_sortedSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type j_sorted(j_sortedSEXP);
+    Rcpp::traits::input_parameter< int >::type scheme(schemeSEXP);
+    Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
+    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< double >::type t_star(t_starSEXP);
+    rcpp_result_gen = Rcpp::wrap(weighted_logrank_core(time_sorted, event_sorted, j_sorted, scheme, rho, gamma, t_star));
+    return rcpp_result_gen;
+END_RCPP
+}
+// wkm_core
+NumericVector wkm_core(NumericVector time, IntegerVector event, IntegerVector grp, int weight_type);
+RcppExport SEXP _FastSurvival_wkm_core(SEXP timeSEXP, SEXP eventSEXP, SEXP grpSEXP, SEXP weight_typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type time(timeSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type event(eventSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type grp(grpSEXP);
+    Rcpp::traits::input_parameter< int >::type weight_type(weight_typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(wkm_core(time, event, grp, weight_type));
+    return rcpp_result_gen;
+END_RCPP
+}
+// wmst_core
+NumericMatrix wmst_core(NumericVector time, IntegerVector event, IntegerVector grp, int ngroup, double tau1, double tau2);
+RcppExport SEXP _FastSurvival_wmst_core(SEXP timeSEXP, SEXP eventSEXP, SEXP grpSEXP, SEXP ngroupSEXP, SEXP tau1SEXP, SEXP tau2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type time(timeSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type event(eventSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type grp(grpSEXP);
+    Rcpp::traits::input_parameter< int >::type ngroup(ngroupSEXP);
+    Rcpp::traits::input_parameter< double >::type tau1(tau1SEXP);
+    Rcpp::traits::input_parameter< double >::type tau2(tau2SEXP);
+    rcpp_result_gen = Rcpp::wrap(wmst_core(time, event, grp, ngroup, tau1, tau2));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_FastSurvival_ahr_core", (DL_FUNC) &_FastSurvival_ahr_core, 5},
+    {"_FastSurvival_ahsw_core", (DL_FUNC) &_FastSurvival_ahsw_core, 3},
+    {"_FastSurvival_analysis_loop_core", (DL_FUNC) &_FastSurvival_analysis_loop_core, 37},
+    {"_FastSurvival_combo_logrank_core", (DL_FUNC) &_FastSurvival_combo_logrank_core, 5},
     {"_FastSurvival_km_core", (DL_FUNC) &_FastSurvival_km_core, 3},
     {"_FastSurvival_logrank_core", (DL_FUNC) &_FastSurvival_logrank_core, 3},
+    {"_FastSurvival_medsurv_core", (DL_FUNC) &_FastSurvival_medsurv_core, 5},
+    {"_FastSurvival_milestone_core", (DL_FUNC) &_FastSurvival_milestone_core, 5},
     {"_FastSurvival_pihe_core", (DL_FUNC) &_FastSurvival_pihe_core, 3},
-    {"_FastSurvival_rpiece_unif_cpp", (DL_FUNC) &_FastSurvival_rpiece_unif_cpp, 3},
-    {"_FastSurvival_rpiece_exp_cpp", (DL_FUNC) &_FastSurvival_rpiece_exp_cpp, 4},
-    {"_FastSurvival_interleave_groups", (DL_FUNC) &_FastSurvival_interleave_groups, 5},
+    {"_FastSurvival_rmst_core", (DL_FUNC) &_FastSurvival_rmst_core, 3},
+    {"_FastSurvival_rmw_core", (DL_FUNC) &_FastSurvival_rmw_core, 4},
+    {"_FastSurvival_simdata_core_full", (DL_FUNC) &_FastSurvival_simdata_core_full, 27},
+    {"_FastSurvival_simdata_core_id", (DL_FUNC) &_FastSurvival_simdata_core_id, 38},
+    {"_FastSurvival_stratified_logrank_core", (DL_FUNC) &_FastSurvival_stratified_logrank_core, 4},
+    {"_FastSurvival_stratified_weighted_logrank_core", (DL_FUNC) &_FastSurvival_stratified_weighted_logrank_core, 8},
+    {"_FastSurvival_weighted_logrank_core", (DL_FUNC) &_FastSurvival_weighted_logrank_core, 7},
+    {"_FastSurvival_wkm_core", (DL_FUNC) &_FastSurvival_wkm_core, 4},
+    {"_FastSurvival_wmst_core", (DL_FUNC) &_FastSurvival_wmst_core, 6},
     {NULL, NULL, 0}
 };
 

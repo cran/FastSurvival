@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Group-sequential design with correlated PFS and OS under the Fleischer model</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Group-sequential design with correlated PFS
+and OS under the Fleischer model</h1>
+
+
+
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>Many confirmatory oncology trials test progression-free survival
+(PFS) as the primary endpoint and overall survival (OS) as a key
+secondary endpoint, with the two endpoints tested in a fixed sequence to
+control the family-wise error rate. Because every PFS event is a death
+or a progression and every death is also a PFS event, the two endpoints
+are positively correlated, and that correlation is needed to
+characterize the operating characteristics of the sequential
+procedure.</p>
+<p>This vignette simulates such a design with the simulation trio
+<code>simdata_fast</code>, <code>analysis_fast</code>, and
+<code>simsummary_fast</code>. It generates correlated PFS and OS times
+from the Fleischer maximal-independence model, runs an event-driven
+group-sequential design with one futility analysis followed by two
+efficacy analyses, evaluates the power of each endpoint under the
+alternative, and estimates the correlation of the standardized log-rank
+statistics <code>Corr(Z_PFS, Z_OS)</code>. The empirical correlation
+reported here is the quantity for which a closed-form expression is
+derived in a companion methodological note; the simulation provides an
+independent check of that derivation and of the design’s operating
+characteristics.</p>
+<div id="the-fleischer-model" class="section level3">
+<h3>The Fleischer model</h3>
+<p>For a subject in group <code>g</code> the Fleischer
+maximal-independence model (Fleischer, Gaschler-Markefski, and Bluhmki,
+2009) takes an independent time-to-progression
+<code>TTP ~ Exp(lam1)</code> and an overall survival time
+<code>OS ~ Exp(lam2)</code>, and sets</p>
+<pre><code>PFS = min(TTP, OS),   OS = OS.</code></pre>
+<p>Since <code>TTP</code> and <code>OS</code> are independent
+exponentials, <code>PFS</code> is exponential with hazard
+<code>Lambda = lam1 + lam2</code>. Given the medians of PFS and OS, the
+OS hazard is <code>lam2 = log(2) / median_OS</code> and the PFS hazard
+is <code>Lambda = log(2) / median_PFS</code>, so the implied TTP hazard
+is <code>lam1 = Lambda - lam2</code>, which must be positive (median OS
+at least median PFS in each group). The dependence between the two
+endpoints is induced entirely through the shared <code>OS</code>
+component.</p>
+</div>
+<div id="the-design" class="section level3">
+<h3>The design</h3>
+<p>The trial is event-driven with three synchronized analyses indexed by
+cumulative PFS event counts. The first analysis is a non-binding
+futility look on PFS; the second and third are the efficacy interim and
+the efficacy final. PFS is the primary endpoint and OS is the key
+secondary endpoint, and the two are tested in the order PFS then OS: OS
+is declared significant only if PFS has already been declared
+significant at the same or an earlier look. The analyses are timed by
+PFS events, and the OS analysis at each look reuses the same calendar
+cutoff as the PFS analysis. The PFS efficacy boundary uses an
+O’Brien-Fleming Lan-DeMets alpha-spending function and the OS efficacy
+boundary uses a Pocock-type Lan-DeMets spending function, each at a
+one-sided level of 0.025 and each spent over the two efficacy looks. All
+tests are the ordinary unweighted log-rank test, one-sided in the
+direction of treatment benefit.</p>
+</div>
+</div>
+<div id="design-parameters" class="section level2">
+<h2>Design parameters</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>nsim <span class="ot">&lt;-</span> <span class="dv">5000</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>seed <span class="ot">&lt;-</span> <span class="dv">20260611</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co"># Per-group sample sizes (group 1 = control, group 2 = treatment)</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>n_control <span class="ot">&lt;-</span> <span class="dv">300</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>n_treat   <span class="ot">&lt;-</span> <span class="dv">300</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>r_alloc   <span class="ot">&lt;-</span> n_treat <span class="sc">/</span> n_control          <span class="co"># allocation ratio treatment:control</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co"># Piecewise-uniform accrual: 20 per month, then 40 per month (600 enrolled by month 18)</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>a_time <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">6</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>a_rate <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">20</span>, <span class="dv">40</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="co"># Median PFS and OS by group, in months</span></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>mst_PFS_C <span class="ot">&lt;-</span> <span class="dv">6</span></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>mst_PFS_T <span class="ot">&lt;-</span> <span class="dv">9</span></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>mst_OS_C  <span class="ot">&lt;-</span> <span class="dv">14</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>mst_OS_T  <span class="ot">&lt;-</span> <span class="dv">18</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="co"># Exponential hazards implied by the medians</span></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>lam_PFS_C <span class="ot">&lt;-</span> <span class="fu">log</span>(<span class="dv">2</span>) <span class="sc">/</span> mst_PFS_C</span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>lam_PFS_T <span class="ot">&lt;-</span> <span class="fu">log</span>(<span class="dv">2</span>) <span class="sc">/</span> mst_PFS_T</span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>lam_OS_C  <span class="ot">&lt;-</span> <span class="fu">log</span>(<span class="dv">2</span>) <span class="sc">/</span> mst_OS_C</span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>lam_OS_T  <span class="ot">&lt;-</span> <span class="fu">log</span>(<span class="dv">2</span>) <span class="sc">/</span> mst_OS_T</span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a><span class="co"># Fleischer maximal-independence: PFS hazard = TTP hazard + OS hazard,</span></span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a><span class="co"># so the latent TTP hazard is the PFS hazard minus the OS hazard.</span></span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a>lam_TTP_C <span class="ot">&lt;-</span> lam_PFS_C <span class="sc">-</span> lam_OS_C</span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a>lam_TTP_T <span class="ot">&lt;-</span> lam_PFS_T <span class="sc">-</span> lam_OS_T</span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a><span class="fu">stopifnot</span>(lam_TTP_C <span class="sc">&gt;</span> <span class="dv">0</span>, lam_TTP_T <span class="sc">&gt;</span> <span class="dv">0</span>)</span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a></span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a><span class="co"># Non-informative exponential dropout, 10 percent per year on the month scale</span></span>
+<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a>eta <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fu">log</span>(<span class="dv">1</span> <span class="sc">-</span> <span class="fl">0.10</span>) <span class="sc">/</span> <span class="dv">12</span></span>
+<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a></span>
+<span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a><span class="co"># Event-driven looks (cumulative PFS event counts):</span></span>
+<span id="cb2-35"><a href="#cb2-35" tabindex="-1"></a><span class="co">#   look 1 = futility, look 2 = efficacy interim, look 3 = efficacy final</span></span>
+<span id="cb2-36"><a href="#cb2-36" tabindex="-1"></a>d_PFS <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">200</span>, <span class="dv">300</span>, <span class="dv">400</span>)</span>
+<span id="cb2-37"><a href="#cb2-37" tabindex="-1"></a>L <span class="ot">&lt;-</span> <span class="fu">length</span>(d_PFS)</span>
+<span id="cb2-38"><a href="#cb2-38" tabindex="-1"></a></span>
+<span id="cb2-39"><a href="#cb2-39" tabindex="-1"></a><span class="co"># One-sided overall significance level</span></span>
+<span id="cb2-40"><a href="#cb2-40" tabindex="-1"></a>alpha_total <span class="ot">&lt;-</span> <span class="fl">0.025</span></span>
+<span id="cb2-41"><a href="#cb2-41" tabindex="-1"></a></span>
+<span id="cb2-42"><a href="#cb2-42" tabindex="-1"></a><span class="fu">c</span>(<span class="at">HR_PFS =</span> lam_PFS_T <span class="sc">/</span> lam_PFS_C, <span class="at">HR_OS =</span> lam_OS_T <span class="sc">/</span> lam_OS_C)</span>
+<span id="cb2-43"><a href="#cb2-43" tabindex="-1"></a><span class="co">#&gt;    HR_PFS     HR_OS </span></span>
+<span id="cb2-44"><a href="#cb2-44" tabindex="-1"></a><span class="co">#&gt; 0.6666667 0.7777778</span></span></code></pre></div>
+<p>The PFS hazard ratio is the stronger effect and the OS hazard ratio
+is more modest, which is the usual pattern when a treatment delays
+progression more than it extends survival.</p>
+</div>
+<div id="data-generation" class="section level2">
+<h2>Data generation</h2>
+<p>A single <code>simdata_fast</code> call generates the two correlated
+endpoints directly from the illness-death structure. The intermediate
+event (progression) has hazard <code>h01 = lam_TTP</code> and the
+terminal event (death) has hazard <code>h02 = lam_OS</code>; the
+post-progression death hazard is left at its default, equal to
+<code>h02</code>, which reproduces the maximal-independence model
+described above. The first endpoint <code>e1</code> is PFS and the
+terminal endpoint <code>e2</code> is OS. The dropout time is shared
+between the two endpoints, so a subject who drops out is censored for
+both PFS and OS at the same time.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># A single call returns both correlated endpoints. e1 is PFS (the state-0 exit:</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co"># progression or death), e2 is OS (the terminal event), and dropout_time is the</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co"># shared non-informative dropout. The observed columns e1_tte / e1_event and</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># e2_tte / e2_event are each already censored at the shared dropout time.</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">nsim       =</span> nsim,</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>  <span class="at">n          =</span> <span class="fu">c</span>(n_control, n_treat),</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>  <span class="at">a.time     =</span> a_time,</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  <span class="at">a.rate     =</span> a_rate,</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>  <span class="at">h01.hazard =</span> <span class="fu">list</span>(lam_TTP_C, lam_TTP_T),</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  <span class="at">h02.hazard =</span> <span class="fu">list</span>(lam_OS_C, lam_OS_T),</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>  <span class="at">d.hazard   =</span> eta,</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>  <span class="at">seed       =</span> seed</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>)</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co"># Observed PFS endpoint (e1).</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>pfs_dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>  <span class="at">sim          =</span> df<span class="sc">$</span>sim,</span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>  <span class="at">group        =</span> df<span class="sc">$</span>group,</span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>  <span class="at">accrual_time =</span> df<span class="sc">$</span>accrual_time,</span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>  <span class="at">tte          =</span> df<span class="sc">$</span>e1_tte,</span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a>  <span class="at">event        =</span> df<span class="sc">$</span>e1_event</span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a>)</span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co"># Observed OS endpoint (e2).</span></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a>os_dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a>  <span class="at">sim          =</span> df<span class="sc">$</span>sim,</span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a>  <span class="at">group        =</span> df<span class="sc">$</span>group,</span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a>  <span class="at">accrual_time =</span> df<span class="sc">$</span>accrual_time,</span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a>  <span class="at">os_tte       =</span> df<span class="sc">$</span>e2_tte,</span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a>  <span class="at">os_event     =</span> df<span class="sc">$</span>e2_event</span>
+<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="primary-endpoint-analysis-pfs" class="section level2">
+<h2>Primary endpoint analysis (PFS)</h2>
+<p>PFS is analyzed at the three event-driven looks. With
+<code>event.looks</code> the calendar cutoff at look <code>l</code> is
+the time of the <code>d_PFS[l]</code>-th PFS event over the whole trial,
+and <code>analysis_fast</code> returns that cutoff per simulation. These
+cutoffs are exactly the analysis times of the design, and the OS
+analysis below reuses them.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>pfs_res <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  pfs_dat,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">control     =</span> <span class="dv">1</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">event.looks =</span> d_PFS,</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">stat        =</span> <span class="st">&quot;logrank&quot;</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">side        =</span> <span class="dv">1</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>)</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co"># Per-simulation calendar cutoffs A_l (rows = simulation, columns = look)</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>A_mat <span class="ot">&lt;-</span> <span class="fu">matrix</span>(pfs_res<span class="sc">$</span>cutoff, <span class="at">nrow =</span> nsim, <span class="at">ncol =</span> L, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co"># With this sample size and these event targets the looks are reached in</span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co"># essentially every simulation; warn if any target is not reached.</span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">all</span>(pfs_res<span class="sc">$</span>reached)) {</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>  <span class="fu">warning</span>(<span class="st">&quot;Some PFS event targets were not reached; increase n or lower d_PFS.&quot;</span>)</span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>}</span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co"># Standardized PFS log-rank statistics (natural sign: benefit is negative)</span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a>Z_PFS <span class="ot">&lt;-</span> <span class="fu">matrix</span>(pfs_res<span class="sc">$</span>logrank.z, <span class="at">nrow =</span> nsim, <span class="at">ncol =</span> L, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+</div>
+<div id="key-secondary-endpoint-analysis-os" class="section level2">
+<h2>Key secondary endpoint analysis (OS)</h2>
+<p>OS is analyzed at the same per-simulation cutoffs <code>A_l</code>.
+For each look the OS times are administratively censored at
+<code>A_l</code>, and the one-sided log-rank statistic is computed with
+<code>analysis_fast</code> at a single, deliberately large calendar time
+so that no further censoring is applied to the already-cut data. This
+reproduces the design rule that the OS analysis at a look uses the
+PFS-driven analysis time.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>big <span class="ot">&lt;-</span> <span class="fu">max</span>(A_mat, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>os_blocks <span class="ot">&lt;-</span> <span class="fu">vector</span>(<span class="st">&quot;list&quot;</span>, L)</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="cf">for</span> (l <span class="cf">in</span> <span class="fu">seq_len</span>(L)) {</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  A_l    <span class="ot">&lt;-</span> A_mat[os_dat<span class="sc">$</span>sim, l]                        <span class="co"># per-row cutoff at look l</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  follow <span class="ot">&lt;-</span> <span class="fu">pmax</span>(<span class="dv">0</span>, A_l <span class="sc">-</span> os_dat<span class="sc">$</span>accrual_time)          <span class="co"># administrative follow-up</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  obs_t  <span class="ot">&lt;-</span> <span class="fu">pmin</span>(os_dat<span class="sc">$</span>os_tte, follow)                 <span class="co"># observed OS time at the look</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  obs_e  <span class="ot">&lt;-</span> os_dat<span class="sc">$</span>os_event <span class="sc">*</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>    <span class="fu">as.integer</span>(os_dat<span class="sc">$</span>accrual_time <span class="sc">+</span> os_dat<span class="sc">$</span>os_tte <span class="sc">&lt;=</span> A_l)</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>  cut_l <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>    <span class="at">sim          =</span> os_dat<span class="sc">$</span>sim,</span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>    <span class="at">group        =</span> os_dat<span class="sc">$</span>group,</span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>    <span class="at">accrual_time =</span> <span class="dv">0</span>,</span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>    <span class="at">tte          =</span> obs_t,</span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a>    <span class="at">event        =</span> obs_e</span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a>  )</span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a>  res_l <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(</span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>    cut_l, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">time.looks =</span> big, <span class="at">stat =</span> <span class="st">&quot;logrank&quot;</span>, <span class="at">side =</span> <span class="dv">1</span></span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a>  )</span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a></span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a>  <span class="co"># Relabel as look l and report the PFS-driven cutoff for the timing summary;</span></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a>  <span class="co"># keep only the columns that are meaningful for the censored OS data.</span></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a>  res_l<span class="sc">$</span>look       <span class="ot">&lt;-</span> l</span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a>  res_l<span class="sc">$</span>look.value <span class="ot">&lt;-</span> d_PFS[l]</span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a>  res_l<span class="sc">$</span>cutoff     <span class="ot">&lt;-</span> A_mat[, l]</span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a>  os_blocks[[l]] <span class="ot">&lt;-</span> res_l[, <span class="fu">c</span>(<span class="st">&quot;sim&quot;</span>, <span class="st">&quot;look&quot;</span>, <span class="st">&quot;look.value&quot;</span>, <span class="st">&quot;cutoff&quot;</span>,</span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a>                              <span class="st">&quot;n.event&quot;</span>, <span class="st">&quot;logrank.z&quot;</span>, <span class="st">&quot;logrank.chisq&quot;</span>,</span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a>                              <span class="st">&quot;logrank.p&quot;</span>)]</span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a>}</span>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a></span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a>os_res <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, os_blocks)</span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a>os_res <span class="ot">&lt;-</span> os_res[<span class="fu">order</span>(os_res<span class="sc">$</span>sim, os_res<span class="sc">$</span>look), ]</span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a></span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a><span class="co"># Standardized OS log-rank statistics</span></span>
+<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a>Z_OS <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, nsim, L)</span>
+<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a><span class="cf">for</span> (l <span class="cf">in</span> <span class="fu">seq_len</span>(L)) Z_OS[, l] <span class="ot">&lt;-</span> os_blocks[[l]]<span class="sc">$</span>logrank.z</span></code></pre></div>
+<p>The mean PFS and OS event counts at each look summarize the
+information available to each endpoint. PFS reaches its event targets by
+construction, while OS, being the slower endpoint, accrues far fewer
+events at the same analysis times.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>d_PFS_emp <span class="ot">&lt;-</span> <span class="fu">colMeans</span>(<span class="fu">matrix</span>(pfs_res<span class="sc">$</span>n.event, <span class="at">nrow =</span> nsim, <span class="at">ncol =</span> L, <span class="at">byrow =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>d_OS_emp  <span class="ot">&lt;-</span> <span class="fu">colMeans</span>(<span class="fu">matrix</span>(os_res<span class="sc">$</span>n.event,  <span class="at">nrow =</span> nsim, <span class="at">ncol =</span> L, <span class="at">byrow =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>A_mean    <span class="ot">&lt;-</span> <span class="fu">colMeans</span>(A_mat)</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="at">look          =</span> <span class="fu">seq_len</span>(L),</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  <span class="at">d_PFS_target  =</span> d_PFS,</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>  <span class="at">d_PFS_mean    =</span> <span class="fu">round</span>(d_PFS_emp),</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>  <span class="at">d_OS_mean     =</span> <span class="fu">round</span>(d_OS_emp),</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>  <span class="at">cutoff_months =</span> <span class="fu">round</span>(A_mean, <span class="dv">1</span>)</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>)</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt;   look d_PFS_target d_PFS_mean d_OS_mean cutoff_months</span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt; 1    1          200        200       112          15.3</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt; 2    2          300        300       175          19.0</span></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt; 3    3          400        400       250          24.0</span></span></code></pre></div>
+</div>
+<div id="efficacy-and-futility-boundaries" class="section level2">
+<h2>Efficacy and futility boundaries</h2>
+<p>Efficacy is assessed at the two later looks only. Two-look Lan-DeMets
+alpha-spending boundaries are computed with <code>gsDesign</code> at the
+information fractions implied by the event counts: the PFS information
+fractions are the exact event-target ratios, and the OS information
+fractions use the mean OS event counts. <code>gsDesign</code> reports
+its boundaries on the convention that a positive Z favors the treatment,
+so they are negated to match the natural sign of <code>logrank.z</code>,
+where treatment benefit is a negative value. The first look carries a
+non-binding futility rule on PFS, expressed as a threshold on the
+standardized statistic.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>timing_PFS_eff <span class="ot">&lt;-</span> <span class="fu">c</span>(d_PFS[<span class="dv">2</span>] <span class="sc">/</span> d_PFS[<span class="dv">3</span>], <span class="dv">1</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>timing_OS_eff  <span class="ot">&lt;-</span> <span class="fu">c</span>(d_OS_emp[<span class="dv">2</span>] <span class="sc">/</span> d_OS_emp[<span class="dv">3</span>], <span class="dv">1</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>gs_PFS <span class="ot">&lt;-</span> gsDesign<span class="sc">::</span><span class="fu">gsDesign</span>(</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="at">k =</span> <span class="dv">2</span>, <span class="at">test.type =</span> <span class="dv">1</span>, <span class="at">alpha =</span> alpha_total,</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>  <span class="at">timing =</span> timing_PFS_eff, <span class="at">sfu =</span> gsDesign<span class="sc">::</span>sfLDOF</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>)</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>gs_OS <span class="ot">&lt;-</span> gsDesign<span class="sc">::</span><span class="fu">gsDesign</span>(</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>  <span class="at">k =</span> <span class="dv">2</span>, <span class="at">test.type =</span> <span class="dv">1</span>, <span class="at">alpha =</span> alpha_total,</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>  <span class="at">timing =</span> timing_OS_eff, <span class="at">sfu =</span> gsDesign<span class="sc">::</span>sfLDPocock</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>)</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>b_PFS <span class="ot">&lt;-</span> gs_PFS<span class="sc">$</span>upper<span class="sc">$</span>bound      <span class="co"># positive z-boundaries (interim, final)</span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>b_OS  <span class="ot">&lt;-</span> gs_OS<span class="sc">$</span>upper<span class="sc">$</span>bound</span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a></span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a><span class="co"># Efficacy boundaries on the natural-sign scale; NA at the futility-only look 1.</span></span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>eff_PFS <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="sc">-</span>b_PFS[<span class="dv">1</span>], <span class="sc">-</span>b_PFS[<span class="dv">2</span>])</span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a>eff_OS  <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="sc">-</span>b_OS[<span class="dv">1</span>],  <span class="sc">-</span>b_OS[<span class="dv">2</span>])</span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a></span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a><span class="co"># Non-binding PFS futility at look 1: stop if the observed PFS hazard ratio is at</span></span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a><span class="co"># or above futility_HR. On the natural-sign scale this is logrank.z at or above</span></span>
+<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a><span class="co"># log(futility_HR) * sqrt(r * d) / (1 + r).</span></span>
+<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a>futility_HR <span class="ot">&lt;-</span> <span class="fl">1.0</span></span>
+<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a>fut1 <span class="ot">&lt;-</span> <span class="fu">log</span>(futility_HR) <span class="sc">*</span> <span class="fu">sqrt</span>(r_alloc <span class="sc">*</span> d_PFS[<span class="dv">1</span>]) <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> r_alloc)</span>
+<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a>fut_PFS <span class="ot">&lt;-</span> <span class="fu">c</span>(fut1, <span class="cn">NA</span>, <span class="cn">NA</span>)</span>
+<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a></span>
+<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a>  <span class="at">look        =</span> <span class="fu">seq_len</span>(L),</span>
+<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a>  <span class="at">PFS_efficacy =</span> <span class="fu">round</span>(eff_PFS, <span class="dv">3</span>),</span>
+<span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a>  <span class="at">PFS_futility =</span> <span class="fu">round</span>(fut_PFS, <span class="dv">3</span>),</span>
+<span id="cb7-31"><a href="#cb7-31" tabindex="-1"></a>  <span class="at">OS_efficacy  =</span> <span class="fu">round</span>(eff_OS, <span class="dv">3</span>)</span>
+<span id="cb7-32"><a href="#cb7-32" tabindex="-1"></a>)</span>
+<span id="cb7-33"><a href="#cb7-33" tabindex="-1"></a><span class="co">#&gt;   look PFS_efficacy PFS_futility OS_efficacy</span></span>
+<span id="cb7-34"><a href="#cb7-34" tabindex="-1"></a><span class="co">#&gt; 1    1           NA            0          NA</span></span>
+<span id="cb7-35"><a href="#cb7-35" tabindex="-1"></a><span class="co">#&gt; 2    2       -2.340           NA      -2.060</span></span>
+<span id="cb7-36"><a href="#cb7-36" tabindex="-1"></a><span class="co">#&gt; 3    3       -2.012           NA      -2.252</span></span></code></pre></div>
+</div>
+<div id="operating-characteristics" class="section level2">
+<h2>Operating characteristics</h2>
+<p>The marginal operating characteristics of each endpoint are obtained
+with <code>simsummary_fast</code>. For PFS the efficacy boundary and the
+look-1 futility boundary are applied together on <code>logrank.z</code>
+with <code>direction = &quot;lower&quot;</code>, so a trial stops for efficacy
+when the statistic is at or below the efficacy boundary and for futility
+when it is at or above the futility boundary. For OS the efficacy
+boundary is applied alone. The <code>cum.reject</code> value on the
+overall row is the power of that endpoint considered on its own.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>oc_PFS <span class="ot">&lt;-</span> <span class="fu">simsummary_fast</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  pfs_res,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="at">eff.col  =</span> <span class="st">&quot;logrank.z&quot;</span>, <span class="at">efficacy =</span> eff_PFS,</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="at">fut.col  =</span> <span class="st">&quot;logrank.z&quot;</span>, <span class="at">futility =</span> fut_PFS,</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="at">direction =</span> <span class="st">&quot;lower&quot;</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>)</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>oc_PFS</span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; Group-Sequential Operating Characteristics (simsummary_fast)</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt;   Simulations: 5000</span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt;   Boundaries: efficacy on &#39;logrank.z&#39; (direction = lower), futility on &#39;logrank.z&#39;</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt; Stopping Boundaries: Look by Look</span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Events (s) Sample (n) Efficacy Z Futility Z Cum. Cross. Eff.</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt;     1        0.50      200.0      490.9         NA     0.0000           0.0000</span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt;     2        0.75      300.0      599.9    -2.3397         NA           0.8668</span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt;     3        1.00      400.0      600.0    -2.0118         NA           0.9766</span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co">#&gt; Events, Sample Size, Dropouts, Pipeline and Analysis Times: Look by Look</span></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Sample (n) Events (s) Dropouts (d) Pipeline Analysis Time</span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="co">#&gt;     1        0.50      490.9      200.0         18.4    272.4         15.26</span></span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt;     2        0.75      599.9      300.0         27.8    272.1         18.97</span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt;     3        1.00      600.0      400.0         37.3    162.7         24.01</span></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="co">#&gt;  Cross. Eff. Cross. Fut.</span></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="co">#&gt;       0.0000      0.0030</span></span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a><span class="co">#&gt;       0.8668      0.0000</span></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt;       0.1098      0.0000</span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt; Overall</span></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt;   Rejection rate (efficacy):    0.9766</span></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt;   Futility-stop rate:           0.0030</span></span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="co">#&gt;   Expected events at stop:      312.7</span></span>
+<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="co">#&gt;   Expected sample size at stop: 599.6</span></span>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="co">#&gt;   Expected analysis time at stop:19.60</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>oc_OS <span class="ot">&lt;-</span> <span class="fu">simsummary_fast</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  os_res,</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="at">eff.col =</span> <span class="st">&quot;logrank.z&quot;</span>, <span class="at">efficacy =</span> eff_OS,</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  <span class="at">direction =</span> <span class="st">&quot;lower&quot;</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>)</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>oc_OS</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt; Group-Sequential Operating Characteristics (simsummary_fast)</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt;   Simulations: 5000</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt;   Boundaries: efficacy on &#39;logrank.z&#39; (direction = lower)</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt; Stopping Boundaries: Look by Look</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Events (s) Efficacy Z Cum. Cross. Eff.</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt;     1        0.45      111.7         NA           0.0000</span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt;     2        0.70      174.7    -2.0599           0.3376</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt;     3        1.00      250.4    -2.2516           0.4604</span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt; Events, Sample Size, Dropouts, Pipeline and Analysis Times: Look by Look</span></span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Events (s) Analysis Time Cross. Eff.</span></span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt;     1        0.45      111.7         15.26      0.0000</span></span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt;     2        0.70      174.7         18.97      0.3376</span></span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt;     3        1.00      250.4         24.01      0.1228</span></span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt; Overall</span></span>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt;   Rejection rate (efficacy):    0.4604</span></span>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt;   Expected events at stop:      224.7</span></span>
+<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt;   Expected analysis time at stop:22.29</span></span></code></pre></div>
+<p>Under the alternative the PFS futility rule rarely stops the trial,
+which is the intended behavior: a futility look is meant to protect
+against continuing an ineffective treatment, not to interrupt a
+genuinely effective one.</p>
+<div id="sequential-testing-of-pfs-then-os" class="section level3">
+<h3>Sequential testing of PFS then OS</h3>
+<p>The procedure tests OS only after PFS has been declared significant,
+and OS may be claimed only at the same look as, or a later look than,
+the PFS claim. The per-simulation rejection looks are recovered from the
+boundary-crossing logic, and the joint power is the probability of
+declaring both endpoints under this gatekeeping rule.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># First efficacy-crossing look for a matrix of statistics, honouring an optional</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co"># futility rule that stops the trial without a rejection.</span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>reject_look <span class="ot">&lt;-</span> <span class="cf">function</span>(Z, efficacy, <span class="at">futility =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>  nl   <span class="ot">&lt;-</span> <span class="fu">ncol</span>(Z)</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>  ns   <span class="ot">&lt;-</span> <span class="fu">nrow</span>(Z)</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>  stop_flag <span class="ot">&lt;-</span> <span class="fu">logical</span>(ns)</span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>  out  <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">NA_integer_</span>, ns)</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>  <span class="cf">for</span> (l <span class="cf">in</span> <span class="fu">seq_len</span>(nl)) {</span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>    active <span class="ot">&lt;-</span> <span class="sc">!</span>stop_flag</span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.na</span>(efficacy[l])) {</span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a>      hit <span class="ot">&lt;-</span> active <span class="sc">&amp;</span> <span class="sc">!</span><span class="fu">is.na</span>(Z[, l]) <span class="sc">&amp;</span> Z[, l] <span class="sc">&lt;=</span> efficacy[l]</span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a>      out[hit] <span class="ot">&lt;-</span> l</span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>      stop_flag[hit] <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a>    }</span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(futility) <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">is.na</span>(futility[l])) {</span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a>      fut_hit <span class="ot">&lt;-</span> <span class="sc">!</span>stop_flag <span class="sc">&amp;</span> active <span class="sc">&amp;</span> <span class="sc">!</span><span class="fu">is.na</span>(Z[, l]) <span class="sc">&amp;</span> Z[, l] <span class="sc">&gt;=</span> futility[l]</span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a>      stop_flag[fut_hit] <span class="ot">&lt;-</span> <span class="cn">TRUE</span></span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a>    }</span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a>  }</span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a>  out</span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a>}</span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a></span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a>pfs_look <span class="ot">&lt;-</span> <span class="fu">reject_look</span>(Z_PFS, eff_PFS, fut_PFS)</span>
+<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a>os_look  <span class="ot">&lt;-</span> <span class="fu">reject_look</span>(Z_OS,  eff_OS)</span>
+<span id="cb10-25"><a href="#cb10-25" tabindex="-1"></a></span>
+<span id="cb10-26"><a href="#cb10-26" tabindex="-1"></a>pfs_reject <span class="ot">&lt;-</span> <span class="sc">!</span><span class="fu">is.na</span>(pfs_look)</span>
+<span id="cb10-27"><a href="#cb10-27" tabindex="-1"></a>os_reject  <span class="ot">&lt;-</span> <span class="sc">!</span><span class="fu">is.na</span>(os_look)</span>
+<span id="cb10-28"><a href="#cb10-28" tabindex="-1"></a></span>
+<span id="cb10-29"><a href="#cb10-29" tabindex="-1"></a><span class="co"># Hierarchical gatekeeping: OS is claimed only if PFS is claimed at the same or</span></span>
+<span id="cb10-30"><a href="#cb10-30" tabindex="-1"></a><span class="co"># an earlier look.</span></span>
+<span id="cb10-31"><a href="#cb10-31" tabindex="-1"></a>joint_reject <span class="ot">&lt;-</span> pfs_reject <span class="sc">&amp;</span> os_reject <span class="sc">&amp;</span> (os_look <span class="sc">&gt;=</span> pfs_look)</span>
+<span id="cb10-32"><a href="#cb10-32" tabindex="-1"></a></span>
+<span id="cb10-33"><a href="#cb10-33" tabindex="-1"></a>power_table <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb10-34"><a href="#cb10-34" tabindex="-1"></a>  <span class="at">quantity =</span> <span class="fu">c</span>(<span class="st">&quot;PFS power (marginal)&quot;</span>,</span>
+<span id="cb10-35"><a href="#cb10-35" tabindex="-1"></a>               <span class="st">&quot;OS power (marginal)&quot;</span>,</span>
+<span id="cb10-36"><a href="#cb10-36" tabindex="-1"></a>               <span class="st">&quot;OS power (after PFS, hierarchical)&quot;</span>,</span>
+<span id="cb10-37"><a href="#cb10-37" tabindex="-1"></a>               <span class="st">&quot;Joint power (both endpoints)&quot;</span>),</span>
+<span id="cb10-38"><a href="#cb10-38" tabindex="-1"></a>  <span class="at">value =</span> <span class="fu">c</span>(<span class="fu">mean</span>(pfs_reject),</span>
+<span id="cb10-39"><a href="#cb10-39" tabindex="-1"></a>            <span class="fu">mean</span>(os_reject),</span>
+<span id="cb10-40"><a href="#cb10-40" tabindex="-1"></a>            <span class="fu">mean</span>(joint_reject),</span>
+<span id="cb10-41"><a href="#cb10-41" tabindex="-1"></a>            <span class="fu">mean</span>(joint_reject))</span>
+<span id="cb10-42"><a href="#cb10-42" tabindex="-1"></a>)</span>
+<span id="cb10-43"><a href="#cb10-43" tabindex="-1"></a>power_table<span class="sc">$</span>value <span class="ot">&lt;-</span> <span class="fu">round</span>(power_table<span class="sc">$</span>value, <span class="dv">3</span>)</span>
+<span id="cb10-44"><a href="#cb10-44" tabindex="-1"></a>power_table</span>
+<span id="cb10-45"><a href="#cb10-45" tabindex="-1"></a><span class="co">#&gt;                             quantity value</span></span>
+<span id="cb10-46"><a href="#cb10-46" tabindex="-1"></a><span class="co">#&gt; 1               PFS power (marginal) 0.977</span></span>
+<span id="cb10-47"><a href="#cb10-47" tabindex="-1"></a><span class="co">#&gt; 2                OS power (marginal) 0.460</span></span>
+<span id="cb10-48"><a href="#cb10-48" tabindex="-1"></a><span class="co">#&gt; 3 OS power (after PFS, hierarchical) 0.452</span></span>
+<span id="cb10-49"><a href="#cb10-49" tabindex="-1"></a><span class="co">#&gt; 4       Joint power (both endpoints) 0.452</span></span></code></pre></div>
+<p>The marginal OS power is the probability of crossing the OS efficacy
+boundary ignoring the gatekeeping, and the hierarchical OS power is the
+probability of claiming OS within the procedure. The latter cannot
+exceed the PFS power, since OS is reachable only through a PFS
+rejection.</p>
+</div>
+</div>
+<div id="correlation-of-the-log-rank-statistics" class="section level2">
+<h2>Correlation of the log-rank statistics</h2>
+<p>The standardized log-rank statistics for the two endpoints are
+positively correlated because they share the OS component and are
+evaluated on overlapping risk sets at the same calendar cutoffs. The
+full empirical correlation matrix of
+<code>Z = (Z_PFS_1, Z_PFS_2, Z_PFS_3, Z_OS_1, Z_OS_2, Z_OS_3)</code>
+summarizes both the within-endpoint correlation across looks and the
+cross-endpoint correlation.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>Zc <span class="ot">&lt;-</span> <span class="fu">cbind</span>(Z_PFS, Z_OS)</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="fu">colnames</span>(Zc) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">paste0</span>(<span class="st">&quot;PFS_&quot;</span>, <span class="fu">seq_len</span>(L)), <span class="fu">paste0</span>(<span class="st">&quot;OS_&quot;</span>, <span class="fu">seq_len</span>(L)))</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>cor_mat <span class="ot">&lt;-</span> <span class="fu">cor</span>(Zc, <span class="at">use =</span> <span class="st">&quot;pairwise.complete.obs&quot;</span>)</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="fu">round</span>(cor_mat, <span class="dv">3</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co">#&gt;       PFS_1 PFS_2 PFS_3  OS_1  OS_2  OS_3</span></span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt; PFS_1 1.000 0.815 0.708 0.614 0.486 0.411</span></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="co">#&gt; PFS_2 0.815 1.000 0.866 0.505 0.601 0.500</span></span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; PFS_3 0.708 0.866 1.000 0.429 0.511 0.572</span></span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="co">#&gt; OS_1  0.614 0.505 0.429 1.000 0.803 0.677</span></span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">#&gt; OS_2  0.486 0.601 0.511 0.803 1.000 0.835</span></span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a><span class="co">#&gt; OS_3  0.411 0.500 0.572 0.677 0.835 1.000</span></span></code></pre></div>
+<p>The cross-endpoint correlation at matching looks is the diagonal of
+the PFS-by-OS block.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>cross_block <span class="ot">&lt;-</span> cor_mat[<span class="fu">paste0</span>(<span class="st">&quot;PFS_&quot;</span>, <span class="fu">seq_len</span>(L)), <span class="fu">paste0</span>(<span class="st">&quot;OS_&quot;</span>, <span class="fu">seq_len</span>(L)),</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>                       drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>  <span class="at">look =</span> <span class="fu">seq_len</span>(L),</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>  <span class="at">cor_PFS_OS =</span> <span class="fu">round</span>(<span class="fu">diag</span>(cross_block), <span class="dv">3</span>)</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>)</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a><span class="co">#&gt;   look cor_PFS_OS</span></span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a><span class="co">#&gt; 1    1      0.614</span></span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a><span class="co">#&gt; 2    2      0.601</span></span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a><span class="co">#&gt; 3    3      0.572</span></span></code></pre></div>
+<p>The within-endpoint correlation across looks follows the canonical
+group-sequential form, in which the correlation between two looks of the
+same endpoint is the square root of the ratio of their event counts,
+<code>sqrt(d_min / d_max)</code>. The empirical values reproduce this
+closed form, with the PFS event counts equal to the exact targets and
+the OS event counts taken from the simulation.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>pairs_idx <span class="ot">&lt;-</span> <span class="fu">rbind</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>), <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">3</span>), <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">3</span>))</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>within_tab <span class="ot">&lt;-</span> <span class="cf">function</span>(Zmat, d_counts, tag) {</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>  emp <span class="ot">&lt;-</span> <span class="fu">apply</span>(pairs_idx, <span class="dv">1</span>, <span class="cf">function</span>(p) {</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>    stats<span class="sc">::</span><span class="fu">cor</span>(Zmat[, p[<span class="dv">1</span>]], Zmat[, p[<span class="dv">2</span>]], <span class="at">use =</span> <span class="st">&quot;complete.obs&quot;</span>)</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>  })</span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>  theo <span class="ot">&lt;-</span> <span class="fu">apply</span>(pairs_idx, <span class="dv">1</span>, <span class="cf">function</span>(p) {</span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>    <span class="fu">sqrt</span>(<span class="fu">min</span>(d_counts[p]) <span class="sc">/</span> <span class="fu">max</span>(d_counts[p]))</span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a>  })</span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a>  <span class="fu">data.frame</span>(</span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a>    <span class="at">endpoint   =</span> tag,</span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a>    <span class="at">look_pair  =</span> <span class="fu">paste0</span>(pairs_idx[, <span class="dv">1</span>], <span class="st">&quot;-&quot;</span>, pairs_idx[, <span class="dv">2</span>]),</span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a>    <span class="at">empirical  =</span> <span class="fu">round</span>(emp, <span class="dv">3</span>),</span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a>    <span class="at">closed_form =</span> <span class="fu">round</span>(theo, <span class="dv">3</span>)</span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a>  )</span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a>}</span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a></span>
+<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a><span class="fu">rbind</span>(</span>
+<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a>  <span class="fu">within_tab</span>(Z_PFS, d_PFS,    <span class="st">&quot;PFS&quot;</span>),</span>
+<span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a>  <span class="fu">within_tab</span>(Z_OS,  d_OS_emp, <span class="st">&quot;OS&quot;</span>)</span>
+<span id="cb13-21"><a href="#cb13-21" tabindex="-1"></a>)</span>
+<span id="cb13-22"><a href="#cb13-22" tabindex="-1"></a><span class="co">#&gt;   endpoint look_pair empirical closed_form</span></span>
+<span id="cb13-23"><a href="#cb13-23" tabindex="-1"></a><span class="co">#&gt; 1      PFS       1-2     0.815       0.816</span></span>
+<span id="cb13-24"><a href="#cb13-24" tabindex="-1"></a><span class="co">#&gt; 2      PFS       1-3     0.708       0.707</span></span>
+<span id="cb13-25"><a href="#cb13-25" tabindex="-1"></a><span class="co">#&gt; 3      PFS       2-3     0.866       0.866</span></span>
+<span id="cb13-26"><a href="#cb13-26" tabindex="-1"></a><span class="co">#&gt; 4       OS       1-2     0.803       0.800</span></span>
+<span id="cb13-27"><a href="#cb13-27" tabindex="-1"></a><span class="co">#&gt; 5       OS       1-3     0.677       0.668</span></span>
+<span id="cb13-28"><a href="#cb13-28" tabindex="-1"></a><span class="co">#&gt; 6       OS       2-3     0.835       0.835</span></span></code></pre></div>
+<p>A scatter of the two final-look statistics shows the positive
+association directly. Each point is one simulated trial; the cloud is
+tilted, reflecting the shared OS component.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="fu">plot</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>  Z_PFS[, L], Z_OS[, L],</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>  <span class="at">pch =</span> <span class="dv">16</span>, <span class="at">col =</span> grDevices<span class="sc">::</span><span class="fu">adjustcolor</span>(<span class="st">&quot;steelblue&quot;</span>, <span class="at">alpha.f =</span> <span class="fl">0.25</span>),</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="fu">expression</span>(Z[PFS]), <span class="at">ylab =</span> <span class="fu">expression</span>(Z[OS]),</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>  <span class="at">main =</span> <span class="st">&quot;Final-look log-rank statistics&quot;</span></span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>)</span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">v =</span> <span class="dv">0</span>, <span class="at">col =</span> <span class="st">&quot;grey70&quot;</span>, <span class="at">lty =</span> <span class="dv">3</span>)</span></code></pre></div>
+<div class="figure" style="text-align: center">
+<img role="img" aria-label="Standardized log-rank statistics at the final look." src="data:image/png;base64,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" alt="Standardized log-rank statistics at the final look." />
+<p class="caption">
+Standardized log-rank statistics at the final look.
+</p>
+</div>
+</div>
+<div id="remarks" class="section level2">
+<h2>Remarks</h2>
+<p>The cross-endpoint correlation at matching looks is moderate, around
+0.6, and is largest at the first look, easing slightly as the trial
+matures. This cross-endpoint correlation is the input a sequential
+PFS-then-OS procedure needs to characterize its joint operating
+characteristics, and the value estimated here by simulation matches the
+closed-form expression derived for the Fleischer model in the companion
+methodological note. The within-endpoint correlations match the
+canonical group-sequential form to simulation error, which serves as a
+check on the event-driven timing and the shared-cutoff OS analysis.</p>
+<p>The simulation uses the validated Rcpp primitives behind
+<code>analysis_fast</code> for every log-rank computation, so the entire
+study of 5,000 trials with three looks per endpoint runs in a few
+seconds. Raising <code>nsim</code> tightens the correlation and power
+estimates at a proportional cost.</p>
+<div id="references" class="section level3">
+<h3>References</h3>
+<p>Fleischer, F., Gaschler-Markefski, B., and Bluhmki, E. (2009). A
+statistical model for the dependence between progression-free survival
+and overall survival. <em>Statistics in Medicine</em>, 28(21),
+2669-2686.</p>
+<p>Lan, K. K. G. and DeMets, D. L. (1983). Discrete sequential
+boundaries for clinical trials. <em>Biometrika</em>, 70(3), 659-663.</p>
+<p>O’Brien, P. C. and Fleming, T. R. (1979). A multiple testing
+procedure for clinical trials. <em>Biometrics</em>, 35(3), 549-556.</p>
+<p>Pocock, S. J. (1977). Group sequential methods in the design and
+analysis of clinical trials. <em>Biometrika</em>, 64(2), 191-199.</p>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -25,12 +25,15 @@ A numeric vector of length 2: \code{c(surv, gw_sum)}, where
 \description{
 Internal C++ function that computes the Kaplan-Meier survival estimate and
 the Greenwood variance sum at a specified time point. Binary search locates
-the cutoff index; a single left-to-right scan accumulates the KM product
-and Greenwood sum over event positions only. Accepts the event vector as
+the cutoff index; a single left-to-right scan groups tied times by distinct
+time, applying one Kaplan-Meier factor and one Greenwood increment per
+distinct event time. Grouping the ties follows the risk-set convention of
+\code{survival::survfit} and makes the result independent of the order of
+events and censorings within a tied time. Accepts the event vector as
 a numeric (double) vector to avoid an \code{as.integer()} copy in R.
-Uses \code{std::log1p(-1/n_risk)} for the KM log-product, which is more
-accurate than \code{std::log(1 - 1/n_risk)} near n_risk = 1 and avoids one
-subtraction per event. Not intended to be called directly by users; use
-\code{survfit_fast()} instead.
+Uses \code{std::log1p(-d/n_risk)} for the KM log-product, which is more
+accurate than \code{std::log(1 - d/n_risk)} near a full drop and avoids one
+subtraction per distinct event time. Not intended to be called directly by
+users; use \code{survfit_fast()} instead.
 }
 \keyword{internal}

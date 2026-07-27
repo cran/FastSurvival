@@ -1,0 +1,240 @@
+---
+title: "Group sequential design with the simulation trio"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Group sequential design with the simulation trio}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  eval     = FALSE
+)
+```
+
+# Purpose
+
+This vignette demonstrates the three simulation functions working together on
+a real phase 3 trial: `simdata_fast()` generates the trial data,
+`analysis_fast()` performs the interim and final analyses, and
+`simsummary_fast()` aggregates the operating characteristics. We reproduce the
+group sequential design of the innovaTV 301 trial and check that the simulated
+operating characteristics match the closed-form values from
+[gsDesign](https://cran.r-project.org/package=gsDesign) and
+[rpact](https://cran.r-project.org/package=rpact).
+
+The point is not that simulation replaces the closed-form calculation under
+proportional hazards, where gsDesign and rpact are exact, but that once the
+simulation agrees on a case they can handle, the same machinery can be trusted
+for cases they cannot, such as non-proportional hazards or data-dependent
+analysis timing. The benchmark code is shown but not executed when the vignette
+is built, because the simulation uses many replicates; the printed results are
+those obtained from an interactive run.
+
+```{r load}
+library(FastSurvival)
+```
+
+# The innovaTV 301 trial
+
+innovaTV 301 (ENGOT-cx12/GOG-3057) was a phase 3, open-label trial of tisotumab
+vedotin versus the investigator's choice of chemotherapy in patients with
+recurrent or metastatic cervical cancer (Vergote et al., 2024). The primary end
+point was overall survival, with patients randomly assigned in a 1:1 ratio.
+
+The design enrolled approximately 482 patients and was powered at 90% on the
+occurrence of 336 total deaths, with one prespecified interim efficacy analysis
+at about 75% of information (252 of 336 events). The overall two-sided type I
+error was controlled at 5% using the Lan-DeMets spending function with an
+O'Brien-Fleming boundary. For planning we take an exponential overall survival
+with a median of 12.9 months in the tisotumab vedotin group and 9.0 months in
+the chemotherapy group (a hazard ratio of about 0.70), accrual over 23 months,
+and a 5% annual dropout rate in each group.
+
+# Simulating the trial
+
+`simdata_fast()` generates the survival, censoring, and entry times for all
+replicates in one fused C++ pass. We specify the two group sizes, the accrual
+window, the per-group event medians, and a per-group dropout hazard
+corresponding to 5% per 12 months.
+
+```{r simulate}
+df <- simdata_fast(
+  nsim     = 10000,
+  n        = c(241, 241),
+  a.time   = c(0, 23),
+  a.prop   = 1,
+  e.median = list(12.9, 9.0),
+  d.hazard = list(-log(1 - 0.05) / 12, -log(1 - 0.05) / 12),
+  seed     = 1
+)
+```
+
+# Interim and final analyses
+
+`analysis_fast()` runs the event-driven looks. We analyze at 252 and 336 events,
+take the chemotherapy group as the control, and compute both the log-rank and
+the Cox statistics with a two-sided test, matching the trial.
+
+```{r analyze}
+res <- analysis_fast(
+  df, control = 2,
+  event.looks = c(252, 336),
+  stat = c("logrank", "coxph"), side = 2
+)
+```
+
+# Spending boundaries
+
+The efficacy boundary is the Lan-DeMets O'Brien-Fleming spending function at the
+planned information fractions. We obtain it from gsDesign and convert the upper
+Z boundaries to two-sided nominal p-value boundaries, which is the scale
+`simsummary_fast()` consumes through its `p.col` argument.
+
+```{r boundaries}
+library(gsDesign)
+
+gsd <- gsDesign(
+  k      = 2,
+  timing = c(252, 336) / 336,
+  alpha  = 0.025,
+  beta   = 0.1,
+  sfu    = sfLDOF,
+  test.type = 1
+)
+
+spend_alpha <- 2 * pnorm(gsd$upper$bound, lower.tail = FALSE)
+spend_alpha
+```
+
+# Operating characteristics
+
+`simsummary_fast()` applies the nominal p-value boundaries to the simulated
+log-rank p-values and aggregates the crossing probabilities, expected events,
+expected sample size, and expected analysis time across the looks.
+
+```{r summary}
+simsummary_fast(
+  res,
+  p.col     = "logrank.p",
+  alpha     = spend_alpha,
+  direction = "lower"
+)
+```
+
+The interactive run produces the following output.
+
+```
+Group-Sequential Operating Characteristics (simsummary_fast)
+  Simulations: 10000
+  Boundaries: nominal p-value on 'logrank.p'
+
+Stopping Boundaries: Look by Look
+ Look Info. Frac. Events (s) Sample (n) Nominal p Cum. Cross. Eff.
+    1        0.75      252.0      482.0    0.0193           0.6881
+    2        1.00      336.0      482.0    0.0442           0.9000
+
+Overall
+  Rejection rate (efficacy):    0.9000
+  Expected events at stop:      278.2
+  Expected sample size at stop: 482.0
+  Expected analysis time at stop:27.31
+```
+
+# Comparison with the closed-form design
+
+For an independent closed-form reference we recompute the same design with rpact
+and read off the operating characteristics. The full rpact output is long, so we
+extract only the quantities needed for the comparison.
+
+```{r rpact}
+library(rpact)
+
+design <- getDesignGroupSequential(
+  kMax = 2,
+  alpha = 0.05,
+  beta  = 0.1,
+  sided = 2,
+  typeOfDesign = "asOF",
+  informationRates = c(252, 336) / 336
+)
+
+results <- getPowerSurvival(
+  design,
+  maxNumberOfEvents   = 336,
+  median1             = 12.9,
+  median2             = 9.0,
+  maxNumberOfSubjects = 482,
+  accrualTime         = c(0, 23),
+  dropoutRate1        = -log(1 - 0.05),
+  dropoutRate2        = -log(1 - 0.05),
+  allocationRatioPlanned = 1
+)
+```
+
+The simulated and closed-form operating characteristics agree closely. The
+efficacy boundaries are the spending boundaries fed into the simulation, so they
+match by construction; the crossing probabilities, expected events, and expected
+timing are estimated independently by simulation and line up with the analytic
+values.
+
+| Quantity | FastSurvival (10,000 sims) | gsDesign / rpact |
+|----------|----------------------------|------------------|
+| Interim efficacy boundary (two-sided nominal p) | 0.0193 | 0.0193 |
+| Final efficacy boundary (two-sided nominal p) | 0.0442 | 0.0442 |
+| Probability of crossing at the interim | 0.688 | 0.698 |
+| Overall power | 0.900 | 0.905 |
+| Expected number of events at stop | 278 | 277 |
+| Expected analysis time at stop (months) | 27.3 | 27.3 |
+
+Remaining differences are Monte Carlo error and shrink as `nsim` increases.
+
+# Beyond proportional hazards
+
+The value of the simulation trio is that nothing in the workflow assumes
+proportional hazards. To study a delayed treatment effect, replace the constant
+event hazard with a piecewise specification through `e.hazard` and `e.time` and
+keep everything else the same. The log-rank statistic loses power under a
+delayed effect, and a weighted or max-combo statistic can be substituted at the
+`analysis_fast()` step to recover it. Because gsDesign and rpact cannot evaluate
+these cases in closed form, the validated simulation machinery becomes the tool
+of choice.
+
+```{r nph}
+df_delay <- simdata_fast(
+  nsim     = 10000,
+  n        = c(241, 241),
+  a.time   = c(0, 23),
+  a.prop   = 1,
+  e.hazard = list(c(0.077, 0.045), c(0.077, 0.077)),
+  e.time   = c(0, 3, Inf),
+  d.hazard = list(-log(1 - 0.05) / 12, -log(1 - 0.05) / 12),
+  seed     = 1
+)
+
+res_delay <- analysis_fast(
+  df_delay, control = 2,
+  event.looks = c(252, 336),
+  stat = "maxcombo", side = 2
+)
+```
+
+# References
+
+Vergote, I., González-Martín, A., Fujiwara, K., et al. (2024). Tisotumab
+vedotin as second- or third-line therapy for recurrent cervical cancer.
+*New England Journal of Medicine*, 391(1), 44-55.
+
+O'Brien, P. C., & Fleming, T. R. (1979). A multiple testing procedure for
+clinical trials. *Biometrics*, 35(3), 549-556.
+
+Lan, K. K. G., & DeMets, D. L. (1983). Discrete sequential boundaries for
+clinical trials. *Biometrika*, 70(3), 659-663.
+
+Lin, R. S., Lin, J., Roychoudhury, S., et al. (2020). Alternative analysis
+methods for time to event endpoints under nonproportional hazards: a
+comparative analysis. *Statistics in Biopharmaceutical Research*, 12(2),
+187-198.

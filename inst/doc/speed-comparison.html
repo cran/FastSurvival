@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Speed comparison</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Speed comparison</h1>
+
+
+
+<div id="purpose" class="section level1">
+<h1>Purpose</h1>
+<p>FastSurvival is designed for repeated evaluation inside large
+simulation loops. This vignette shows how to benchmark each estimation
+and testing function against an established reference and reports
+representative results. The benchmark code is shown but not executed
+when the vignette is built, because timing many microbenchmark
+replicates would exceed the build-time limits. To reproduce the numbers,
+run the code blocks interactively. The same code is collected in the
+<code>tools/benchmark_speed.R</code> script shipped in the package
+sources.</p>
+<p>The reported figures are median times from microbenchmark replicates
+on a single desktop machine. Absolute timings depend on hardware, sample
+size, and event rate, so the ratios matter more than the raw values.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(FastSurvival)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(survival)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">library</span>(microbenchmark)</span></code></pre></div>
+</div>
+<div id="setup" class="section level1">
+<h1>Setup</h1>
+<p>The key to the speed gain is that the analysis functions accept
+pre-sorted vectors. Inside a simulation loop the data are sorted once
+and reused, so the sort cost is paid a single time rather than on every
+call. We build a single two-group dataset of 500 subjects with
+<code>simdata_fast()</code> and prepare the sorted vectors, the binary
+arm indicator, and the restriction horizon used by the time-restricted
+methods.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>dataset <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="at">nsim     =</span> <span class="dv">1</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="at">n        =</span> <span class="dv">500</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">a.time   =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">12.5</span>),</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">a.rate   =</span> <span class="dv">40</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">e.median =</span> <span class="fu">list</span>(<span class="fl">5.811</span>, <span class="fl">4.3</span>),</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">seed     =</span> <span class="dv">1</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>)</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co"># Sort once and reuse, the intended pattern for the pre-sorted fast path.</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>ord <span class="ot">&lt;-</span> <span class="fu">order</span>(dataset<span class="sc">$</span>tte)</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>t_s <span class="ot">&lt;-</span> dataset<span class="sc">$</span>tte[ord]</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>e_s <span class="ot">&lt;-</span> dataset<span class="sc">$</span>event[ord]</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>g_s <span class="ot">&lt;-</span> dataset<span class="sc">$</span>group[ord]</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co"># Control is group 1, treatment is group 2.</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>arm <span class="ot">&lt;-</span> <span class="fu">as.integer</span>(dataset<span class="sc">$</span>group <span class="sc">==</span> <span class="dv">2</span>)</span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="co"># Restriction horizon within both arms&#39; follow-up.</span></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>tau <span class="ot">&lt;-</span> <span class="fu">floor</span>(<span class="fu">min</span>(<span class="fu">tapply</span>(t_s, g_s, max)))</span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a><span class="co"># Factor arm for the nphRCT reference used in the rmw_fast benchmark.</span></span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>df_rmw <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a>  <span class="at">tte   =</span> dataset<span class="sc">$</span>tte,</span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a>  <span class="at">event =</span> dataset<span class="sc">$</span>event,</span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a>  <span class="at">arm   =</span> <span class="fu">factor</span>(<span class="fu">ifelse</span>(dataset<span class="sc">$</span>group <span class="sc">==</span> <span class="dv">1</span>, <span class="st">&quot;control&quot;</span>, <span class="st">&quot;treatment&quot;</span>),</span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a>                 <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">&quot;control&quot;</span>, <span class="st">&quot;treatment&quot;</span>))</span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="survfit_fast-vs-survfit-summary" class="section level1">
+<h1>survfit_fast vs survfit + summary</h1>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">microbenchmark</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="at">fast =</span> <span class="fu">survfit_fast</span>(t_s, e_s, <span class="at">t_eval =</span> tau, <span class="at">presorted =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="at">ref  =</span> <span class="fu">summary</span>(<span class="fu">survfit</span>(<span class="fu">Surv</span>(tte, event) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> dataset), <span class="at">times =</span> tau),</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">times =</span> <span class="dv">1000</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="survdiff_fast-vs-survdiff" class="section level1">
+<h1>survdiff_fast vs survdiff</h1>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">microbenchmark</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">fast =</span> <span class="fu">survdiff_fast</span>(t_s, e_s, g_s, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">side =</span> <span class="dv">1</span>, <span class="at">presorted =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">ref  =</span> <span class="fu">survdiff</span>(<span class="fu">Surv</span>(tte, event) <span class="sc">~</span> group, <span class="at">data =</span> dataset),</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">times =</span> <span class="dv">1000</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="coxph_fast-vs-coxph" class="section level1">
+<h1>coxph_fast vs coxph</h1>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">microbenchmark</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">fast =</span> <span class="fu">coxph_fast</span>(t_s, e_s, g_s, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">side =</span> <span class="dv">1</span>, <span class="at">presorted =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">ref  =</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(tte, event) <span class="sc">~</span> <span class="fu">I</span>(group <span class="sc">==</span> <span class="dv">2</span>), <span class="at">data =</span> dataset),</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">times =</span> <span class="dv">1000</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="rmst_fast-vs-survrm2rmst2" class="section level1">
+<h1>rmst_fast vs survRM2::rmst2</h1>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">microbenchmark</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="at">fast =</span> <span class="fu">rmst_fast</span>(t_s, e_s, g_s, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">tau =</span> tau, <span class="at">side =</span> <span class="dv">1</span>,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>                   <span class="at">presorted =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="at">ref  =</span> survRM2<span class="sc">::</span><span class="fu">rmst2</span>(<span class="at">time =</span> dataset<span class="sc">$</span>tte, <span class="at">status =</span> dataset<span class="sc">$</span>event,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>                        <span class="at">arm =</span> arm, <span class="at">tau =</span> tau),</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="at">times =</span> <span class="dv">1000</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="survdiff_fastweight-fh-vs-nphlogrank.test" class="section level1">
+<h1>survdiff_fast(weight = “fh”) vs nph::logrank.test</h1>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">microbenchmark</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  <span class="at">fast =</span> <span class="fu">survdiff_fast</span>(t_s, e_s, g_s, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">side =</span> <span class="dv">1</span>,</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>                       <span class="at">weight =</span> <span class="st">&quot;fh&quot;</span>, <span class="at">rho =</span> <span class="dv">0</span>, <span class="at">gamma =</span> <span class="dv">1</span>, <span class="at">presorted =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">ref  =</span> nph<span class="sc">::</span><span class="fu">logrank.test</span>(dataset<span class="sc">$</span>tte, dataset<span class="sc">$</span>event, dataset<span class="sc">$</span>group,</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>                           <span class="at">rho =</span> <span class="dv">0</span>, <span class="at">gamma =</span> <span class="dv">1</span>),</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>  <span class="at">times =</span> <span class="dv">1000</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="wmst_fast-vs-survwmstwmst" class="section level1">
+<h1>wmst_fast vs survWMST::wmst</h1>
+<p>The window mean survival time is benchmarked against
+<code>wmst()</code> from the survWMST package. survWMST is distributed
+on GitHub (pauknemj/survWMST), not CRAN, so this benchmark is shown as a
+static block rather than a live chunk, and the vignette carries no
+undeclared dependency. Install survWMST with
+<code>remotes::install_github(&quot;pauknemj/survWMST&quot;)</code> and run the
+block to reproduce it.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">microbenchmark</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="at">fast =</span> <span class="fu">wmst_fast</span>(t_s, e_s, g_s, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">tau1 =</span> <span class="dv">0</span>, <span class="at">tau2 =</span> tau,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>                   <span class="at">side =</span> <span class="dv">1</span>, <span class="at">presorted =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="at">ref  =</span> survWMST<span class="sc">::</span><span class="fu">wmst</span>(<span class="at">time =</span> dataset<span class="sc">$</span>tte, <span class="at">status =</span> dataset<span class="sc">$</span>event,</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>                        <span class="at">arm =</span> arm, <span class="at">tau0 =</span> <span class="dv">0</span>, <span class="at">tau1 =</span> tau),</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  <span class="at">times =</span> <span class="dv">1000</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="milestone_fast-vs-survfit-summary" class="section level1">
+<h1>milestone_fast vs survfit + summary</h1>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">microbenchmark</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  <span class="at">fast =</span> <span class="fu">milestone_fast</span>(t_s, e_s, g_s, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">tau =</span> tau, <span class="at">side =</span> <span class="dv">1</span>,</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>                        <span class="at">presorted =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  <span class="at">ref  =</span> <span class="fu">summary</span>(<span class="fu">survfit</span>(<span class="fu">Surv</span>(tte, event) <span class="sc">~</span> group, <span class="at">data =</span> dataset),</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>                 <span class="at">times =</span> tau),</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>  <span class="at">times =</span> <span class="dv">1000</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="medsurv_fast-vs-nphnphparams" class="section level1">
+<h1>medsurv_fast vs nph::nphparams</h1>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">microbenchmark</span>(</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>  <span class="at">fast =</span> <span class="fu">medsurv_fast</span>(t_s, e_s, g_s, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">side =</span> <span class="dv">1</span>,</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>                      <span class="at">method =</span> <span class="st">&quot;nph&quot;</span>, <span class="at">presorted =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>  <span class="at">ref  =</span> nph<span class="sc">::</span><span class="fu">nphparams</span>(<span class="at">time =</span> dataset<span class="sc">$</span>tte, <span class="at">event =</span> dataset<span class="sc">$</span>event,</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>                        <span class="at">group =</span> <span class="fu">as.integer</span>(dataset<span class="sc">$</span>group <span class="sc">==</span> <span class="dv">2</span>),</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>                        <span class="at">param_type =</span> <span class="st">&quot;Q&quot;</span>, <span class="at">param_par =</span> <span class="fl">0.5</span>),</span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>  <span class="at">times =</span> <span class="dv">1000</span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="maxcombo_fast-vs-nphlogrank.maxtest" class="section level1">
+<h1>maxcombo_fast vs nph::logrank.maxtest</h1>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="fu">microbenchmark</span>(</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>  <span class="at">fast =</span> <span class="fu">maxcombo_fast</span>(t_s, e_s, g_s, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">side =</span> <span class="dv">1</span>,</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>                       <span class="at">rho =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">1</span>), <span class="at">gamma =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>), <span class="at">presorted =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>  <span class="at">ref  =</span> nph<span class="sc">::</span><span class="fu">logrank.maxtest</span>(dataset<span class="sc">$</span>tte, dataset<span class="sc">$</span>event,</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>                              <span class="fu">as.integer</span>(dataset<span class="sc">$</span>group <span class="sc">==</span> <span class="dv">2</span>)),</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>  <span class="at">times =</span> <span class="dv">1000</span></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="rmw_fast-vs-nphrctwlrt" class="section level1">
+<h1>rmw_fast vs nphRCT::wlrt</h1>
+<p><code>rmw_fast()</code> combines a standard and a modestly-weighted
+log-rank statistic, so the reference computes both weighted log-rank
+components with nphRCT.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">microbenchmark</span>(</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>  <span class="at">fast =</span> <span class="fu">rmw_fast</span>(t_s, e_s, g_s, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">side =</span> <span class="dv">1</span>, <span class="at">s_star =</span> <span class="fl">0.5</span>,</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>                  <span class="at">presorted =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>  <span class="at">ref  =</span> {</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>    nphRCT<span class="sc">::</span><span class="fu">wlrt</span>(<span class="fu">Surv</span>(tte, event) <span class="sc">~</span> arm, <span class="at">data =</span> df_rmw,</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>                 <span class="at">method =</span> <span class="st">&quot;mw&quot;</span>, <span class="at">s_star =</span> <span class="dv">1</span>)</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>    nphRCT<span class="sc">::</span><span class="fu">wlrt</span>(<span class="fu">Surv</span>(tte, event) <span class="sc">~</span> arm, <span class="at">data =</span> df_rmw,</span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>                 <span class="at">method =</span> <span class="st">&quot;mw&quot;</span>, <span class="at">s_star =</span> <span class="fl">0.5</span>)</span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>  },</span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a>  <span class="at">times =</span> <span class="dv">1000</span></span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="wkm_fast-vs-nphsimwkm.stat" class="section level1">
+<h1>wkm_fast vs nphsim::wkm.Stat</h1>
+<p>The weighted Kaplan-Meier (Pepe-Fleming) test is benchmarked against
+<code>wkm.Stat()</code> from the nphsim package. nphsim is distributed
+on GitHub (keaven/nphsim), not CRAN, so this benchmark is shown as a
+static block. Install nphsim with
+<code>remotes::install_github(&quot;keaven/nphsim&quot;)</code> and run the block
+to reproduce it.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="fu">microbenchmark</span>(</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>  <span class="at">fast =</span> <span class="fu">wkm_fast</span>(t_s, e_s, g_s, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">side =</span> <span class="dv">1</span>, <span class="at">weight =</span> <span class="st">&quot;PF&quot;</span>,</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>                  <span class="at">presorted =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>  <span class="at">ref  =</span> nphsim<span class="sc">::</span><span class="fu">wkm.Stat</span>(<span class="at">survival =</span> dataset<span class="sc">$</span>tte, <span class="at">cnsr =</span> <span class="dv">1</span> <span class="sc">-</span> dataset<span class="sc">$</span>event,</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>                          <span class="at">trt =</span> <span class="fu">ifelse</span>(dataset<span class="sc">$</span>group <span class="sc">==</span> <span class="dv">1</span>,</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>                                       <span class="st">&quot;control&quot;</span>, <span class="st">&quot;experimental&quot;</span>)),</span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>  <span class="at">times =</span> <span class="dv">1000</span></span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="ahsw_fast-vs-survahah2" class="section level1">
+<h1>ahsw_fast vs survAH::ah2</h1>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="fu">microbenchmark</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>  <span class="at">fast =</span> <span class="fu">ahsw_fast</span>(t_s, e_s, g_s, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">tau =</span> tau, <span class="at">side =</span> <span class="dv">1</span>,</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>                   <span class="at">presorted =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>  <span class="at">ref  =</span> survAH<span class="sc">::</span><span class="fu">ah2</span>(<span class="at">time =</span> dataset<span class="sc">$</span>tte, <span class="at">status =</span> dataset<span class="sc">$</span>event,</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>                     <span class="at">arm =</span> arm, <span class="at">tau =</span> tau),</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>  <span class="at">times =</span> <span class="dv">1000</span></span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="ahr_fast-vs-ahrahrkm" class="section level1">
+<h1>ahr_fast vs AHR::ahrKM</h1>
+<p>The Kalbfleisch-Prentice average hazard ratio is benchmarked against
+<code>ahrKM()</code> from the AHR package, the reference implementation
+used by Dormuth et al. (2024). Because AHR has been archived on CRAN,
+this benchmark is shown as a static block rather than a live chunk.
+Install AHR with <code>remotes::install_github(&quot;cran/AHR&quot;)</code> and
+run the block to reproduce it.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="fu">microbenchmark</span>(</span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>  <span class="at">fast =</span> <span class="fu">ahr_fast</span>(t_s, e_s, g_s, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">tau =</span> tau, <span class="at">side =</span> <span class="dv">1</span>,</span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>                  <span class="at">presorted =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a>  <span class="at">ref  =</span> AHR<span class="sc">::</span><span class="fu">ahrKM</span>(tau, <span class="fu">Surv</span>(tte, event) <span class="sc">~</span> group, dataset),</span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a>  <span class="at">times =</span> <span class="dv">1000</span></span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="representative-results" class="section level1">
+<h1>Representative results</h1>
+<p>The table below summarizes representative median timings on the n =
+500 two-group dataset generated above, with
+<code>presorted = TRUE</code> and one-sided tests where applicable. The
+exact values will differ on your machine, but the order of magnitude of
+the speedup is stable.</p>
+<table>
+<colgroup>
+<col width="22%" />
+<col width="22%" />
+<col width="54%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Replaces</th>
+<th>Approximate speed gain</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>survfit_fast()</code></td>
+<td><code>survfit()</code> + <code>summary()</code> at one time
+point</td>
+<td>~40x</td>
+</tr>
+<tr class="even">
+<td><code>survdiff_fast()</code></td>
+<td><code>survdiff()</code></td>
+<td>~40x</td>
+</tr>
+<tr class="odd">
+<td><code>coxph_fast()</code></td>
+<td><code>coxph()</code> (point estimate + Wald CI)</td>
+<td>~30x</td>
+</tr>
+<tr class="even">
+<td><code>rmst_fast()</code></td>
+<td><code>survRM2::rmst2()</code></td>
+<td>~40x</td>
+</tr>
+<tr class="odd">
+<td><code>survdiff_fast(weight = &quot;fh&quot;)</code></td>
+<td><code>nph::logrank.test()</code></td>
+<td>~350x</td>
+</tr>
+<tr class="even">
+<td><code>wmst_fast()</code></td>
+<td><code>survWMST::wmst()</code></td>
+<td>~560x</td>
+</tr>
+<tr class="odd">
+<td><code>milestone_fast()</code></td>
+<td><code>survfit()</code> + <code>summary()</code> at a milestone</td>
+<td>~20x</td>
+</tr>
+<tr class="even">
+<td><code>medsurv_fast()</code></td>
+<td><code>nph::nphparams()</code></td>
+<td>~30x</td>
+</tr>
+<tr class="odd">
+<td><code>maxcombo_fast()</code></td>
+<td><code>nph::logrank.maxtest()</code></td>
+<td>~320x</td>
+</tr>
+<tr class="even">
+<td><code>rmw_fast()</code></td>
+<td><code>nphRCT::wlrt()</code> (two components)</td>
+<td>~80x</td>
+</tr>
+<tr class="odd">
+<td><code>ahsw_fast()</code></td>
+<td><code>survAH::ah2()</code></td>
+<td>~410x</td>
+</tr>
+<tr class="even">
+<td><code>ahr_fast()</code></td>
+<td><code>AHR::ahrKM()</code></td>
+<td>~130x</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="why-it-is-faster" class="section level1">
+<h1>Why it is faster</h1>
+<p>Each function avoids the overhead that the standard implementations
+incur on every call. The standard functions parse a formula, build an S3
+model object, and construct intermediate vectors before producing the
+result, which is appropriate for interactive use but wasteful when the
+same operation is repeated thousands of times. The FastSurvival
+functions take plain vectors, do the core computation in a single C++
+pass over the data, and return a lightweight numeric vector. When the
+input is already sorted the sort cost is avoided entirely. In a
+simulation loop these savings accumulate across every iteration.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -60,14 +60,14 @@ test_that("coxph_fast presorted=TRUE and presorted=FALSE agree", {
   expect_equal(unname(res_pre), unname(res_uns), tolerance = 1e-12)
 })
 
-test_that("coxph_fast conf.int argument changes CI label names", {
+test_that("coxph_fast conf.level argument changes CI label names", {
   set.seed(6)
   n     <- 100
   time  <- c(rexp(n / 2, 0.1), rexp(n / 2, 0.15))
   event <- rep(1L, n)
   group <- rep(c(1L, 2L), each = n / 2)
 
-  res90 <- coxph_fast(time, event, group, control = 1, conf.int = 0.90)
+  res90 <- coxph_fast(time, event, group, control = 1, conf.level = 0.90)
   expect_named(res90, c("coef", "exp(coef)", "se(coef)", "lower .90", "upper .90"))
 })
 

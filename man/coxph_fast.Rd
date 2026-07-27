@@ -4,7 +4,15 @@
 \alias{coxph_fast}
 \title{Fast Closed-Form Hazard Ratio Estimation via the Pike-Halley Estimator}
 \usage{
-coxph_fast(time, event, group, control, conf.int = 0.95, presorted = FALSE)
+coxph_fast(
+  time,
+  event,
+  group,
+  control,
+  side = 2,
+  conf.level = 0.95,
+  presorted = FALSE
+)
 }
 \arguments{
 \item{time}{A numeric vector of follow-up times for all subjects (pooled
@@ -20,7 +28,12 @@ that supports equality comparison is accepted.}
 represents the control group. Subjects with \code{group != control} are
 treated as the treatment group.}
 
-\item{conf.int}{A single numeric value in (0, 1) specifying the confidence
+\item{side}{1 for a one-sided test in the direction of treatment benefit
+(hazard ratio below 1, i.e. a negative coefficient) or 2 for a two-sided
+test (default 2). The reported p-value follows this choice; the confidence
+interval is always two-sided at \code{conf.level}.}
+
+\item{conf.level}{A single numeric value in (0, 1) specifying the confidence
 level for the Wald interval. Defaults to 0.95.}
 
 \item{presorted}{A logical value. If \code{TRUE}, \code{time},
@@ -39,8 +52,8 @@ An object of class \code{"coxph_fast"}, which is a named numeric
   \item{\code{se(coef)}}{Standard error of \code{coef} on the log scale,
     equal to 1 / sqrt(I_0).}
   \item{\code{lower .95}}{Lower bound of the Wald confidence interval for
-    the hazard ratio. The label reflects \code{conf.int} (e.g.,
-    \code{"lower .90"} when \code{conf.int = 0.90}).}
+    the hazard ratio. The label reflects \code{conf.level} (e.g.,
+    \code{"lower .90"} when \code{conf.level = 0.90}).}
   \item{\code{upper .95}}{Upper bound of the Wald confidence interval.}
 }
 Returns a vector of \code{NA_real_} values (still with class
@@ -123,22 +136,28 @@ coxph_fast(ovarian$futime[ord], ovarian$fustat[ord], ovarian$rx[ord],
            control = 1, presorted = TRUE)
 
 \donttest{
-library(microbenchmark)
-microbenchmark(
-  coxph_fast = coxph_fast(ovarian$futime, ovarian$fustat, ovarian$rx, 2),
-  coxph      = coxph(Surv(futime, fustat) ~ rx, data = ovarian),
-  times = 1000
-)
+# Speed comparison against coxph()
+if (requireNamespace("microbenchmark", quietly = TRUE)) {
+  microbenchmark::microbenchmark(
+    coxph_fast = coxph_fast(ovarian$futime, ovarian$fustat, ovarian$rx, 2),
+    coxph      = coxph(Surv(futime, fustat) ~ rx, data = ovarian),
+    times = 1000
+  )
+}
 }
 
 }
 \references{
+Cox, D. R. (1972). Regression models and life-tables. \emph{Journal of the
+Royal Statistical Society. Series B (Methodological)}, \emph{34}(2),
+187-220.
+
+Berry, G., Kitchin, R. M., & Mock, P. A. (1991). A comparison of two simple
+hazard ratio estimators based on the logrank test. \emph{Statistics in
+Medicine}, \emph{10}(5), 749-755.
+
 Homma, G. (2025). One step from Pike to Cox: a closed-form hazard ratio
 estimator. Manuscript under review.
-
-Berry, G., Kitchin, R. M., & Mock, P. A. (1991). A comparison of two
-simple hazard ratio estimators based on the logrank test.
-\emph{Statistics in Medicine}, \emph{10}(5), 749-755.
 }
 \seealso{
 \code{\link[survival]{coxph}} for the standard iterative Cox estimator.

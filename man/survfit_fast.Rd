@@ -8,7 +8,7 @@ survfit_fast(
   t_sorted,
   e_sorted,
   t_eval,
-  conf.int = 0.95,
+  conf.level = 0.95,
   conf.type = "log",
   presorted = TRUE
 )
@@ -23,7 +23,7 @@ sorted in ascending order when \code{presorted = TRUE}.}
 \item{t_eval}{A single numeric value specifying the time point at which
 the survival probability is evaluated.}
 
-\item{conf.int}{A single numeric value in (0, 1) specifying the
+\item{conf.level}{A single numeric value in (0, 1) specifying the
 confidence level. Defaults to 0.95.}
 
 \item{conf.type}{A character string specifying the confidence interval type.
@@ -41,7 +41,7 @@ An object of class \code{"survfit_fast"}, which is a named numeric
   estimate, the Greenwood standard error SE[S(t)], and the lower and upper
   confidence limits at \code{t_eval}. The evaluation time, confidence
   level, and confidence interval type are stored as attributes
-  \code{t_eval}, \code{conf.int}, and \code{conf.type}.
+  \code{t_eval}, \code{conf.level}, and \code{conf.type}.
   Returns a vector of \code{NA_real_} values (still with class
   \code{"survfit_fast"}) when \code{n} is zero.
 }
@@ -93,7 +93,7 @@ Three confidence interval types are supported via \code{conf.type}:
 
 The returned object has class \code{"survfit_fast"} and is a named numeric
 vector of length 4 with the evaluation time \code{t_eval}, the confidence
-level \code{conf.int}, and the confidence interval type \code{conf.type}
+level \code{conf.level}, and the confidence interval type \code{conf.type}
 stored as attributes. A \code{print()} method formats the result similarly
 to \code{print(summary(survival::survfit(...)))}.
 }
@@ -120,9 +120,9 @@ summary(fit, times = 10)
 
 }
 \references{
-Kaplan, E. L., & Meier, P. (1958). Nonparametric Estimation from Incomplete
-Observations. Journal of the American Statistical Association, 53(282),
-457–481.
+Kaplan, E. L., & Meier, P. (1958). Nonparametric estimation from incomplete
+observations. \emph{Journal of the American Statistical Association},
+\emph{53}(282), 457-481.
 }
 \seealso{
 \code{\link[survival]{survfit}} for the standard Kaplan-Meier estimator.

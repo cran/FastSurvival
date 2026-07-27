@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Validation of FastSurvival</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Validation of FastSurvival</h1>
+
+
+
+<div id="purpose" class="section level1">
+<h1>Purpose</h1>
+<p>FastSurvival is built for speed, but a fast estimator is only useful
+if it returns the same answer as the established implementation. This
+vignette checks the numerical agreement between each FastSurvival
+function and a reference, on a real clinical-trial dataset. We use the
+<code>gbsg</code> data from the survival package, the German Breast
+Cancer Study Group cohort of 686 patients, with recurrence-free survival
+time <code>rfstime</code> (in days), the event indicator
+<code>status</code>, and the treatment indicator <code>hormon</code> (0
+= no hormonal therapy, 1 = hormonal therapy). Throughout we take the
+no-hormone arm as the control (<code>control = 0</code>) and report
+one-sided tests of treatment benefit (<code>side = 1</code>).</p>
+<p>The references are: the survival package for the Kaplan-Meier
+estimate, the log-rank test, the Cox hazard ratio, milestone survival,
+and the median survival comparison; survRM2 for the restricted mean
+survival time; survAH for the average hazard with survival weight; nph
+for the weighted log-rank test and the max-combo test; and nphRCT for
+the robust modestly-weighted test. The window mean survival time and the
+weighted Kaplan-Meier statistic, which have no direct package
+counterpart on CRAN, are checked against a Kaplan-Meier integral
+computed from <code>survfit()</code> and against the restricted mean
+survival time identity, respectively. The same comparisons form the
+basis of the automated test suite shipped with the package.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(FastSurvival)</span></code></pre></div>
+</div>
+<div id="reference-data" class="section level1">
+<h1>Reference data</h1>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">library</span>(survival)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co"># German Breast Cancer Study Group cohort</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="fu">str</span>(gbsg[, <span class="fu">c</span>(<span class="st">&quot;rfstime&quot;</span>, <span class="st">&quot;status&quot;</span>, <span class="st">&quot;hormon&quot;</span>)])</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt; &#39;data.frame&#39;:    686 obs. of  3 variables:</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt;  $ rfstime: int  1838 403 1603 177 1855 842 293 42 564 1093 ...</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt;  $ status : int  0 1 0 0 0 1 1 0 1 1 ...</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt;  $ hormon : int  0 0 0 0 1 0 0 1 1 0 ...</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="fu">table</span>(<span class="at">hormon =</span> gbsg<span class="sc">$</span>hormon)</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt; hormon</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt;   0   1 </span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co">#&gt; 440 246</span></span></code></pre></div>
+</div>
+<div id="kaplan-meier-survival" class="section level1">
+<h1>Kaplan-Meier survival</h1>
+<p><code>survfit_fast()</code> evaluates the Kaplan-Meier estimate at a
+single time point. We compare against <code>summary(survfit(...))</code>
+at the same time (1000 days).</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># survfit_fast assumes time-sorted input; the C++ core groups tied times in the</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co"># survival::survfit risk-set convention, so the data only need ordering by time.</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>ord  <span class="ot">&lt;-</span> <span class="fu">order</span>(gbsg<span class="sc">$</span>rfstime)</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>fast <span class="ot">&lt;-</span> <span class="fu">survfit_fast</span>(gbsg<span class="sc">$</span>rfstime[ord], gbsg<span class="sc">$</span>status[ord],</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>                     <span class="at">t_eval =</span> <span class="dv">1000</span>, <span class="at">conf.type =</span> <span class="st">&quot;log-log&quot;</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>fit  <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(rfstime, status) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> gbsg)</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>ref  <span class="ot">&lt;-</span> <span class="fu">summary</span>(fit, <span class="at">times =</span> <span class="dv">1000</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  <span class="at">quantity =</span> <span class="fu">c</span>(<span class="st">&quot;survival&quot;</span>, <span class="st">&quot;std.err&quot;</span>),</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>  <span class="at">fast     =</span> <span class="fu">c</span>(<span class="fu">unclass</span>(fast)[<span class="st">&quot;surv&quot;</span>], <span class="fu">unclass</span>(fast)[<span class="st">&quot;std.err&quot;</span>]),</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>  <span class="at">survival =</span> <span class="fu">c</span>(ref<span class="sc">$</span>surv, ref<span class="sc">$</span>std.err),</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">NULL</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>)</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt;   quantity       fast   survival</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; 1 survival 0.65775040 0.65775040</span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; 2  std.err 0.01905146 0.01905146</span></span></code></pre></div>
+</div>
+<div id="log-rank-test" class="section level1">
+<h1>Log-rank test</h1>
+<p><code>survdiff_fast()</code> with <code>side = 1</code> returns a
+signed Z-score. Its square is the chi-square statistic from
+<code>survdiff()</code>.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>fast_lr <span class="ot">&lt;-</span> <span class="fu">survdiff_fast</span>(gbsg<span class="sc">$</span>rfstime, gbsg<span class="sc">$</span>status, gbsg<span class="sc">$</span>hormon,</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>                         <span class="at">control =</span> <span class="dv">0</span>, <span class="at">side =</span> <span class="dv">1</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>ref_lr  <span class="ot">&lt;-</span> <span class="fu">survdiff</span>(<span class="fu">Surv</span>(rfstime, status) <span class="sc">~</span> hormon, <span class="at">data =</span> gbsg)</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="fu">c</span>(<span class="at">fast =</span> <span class="fu">as.numeric</span>(fast_lr)<span class="sc">^</span><span class="dv">2</span>, <span class="at">survival =</span> ref_lr<span class="sc">$</span>chisq)</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt;     fast survival </span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; 8.564781 8.564781</span></span></code></pre></div>
+</div>
+<div id="weighted-log-rank-test" class="section level1">
+<h1>Weighted log-rank test</h1>
+<p><code>survdiff_fast()</code> also computes Fleming-Harrington G(rho,
+gamma) weighted log-rank tests through the <code>weight = &quot;fh&quot;</code>
+argument. The <a href="https://cran.r-project.org/package=nph">nph</a>
+package provides <code>logrank.test()</code> with the same family, so we
+compare the chi-square statistic (the squared one-sided Z) across
+several weight choices.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>fh_grid <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">rho =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">1</span>), <span class="at">gamma =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">1</span>))</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="fu">do.call</span>(rbind, <span class="fu">lapply</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(fh_grid)), <span class="cf">function</span>(i) {</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  r <span class="ot">&lt;-</span> fh_grid<span class="sc">$</span>rho[i]</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  g <span class="ot">&lt;-</span> fh_grid<span class="sc">$</span>gamma[i]</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  fast <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">survdiff_fast</span>(gbsg<span class="sc">$</span>rfstime, gbsg<span class="sc">$</span>status, gbsg<span class="sc">$</span>hormon,</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>                                   <span class="at">control =</span> <span class="dv">0</span>, <span class="at">side =</span> <span class="dv">1</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>                                   <span class="at">weight =</span> <span class="st">&quot;fh&quot;</span>, <span class="at">rho =</span> r, <span class="at">gamma =</span> g))</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  nph_chisq <span class="ot">&lt;-</span> nph<span class="sc">::</span><span class="fu">logrank.test</span>(gbsg<span class="sc">$</span>rfstime, gbsg<span class="sc">$</span>status, gbsg<span class="sc">$</span>hormon,</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>                                 <span class="at">rho =</span> r, <span class="at">gamma =</span> g)<span class="sc">$</span>test<span class="sc">$</span>Chisq</span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>  <span class="fu">data.frame</span>(<span class="at">rho =</span> r, <span class="at">gamma =</span> g, <span class="at">fast =</span> fast<span class="sc">^</span><span class="dv">2</span>, <span class="at">nph =</span> nph_chisq)</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>}))</span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt;   rho gamma     fast      nph</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; 1   0     1 5.110660 5.110660</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; 2   1     0 8.713791 8.713791</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt; 3   0     0 8.564781 8.564781</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt; 4   1     1 5.881310 5.881310</span></span></code></pre></div>
+<p>The two implementations agree to numerical precision across the
+weight family, including the ordinary log-rank test recovered at
+<code>rho = 0, gamma = 0</code>.</p>
+</div>
+<div id="cox-hazard-ratio" class="section level1">
+<h1>Cox hazard ratio</h1>
+<p><code>coxph_fast()</code> returns the Pike-Halley Estimator, a
+closed-form approximation to the Cox partial likelihood maximizer. We
+report the log hazard ratio from both; the sign convention is the same
+and <code>side</code> does not affect the point estimate.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>fast_hr <span class="ot">&lt;-</span> <span class="fu">coxph_fast</span>(gbsg<span class="sc">$</span>rfstime, gbsg<span class="sc">$</span>status, gbsg<span class="sc">$</span>hormon,</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>                      <span class="at">control =</span> <span class="dv">0</span>, <span class="at">side =</span> <span class="dv">1</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>ref_cox <span class="ot">&lt;-</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(rfstime, status) <span class="sc">~</span> hormon, <span class="at">data =</span> gbsg)</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="fu">c</span>(<span class="at">fast =</span> <span class="fu">unclass</span>(fast_hr)[<span class="st">&quot;coef&quot;</span>], <span class="at">cox =</span> <span class="fu">unname</span>(<span class="fu">coef</span>(ref_cox)))</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt;  fast.coef        cox </span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt; -0.3638987 -0.3640099</span></span></code></pre></div>
+<p>Because the Pike-Halley Estimator is a closed-form approximation
+rather than the exact partial-likelihood maximizer, the two log hazard
+ratios are not expected to be identical. They differ slightly, here in
+the fourth decimal place, which reflects the approximation and is not a
+sign of error.</p>
+</div>
+<div id="restricted-mean-survival-time" class="section level1">
+<h1>Restricted mean survival time</h1>
+<p><code>rmst_fast()</code> integrates the Kaplan-Meier survival curve
+up to a horizon. We compare the two-group RMST difference against
+<code>survRM2::rmst2()</code> at 1000 days.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">library</span>(survRM2)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>tau <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>fast_rmst <span class="ot">&lt;-</span> <span class="fu">rmst_fast</span>(gbsg<span class="sc">$</span>rfstime, gbsg<span class="sc">$</span>status, gbsg<span class="sc">$</span>hormon,</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>                       <span class="at">control =</span> <span class="dv">0</span>, <span class="at">tau =</span> tau, <span class="at">side =</span> <span class="dv">1</span>)</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>ref_rmst  <span class="ot">&lt;-</span> <span class="fu">rmst2</span>(<span class="at">time =</span> gbsg<span class="sc">$</span>rfstime, <span class="at">status =</span> gbsg<span class="sc">$</span>status,</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>                   <span class="at">arm =</span> gbsg<span class="sc">$</span>hormon, <span class="at">tau =</span> tau)</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="fu">c</span>(<span class="at">fast =</span> <span class="fu">unclass</span>(fast_rmst)[<span class="st">&quot;diff&quot;</span>],</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>  <span class="at">survRM2 =</span> ref_rmst<span class="sc">$</span>unadjusted.result[<span class="dv">1</span>, <span class="dv">1</span>])</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt; fast.diff   survRM2 </span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt;  51.14447  51.14447</span></span></code></pre></div>
+</div>
+<div id="window-mean-survival-time" class="section level1">
+<h1>Window mean survival time</h1>
+<p><code>wmst_fast()</code> integrates the Kaplan-Meier curve between a
+lower and an upper window limit, generalizing the restricted mean
+survival time. CRAN has no dedicated WMST package, so we validate the
+per-group windowed area directly against a Kaplan-Meier step-function
+integral computed from <code>survfit()</code> over the same window. A
+full comparison against the <code>survWMST</code> package, which is
+distributed on GitHub, is provided in
+<code>tools/compare_wmst_survwmst.R</code>.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>tau1 <span class="ot">&lt;-</span> <span class="dv">200</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>tau2 <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>fast_wm <span class="ot">&lt;-</span> <span class="fu">wmst_fast</span>(gbsg<span class="sc">$</span>rfstime, gbsg<span class="sc">$</span>status, gbsg<span class="sc">$</span>hormon,</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>                     <span class="at">control =</span> <span class="dv">0</span>, <span class="at">side =</span> <span class="dv">1</span>, <span class="at">tau1 =</span> tau1, <span class="at">tau2 =</span> tau2)</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co"># Integral of the Kaplan-Meier step function over [lo, hi] for one group.</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>km_window_area <span class="ot">&lt;-</span> <span class="cf">function</span>(gi, lo, hi) {</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>  sf <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(rfstime, status) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> gbsg[gbsg<span class="sc">$</span>hormon <span class="sc">==</span> gi, ])</span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>  tk <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, sf<span class="sc">$</span>time)</span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>  sk <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, sf<span class="sc">$</span>surv)</span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a>  brk  <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">unique</span>(<span class="fu">c</span>(lo, hi, sf<span class="sc">$</span>time[sf<span class="sc">$</span>time <span class="sc">&gt;</span> lo <span class="sc">&amp;</span> sf<span class="sc">$</span>time <span class="sc">&lt;</span> hi])))</span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a>  area <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>  <span class="cf">for</span> (b <span class="cf">in</span> <span class="fu">seq_len</span>(<span class="fu">length</span>(brk) <span class="sc">-</span> <span class="dv">1</span><span class="dt">L</span>)) {</span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>    u  <span class="ot">&lt;-</span> brk[b]</span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a>    su <span class="ot">&lt;-</span> sk[<span class="fu">max</span>(<span class="fu">which</span>(tk <span class="sc">&lt;=</span> u))]</span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a>    area <span class="ot">&lt;-</span> area <span class="sc">+</span> su <span class="sc">*</span> (brk[b <span class="sc">+</span> <span class="dv">1</span><span class="dt">L</span>] <span class="sc">-</span> u)</span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a>  }</span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a>  area</span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a>}</span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a>  <span class="at">group    =</span> <span class="fu">c</span>(<span class="st">&quot;control&quot;</span>, <span class="st">&quot;treatment&quot;</span>),</span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a>  <span class="at">fast     =</span> <span class="fu">unclass</span>(fast_wm)[<span class="fu">c</span>(<span class="st">&quot;wmst.control&quot;</span>, <span class="st">&quot;wmst.treatment&quot;</span>)],</span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a>  <span class="at">survfit  =</span> <span class="fu">c</span>(<span class="fu">km_window_area</span>(<span class="dv">0</span>, tau1, tau2), <span class="fu">km_window_area</span>(<span class="dv">1</span>, tau1, tau2)),</span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">NULL</span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a>)</span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt;       group     fast  survfit</span></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt; 1   control 628.0064 628.0064</span></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt; 2 treatment 678.3393 678.3393</span></span></code></pre></div>
+</div>
+<div id="weighted-kaplan-meier-test" class="section level1">
+<h1>Weighted Kaplan-Meier test</h1>
+<p><code>wkm_fast()</code> computes the weighted Kaplan-Meier
+(Pepe-Fleming) test, the weighted integral of the difference between the
+two Kaplan-Meier curves. With the constant weight the weighted
+difference reduces exactly to the difference in restricted mean survival
+time over the observed range, which gives a clean internal check against
+<code>rmst_fast()</code> evaluated at the largest observed time.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>tmax <span class="ot">&lt;-</span> <span class="fu">max</span>(gbsg<span class="sc">$</span>rfstime)</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>fast_wk <span class="ot">&lt;-</span> <span class="fu">wkm_fast</span>(gbsg<span class="sc">$</span>rfstime, gbsg<span class="sc">$</span>status, gbsg<span class="sc">$</span>hormon,</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>                    <span class="at">control =</span> <span class="dv">0</span>, <span class="at">side =</span> <span class="dv">1</span>, <span class="at">weight =</span> <span class="st">&quot;constant&quot;</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>ref_rm  <span class="ot">&lt;-</span> <span class="fu">rmst_fast</span>(gbsg<span class="sc">$</span>rfstime, gbsg<span class="sc">$</span>status, gbsg<span class="sc">$</span>hormon,</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>                     <span class="at">control =</span> <span class="dv">0</span>, <span class="at">tau =</span> tmax, <span class="at">side =</span> <span class="dv">1</span>)</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="fu">c</span>(<span class="at">wkm.constant =</span> <span class="fu">unclass</span>(fast_wk)[<span class="st">&quot;wdiff&quot;</span>], <span class="at">rmst =</span> <span class="fu">unclass</span>(ref_rm)[<span class="st">&quot;diff&quot;</span>])</span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt; wkm.constant.wdiff          rmst.diff </span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt;           256.7207           256.7207</span></span></code></pre></div>
+<p>With the default Pepe-Fleming weight, <code>wkm_fast()</code>
+reproduces the weighted Kaplan-Meier statistic of the
+<code>nphsim</code> package. Because <code>nphsim</code> is distributed
+only on GitHub, that comparison is kept in
+<code>tools/compare_wkm_nphsim.R</code> (which also bundles a
+survival-only reproduction of the statistic) and in the test suite,
+rather than in this vignette.</p>
+</div>
+<div id="milestone-survival" class="section level1">
+<h1>Milestone survival</h1>
+<p><code>milestone_fast()</code> compares Kaplan-Meier survival between
+two groups at a milestone timepoint. The per-group survival
+probabilities match those from <code>survfit()</code>.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>tstar <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>fast_ms <span class="ot">&lt;-</span> <span class="fu">milestone_fast</span>(gbsg<span class="sc">$</span>rfstime, gbsg<span class="sc">$</span>status, gbsg<span class="sc">$</span>hormon,</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>                          <span class="at">control =</span> <span class="dv">0</span>, <span class="at">tau =</span> tstar, <span class="at">method =</span> <span class="st">&quot;loglog&quot;</span>,</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>                          <span class="at">side =</span> <span class="dv">1</span>)</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>fit_g <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(rfstime, status) <span class="sc">~</span> hormon, <span class="at">data =</span> gbsg)</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>ref_g <span class="ot">&lt;-</span> <span class="fu">summary</span>(fit_g, <span class="at">times =</span> tstar)</span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a>  <span class="at">group    =</span> <span class="fu">c</span>(<span class="st">&quot;control&quot;</span>, <span class="st">&quot;treatment&quot;</span>),</span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a>  <span class="at">fast     =</span> fast_ms<span class="sc">$</span>surv[<span class="fu">c</span>(<span class="st">&quot;control&quot;</span>, <span class="st">&quot;treatment&quot;</span>)],</span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>  <span class="at">survival =</span> ref_g<span class="sc">$</span>surv,</span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">NULL</span></span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a>)</span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a><span class="co">#&gt;       group      fast  survival</span></span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a><span class="co">#&gt; 1   control 0.6208762 0.6208762</span></span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a><span class="co">#&gt; 2 treatment 0.7230082 0.7230082</span></span></code></pre></div>
+</div>
+<div id="median-survival-time" class="section level1">
+<h1>Median survival time</h1>
+<p><code>medsurv_fast()</code> estimates the Kaplan-Meier median
+survival time and, for two groups, their difference. The point estimate
+is the Kaplan-Meier median (the first time at which the product-limit
+curve reaches 0.5), the same convention as <code>survfit()</code>, so
+the per-group medians match those reported by <code>survfit()</code>
+exactly.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>fast_med <span class="ot">&lt;-</span> <span class="fu">medsurv_fast</span>(gbsg<span class="sc">$</span>rfstime, gbsg<span class="sc">$</span>status, gbsg<span class="sc">$</span>hormon,</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>                         <span class="at">control =</span> <span class="dv">0</span>, <span class="at">side =</span> <span class="dv">1</span>, <span class="at">method =</span> <span class="st">&quot;nph&quot;</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>fit_med <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(rfstime, status) <span class="sc">~</span> hormon, <span class="at">data =</span> gbsg)</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>med_ref <span class="ot">&lt;-</span> <span class="fu">summary</span>(fit_med)<span class="sc">$</span>table[, <span class="st">&quot;median&quot;</span>]</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>  <span class="at">group    =</span> <span class="fu">c</span>(<span class="st">&quot;control&quot;</span>, <span class="st">&quot;treatment&quot;</span>),</span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>  <span class="at">fast     =</span> <span class="fu">unclass</span>(fast_med)[<span class="fu">c</span>(<span class="st">&quot;median.control&quot;</span>, <span class="st">&quot;median.treatment&quot;</span>)],</span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a>  <span class="at">survival =</span> <span class="fu">c</span>(med_ref[<span class="dv">1</span>], med_ref[<span class="dv">2</span>]),</span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">NULL</span></span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a>)</span>
+<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a><span class="co">#&gt;       group fast survival</span></span>
+<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a><span class="co">#&gt; 1   control 1528     1528</span></span>
+<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a><span class="co">#&gt; 2 treatment 2018     2018</span></span></code></pre></div>
+<p>We use <code>survfit()</code> as the reference here, rather than
+<code>nph::nphparams()</code>, because the two define the median on
+different survival curves: <code>survfit()</code> and
+<code>medsurv_fast()</code> use the Kaplan-Meier (product-limit) median,
+whereas <code>nph::nphparams()</code> reads the median off the
+Nelson-Aalen curve, S(t) = exp(-H(t)), which lies above the Kaplan-Meier
+curve and so can cross 0.5 at a later time on tied data. The
+<code>method = &quot;nph&quot;</code> standard error reproduces the
+<code>nph::nphparams()</code> standard error to numerical precision when
+the two medians coincide; that comparison is run on tie-free scenarios
+in <code>tools/compare_medsurv_nphparams.R</code> and in the package
+test suite.</p>
+</div>
+<div id="average-hazard-with-survival-weight" class="section level1">
+<h1>Average hazard with survival weight</h1>
+<p><code>ahsw_fast()</code> computes the average hazard with survival
+weight of Uno and Horiguchi. We compare the per-group average hazard
+against <code>survAH::ah2()</code>.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">library</span>(survAH)</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>tau <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>fast_ah <span class="ot">&lt;-</span> <span class="fu">ahsw_fast</span>(gbsg<span class="sc">$</span>rfstime, gbsg<span class="sc">$</span>status, gbsg<span class="sc">$</span>hormon,</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>                     <span class="at">control =</span> <span class="dv">0</span>, <span class="at">tau =</span> tau, <span class="at">side =</span> <span class="dv">1</span>)</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>ref_ah  <span class="ot">&lt;-</span> <span class="fu">ah2</span>(<span class="at">time =</span> gbsg<span class="sc">$</span>rfstime, <span class="at">status =</span> gbsg<span class="sc">$</span>status,</span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>               <span class="at">arm =</span> gbsg<span class="sc">$</span>hormon, <span class="at">tau =</span> tau)</span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a></span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a>  <span class="at">quantity =</span> <span class="fu">c</span>(<span class="st">&quot;AH (control)&quot;</span>, <span class="st">&quot;AH (treatment)&quot;</span>),</span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a>  <span class="at">fast     =</span> <span class="fu">unclass</span>(fast_ah)[<span class="fu">c</span>(<span class="st">&quot;ah.ctrl&quot;</span>, <span class="st">&quot;ah.trt&quot;</span>)],</span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a>  <span class="at">survAH   =</span> <span class="fu">c</span>(ref_ah<span class="sc">$</span>ah[<span class="st">&quot;AH (arm0)&quot;</span>, <span class="st">&quot;Est.&quot;</span>],</span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a>               ref_ah<span class="sc">$</span>ah[<span class="st">&quot;AH (arm1)&quot;</span>, <span class="st">&quot;Est.&quot;</span>]),</span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">NULL</span></span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a>)</span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a><span class="co">#&gt;         quantity         fast       survAH</span></span>
+<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a><span class="co">#&gt; 1   AH (control) 0.0004585857 0.0004585857</span></span>
+<span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a><span class="co">#&gt; 2 AH (treatment) 0.0003155277 0.0003155277</span></span></code></pre></div>
+<p>The average hazard is the ratio of the cumulative event probability
+to the restricted mean survival time, so for the <code>gbsg</code> data,
+where follow-up is measured in days, the values are on the order of
+1e-04 per day in both groups.</p>
+</div>
+<div id="average-hazard-ratio" class="section level1">
+<h1>Average hazard ratio</h1>
+<p><code>ahr_fast()</code> computes the Kalbfleisch-Prentice average
+hazard ratio between two groups over a restricted interval. The
+reference implementation is <code>ahrKM()</code> from the AHR package,
+but that package has been archived on CRAN, so here we check the point
+estimates against a direct survival-based computation: each group’s
+Kaplan-Meier curve from <code>survfit()</code>, integrated to form the
+group shares of the total hazard.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>tau <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>fast_ahr <span class="ot">&lt;-</span> <span class="fu">ahr_fast</span>(gbsg<span class="sc">$</span>rfstime, gbsg<span class="sc">$</span>status, gbsg<span class="sc">$</span>hormon,</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>                     <span class="at">control =</span> <span class="dv">0</span>, <span class="at">tau =</span> tau, <span class="at">side =</span> <span class="dv">1</span>)</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a></span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>g  <span class="ot">&lt;-</span> gbsg<span class="sc">$</span>hormon</span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>ev <span class="ot">&lt;-</span> <span class="fu">c</span>(gbsg<span class="sc">$</span>rfstime[g <span class="sc">==</span> <span class="dv">0</span> <span class="sc">&amp;</span> gbsg<span class="sc">$</span>status <span class="sc">==</span> <span class="dv">1</span>],</span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>        gbsg<span class="sc">$</span>rfstime[g <span class="sc">==</span> <span class="dv">1</span> <span class="sc">&amp;</span> gbsg<span class="sc">$</span>status <span class="sc">==</span> <span class="dv">1</span>])</span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a>grid <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">unique</span>(<span class="fu">c</span>(<span class="dv">0</span>, ev[ev <span class="sc">&lt;=</span> tau], tau)))</span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a></span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a>km_on_grid <span class="ot">&lt;-</span> <span class="cf">function</span>(gi) {</span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a>  sf <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(rfstime, status) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> gbsg[g <span class="sc">==</span> gi, ])</span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a>  <span class="fu">approxfun</span>(sf<span class="sc">$</span>time, sf<span class="sc">$</span>surv, <span class="at">method =</span> <span class="st">&quot;constant&quot;</span>,</span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a>            <span class="at">yleft =</span> <span class="dv">1</span>, <span class="at">rule =</span> <span class="dv">2</span>, <span class="at">f =</span> <span class="dv">0</span>)(grid)</span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a>}</span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a></span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a>S0  <span class="ot">&lt;-</span> <span class="fu">km_on_grid</span>(<span class="dv">0</span>)</span>
+<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a>S1  <span class="ot">&lt;-</span> <span class="fu">km_on_grid</span>(<span class="dv">1</span>)</span>
+<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a>m   <span class="ot">&lt;-</span> <span class="fu">length</span>(grid)</span>
+<span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a>dS0 <span class="ot">&lt;-</span> S0 <span class="sc">-</span> <span class="fu">c</span>(<span class="dv">1</span>, S0[<span class="sc">-</span>m])</span>
+<span id="cb13-21"><a href="#cb13-21" tabindex="-1"></a>GL  <span class="ot">&lt;-</span> S0[m] <span class="sc">*</span> S1[m]</span>
+<span id="cb13-22"><a href="#cb13-22" tabindex="-1"></a>ref_theta_ctrl <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fu">sum</span>(S1 <span class="sc">*</span> dS0) <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">-</span> GL)</span>
+<span id="cb13-23"><a href="#cb13-23" tabindex="-1"></a></span>
+<span id="cb13-24"><a href="#cb13-24" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb13-25"><a href="#cb13-25" tabindex="-1"></a>  <span class="at">quantity  =</span> <span class="fu">c</span>(<span class="st">&quot;theta (control)&quot;</span>, <span class="st">&quot;theta (treatment)&quot;</span>, <span class="st">&quot;AHR&quot;</span>),</span>
+<span id="cb13-26"><a href="#cb13-26" tabindex="-1"></a>  <span class="at">fast      =</span> <span class="fu">c</span>(fast_ahr<span class="sc">$</span>theta[[<span class="dv">1</span>]], fast_ahr<span class="sc">$</span>theta[[<span class="dv">2</span>]], fast_ahr<span class="sc">$</span>ahr),</span>
+<span id="cb13-27"><a href="#cb13-27" tabindex="-1"></a>  <span class="at">reference =</span> <span class="fu">c</span>(ref_theta_ctrl, <span class="dv">1</span> <span class="sc">-</span> ref_theta_ctrl,</span>
+<span id="cb13-28"><a href="#cb13-28" tabindex="-1"></a>                (<span class="dv">1</span> <span class="sc">-</span> ref_theta_ctrl) <span class="sc">/</span> ref_theta_ctrl),</span>
+<span id="cb13-29"><a href="#cb13-29" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">NULL</span></span>
+<span id="cb13-30"><a href="#cb13-30" tabindex="-1"></a>)</span>
+<span id="cb13-31"><a href="#cb13-31" tabindex="-1"></a><span class="co">#&gt;            quantity      fast reference</span></span>
+<span id="cb13-32"><a href="#cb13-32" tabindex="-1"></a><span class="co">#&gt; 1   theta (control) 0.5974108 0.5974108</span></span>
+<span id="cb13-33"><a href="#cb13-33" tabindex="-1"></a><span class="co">#&gt; 2 theta (treatment) 0.4025892 0.4025892</span></span>
+<span id="cb13-34"><a href="#cb13-34" tabindex="-1"></a><span class="co">#&gt; 3               AHR 0.6738899 0.6738899</span></span></code></pre></div>
+<p>The point estimates match the survival-based reference to numerical
+precision. The average hazard ratio was additionally cross-checked
+against the archived AHR package, the reference implementation used by
+Dormuth et al. (2024): the two group shares, the average hazard ratio,
+the variances, and both test statistics agree to within the order of
+1e-15. That external comparison is reproducible with the
+<code>tools/compare_ahr_ahrKM.R</code> script shipped in the package
+sources.</p>
+</div>
+<div id="max-combo-test" class="section level1">
+<h1>Max-combo test</h1>
+<p><code>maxcombo_fast()</code> computes the max-combo test, the most
+extreme of a set of Fleming-Harrington weighted log-rank statistics. The
+<code>nph</code> package provides <code>logrank.maxtest()</code>, whose
+default weight set is FH(0, 0), FH(0, 1), and FH(1, 0). We request the
+same three weights from <code>maxcombo_fast()</code> and compare the
+component Z-scores. The individual Z-scores are kept in the
+<code>z</code> attribute, signed so that a negative value indicates
+benefit for the treatment group under the package convention. Because
+<code>nph</code> orients the contrast in the opposite direction, the
+signs are mirrored, so we compare absolute values.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>rho   <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>gamma <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>fast_mc <span class="ot">&lt;-</span> <span class="fu">maxcombo_fast</span>(gbsg<span class="sc">$</span>rfstime, gbsg<span class="sc">$</span>status, gbsg<span class="sc">$</span>hormon,</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>                         <span class="at">control =</span> <span class="dv">0</span>, <span class="at">side =</span> <span class="dv">1</span>, <span class="at">rho =</span> rho, <span class="at">gamma =</span> gamma)</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a>nph_mc <span class="ot">&lt;-</span> nph<span class="sc">::</span><span class="fu">logrank.maxtest</span>(gbsg<span class="sc">$</span>rfstime, gbsg<span class="sc">$</span>status, gbsg<span class="sc">$</span>hormon)</span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a></span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a>  <span class="at">weight =</span> <span class="fu">c</span>(<span class="st">&quot;FH(0,0)&quot;</span>, <span class="st">&quot;FH(0,1)&quot;</span>, <span class="st">&quot;FH(1,0)&quot;</span>),</span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a>  <span class="at">fast   =</span> <span class="fu">abs</span>(<span class="fu">attr</span>(fast_mc, <span class="st">&quot;z&quot;</span>)),</span>
+<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a>  <span class="at">nph    =</span> <span class="fu">abs</span>(nph_mc<span class="sc">$</span>tests<span class="sc">$</span>z),</span>
+<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">NULL</span></span>
+<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a>)</span>
+<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a><span class="co">#&gt;    weight     fast      nph</span></span>
+<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a><span class="co">#&gt; 1 FH(0,0) 2.926565 2.926565</span></span>
+<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a><span class="co">#&gt; 2 FH(0,1) 2.260677 2.260677</span></span>
+<span id="cb14-18"><a href="#cb14-18" tabindex="-1"></a><span class="co">#&gt; 3 FH(1,0) 2.951913 2.951913</span></span></code></pre></div>
+<p>The component statistics agree in absolute value. The final max-combo
+statistic is the largest of these, which for the one-sided test is the
+most extreme component Z. The p-values from the two packages are close
+but not identical, since they use different numerical methods for the
+joint distribution (a multivariate normal integral here, a
+Bonferroni-style combination in <code>nph</code>).</p>
+</div>
+<div id="robust-modestly-weighted-log-rank-test" class="section level1">
+<h1>Robust modestly-weighted log-rank test</h1>
+<p><code>rmw_fast()</code> computes the robust modestly-weighted (rMW)
+test of Magirr and Öhrn, the maximum of the standard log-rank statistic
+and a single modestly-weighted log-rank statistic. Each component is a
+weighted log-rank test, so we check the two component Z-scores against
+<a href="https://cran.r-project.org/package=nphRCT">nphRCT</a>, the
+implementation used by the method’s authors. The modestly-weighted
+component uses the survival-threshold parameterization, so
+<code>s_star = 1</code> recovers the standard log-rank test and
+<code>s_star = 0.5</code> gives the modestly-weighted component. As with
+the max-combo test the package orients a negative Z toward treatment
+benefit while <code>nphRCT</code> uses the opposite sign, so we compare
+absolute values.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>gbsg_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>  <span class="at">time  =</span> gbsg<span class="sc">$</span>rfstime,</span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>  <span class="at">event =</span> gbsg<span class="sc">$</span>status,</span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a>  <span class="at">arm   =</span> <span class="fu">factor</span>(<span class="fu">ifelse</span>(gbsg<span class="sc">$</span>hormon <span class="sc">==</span> <span class="dv">0</span>, <span class="st">&quot;control&quot;</span>, <span class="st">&quot;experimental&quot;</span>),</span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a>                 <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">&quot;control&quot;</span>, <span class="st">&quot;experimental&quot;</span>))</span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>)</span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a></span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a>fit_rmw <span class="ot">&lt;-</span> <span class="fu">rmw_fast</span>(gbsg_df<span class="sc">$</span>time, gbsg_df<span class="sc">$</span>event, gbsg_df<span class="sc">$</span>arm,</span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a>                    <span class="at">control =</span> <span class="st">&quot;control&quot;</span>, <span class="at">side =</span> <span class="dv">1</span>, <span class="at">s_star =</span> <span class="fl">0.5</span>)</span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a></span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a>z_lr_nph <span class="ot">&lt;-</span> nphRCT<span class="sc">::</span><span class="fu">wlrt</span>(<span class="fu">Surv</span>(time, event) <span class="sc">~</span> arm, <span class="at">data =</span> gbsg_df,</span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a>                         <span class="at">method =</span> <span class="st">&quot;mw&quot;</span>, <span class="at">s_star =</span> <span class="dv">1</span>)<span class="sc">$</span>z</span>
+<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a>z_mw_nph <span class="ot">&lt;-</span> nphRCT<span class="sc">::</span><span class="fu">wlrt</span>(<span class="fu">Surv</span>(time, event) <span class="sc">~</span> arm, <span class="at">data =</span> gbsg_df,</span>
+<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a>                         <span class="at">method =</span> <span class="st">&quot;mw&quot;</span>, <span class="at">s_star =</span> <span class="fl">0.5</span>)<span class="sc">$</span>z</span>
+<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a></span>
+<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a>  <span class="at">component =</span> <span class="fu">c</span>(<span class="st">&quot;log-rank (s_star = 1)&quot;</span>, <span class="st">&quot;modestly-weighted (s_star = 0.5)&quot;</span>),</span>
+<span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a>  <span class="at">fast      =</span> <span class="fu">abs</span>(<span class="fu">attr</span>(fit_rmw, <span class="st">&quot;z&quot;</span>)),</span>
+<span id="cb15-19"><a href="#cb15-19" tabindex="-1"></a>  <span class="at">nphRCT    =</span> <span class="fu">abs</span>(<span class="fu">c</span>(z_lr_nph, z_mw_nph)),</span>
+<span id="cb15-20"><a href="#cb15-20" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">NULL</span></span>
+<span id="cb15-21"><a href="#cb15-21" tabindex="-1"></a>)</span>
+<span id="cb15-22"><a href="#cb15-22" tabindex="-1"></a><span class="co">#&gt;                          component     fast   nphRCT</span></span>
+<span id="cb15-23"><a href="#cb15-23" tabindex="-1"></a><span class="co">#&gt; 1            log-rank (s_star = 1) 2.926565 2.926565</span></span>
+<span id="cb15-24"><a href="#cb15-24" tabindex="-1"></a><span class="co">#&gt; 2 modestly-weighted (s_star = 0.5) 2.773749 2.773749</span></span></code></pre></div>
+<p>The component statistics agree in absolute value. The null
+correlation of the two components, reported in the <code>corr</code>
+attribute, matches the covariance computed by the authors’
+<code>find_cor</code> routine to numerical precision. The combined
+statistic and one-sided p-value then follow from the bivariate normal
+distribution of the two components, evaluated with
+<code>mvtnorm::pmvnorm</code>. On the POPLAR overall-survival data
+analyzed in the original article, <code>rmw_fast()</code> reproduces the
+published one-sided p-values of 0.0028 for the log-rank test, 0.0009 for
+the modestly-weighted test, and 0.0012 for the rMW test, with a
+component correlation of 0.97.</p>
+</div>
+<div id="summary" class="section level1">
+<h1>Summary</h1>
+<p>Across all functions the FastSurvival results reproduce the reference
+values on the <code>gbsg</code> data. The point estimates and test
+statistics agree to numerical precision for the Kaplan-Meier, log-rank,
+weighted log-rank, RMST, milestone, median, and average-hazard
+quantities; the window mean survival time matches a Kaplan-Meier
+integral and the weighted Kaplan-Meier statistic matches the RMST
+identity; the average hazard ratio matches a survival-based reference;
+and the closed-form Cox hazard ratio agrees with the partial-likelihood
+maximizer to the order expected for the Pike-Halley approximation. This
+agreement is verified continuously by the package test suite.</p>
+</div>
+<div id="references" class="section level1">
+<h1>References</h1>
+<p>Kaplan, E. L., &amp; Meier, P. (1958). Nonparametric estimation from
+incomplete observations. <em>Journal of the American Statistical
+Association</em>, 53(282), 457-481.</p>
+<p>Mantel, N. (1966). Evaluation of survival data and two new rank order
+statistics arising in its consideration. <em>Cancer Chemotherapy
+Reports</em>, 50(3), 163-170.</p>
+<p>Fleming, T. R., &amp; Harrington, D. P. (1991). <em>Counting
+Processes and Survival Analysis</em>. New York: John Wiley &amp;
+Sons.</p>
+<p>Cox, D. R. (1972). Regression models and life-tables. <em>Journal of
+the Royal Statistical Society. Series B (Methodological)</em>, 34(2),
+187-220.</p>
+<p>Homma, G. (2025). One step from Pike to Cox: a closed-form hazard
+ratio estimator. <em>Manuscript under review.</em></p>
+<p>Royston, P., &amp; Parmar, M. K. B. (2013). Restricted mean survival
+time: an alternative to the hazard ratio for the design and analysis of
+randomized trials with a time-to-event outcome. <em>BMC Medical Research
+Methodology</em>, 13, 152.</p>
+<p>Paukner, M., &amp; Chappell, R. (2021). Window mean survival time.
+<em>Statistics in Medicine</em>, 40(25), 5521-5533.</p>
+<p>Pepe, M. S., &amp; Fleming, T. R. (1989). Weighted Kaplan-Meier
+statistics: a class of distance tests for censored survival data.
+<em>Biometrics</em>, 45(2), 497-507.</p>
+<p>Pepe, M. S., &amp; Fleming, T. R. (1991). Weighted Kaplan-Meier
+statistics: large sample and optimality considerations. <em>Journal of
+the Royal Statistical Society. Series B (Methodological)</em>, 53(2),
+341-352.</p>
+<p>Tang, Y. (2021). Some new confidence intervals for Kaplan-Meier based
+estimators from one and two sample survival data. <em>Statistics in
+Medicine</em>, 40(23), 4961-4976.</p>
+<p>Uno, H., Claggett, B., Tian, L., et al. (2014). Moving beyond the
+hazard ratio in quantifying the between-group difference in survival
+analysis. <em>Journal of Clinical Oncology</em>, 32(22), 2380-2385.</p>
+<p>Uno, H., &amp; Horiguchi, M. (2023). Ratio and difference of average
+hazard with survival weight: new measures to quantify survival benefit
+of new therapy. <em>Statistics in Medicine</em>, 42(7), 936-952.</p>
+<p>Kalbfleisch, J. D., &amp; Prentice, R. L. (1981). Estimation of the
+average hazard ratio. <em>Biometrika</em>, 68(1), 105-112.</p>
+<p>Dormuth, I., Pauly, M., Rauch, G., &amp; Herrmann, C. (2024). Sample
+size calculation under nonproportional hazards using average hazard
+ratios. <em>Biometrical Journal</em>, 66(6), e202300271.</p>
+<p>Karrison, T. G. (2016). Versatile tests for comparing survival curves
+based on weighted log-rank statistics. <em>The Stata Journal</em>,
+16(3), 678-690.</p>
+<p>Magirr, D., &amp; Burman, C.-F. (2019). Modestly weighted logrank
+tests. <em>Statistics in Medicine</em>, 38(20), 3782-3790.</p>
+<p>Magirr, D., &amp; Öhrn, F. (2026). Robust modestly weighted log-rank
+tests. <em>Pharmaceutical Statistics</em>, 25(1), e70066.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

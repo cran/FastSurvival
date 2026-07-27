@@ -23,7 +23,10 @@ Formats and prints a \code{survdiff_fast} object similarly to
 \code{print(survival::survdiff(...))}, showing the observed and expected
 event counts for the control and treatment groups, the per-group
 contributions \code{(O-E)^2 / E} and \code{(O-E)^2 / V}, the test
-statistic, and the corresponding p-value.
+statistic, and the corresponding p-value. For a weighted log-rank test the
+header names the weight scheme (and notes stratification), and only the
+observed event counts are shown alongside the weighted statistic, since a
+single unweighted expected count is not defined for a weighted test.
 }
 \examples{
 library(survival)

@@ -1,0 +1,320 @@
+---
+title: "MRCT with complex survival analysis design"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{MRCT with complex survival analysis design}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>"
+)
+```
+
+```{r load, message = FALSE}
+library(FastSurvival)
+```
+
+## What this vignette shows
+
+A multiregional clinical trial (MRCT) is run under a single protocol across more
+than one region to support simultaneous approvals. Beyond the overall treatment
+effect, a regional regulator often asks whether the effect in its own region is
+consistent with the overall result. The Japanese Ministry of Health, Labour and
+Welfare set out two criteria for this purpose, usually called Method 1 and
+Method 2, and the operating characteristic of interest is the *regional
+consistency probability*: the chance that the regional criterion is met, often
+evaluated conditional on the overall test being significant.
+
+Closed-form formulas for these probabilities exist for continuous endpoints and
+have been extended to other endpoint types under a normal approximation of the
+treatment effect. Those formulas are convenient but they assume a fixed design,
+a single final analysis, and balanced, simultaneous accrual across regions. Real
+oncology MRCTs routinely break those assumptions: the design is group-sequential
+with interim looks, and one region (here, Japan) starts enrolling later than the
+others, so its information accrues on a different calendar. When the assumptions
+behind the closed-form formulas no longer hold, simulation is the natural way to
+obtain the consistency probabilities.
+
+FastSurvival does not provide a regional-consistency function, and it is not
+meant to: three-or-more-region designs and consistency criteria are outside its
+scope. What it does provide are fast, validated building blocks. This vignette
+shows that the existing simulation trio, `simdata_fast()`, `analysis_fast()`,
+and `simsummary_fast()`, can be composed to evaluate the conditional regional
+consistency probabilities of Method 1 and Method 2 at every interim and final
+analysis, under a group-sequential design with a late-enrolling region. The only
+piece written by hand is a short post-processing layer in base R that applies the
+consistency criteria to the per-region estimates the trio returns.
+
+## The two criteria
+
+Write the estimated treatment effect on the hazard-reduction scale, that is
+`1 - HR` for the entire trial population and `1 - HR_s` for region `s`, where a
+positive value indicates benefit (this is the survival-endpoint formulation of
+Teng et al., 2018). The region of interest is region 1, and `pi` is the
+effect-retention fraction, conventionally `0.5`.
+
+Method 1 asks that region 1 retain at least a fraction `pi` of the overall
+effect, `(1 - HR_1) > pi * (1 - HR)`. Method 2 asks that the effect trend in the
+benefit direction in every region, `1 - HR_s > 0` for all `s`, equivalently that
+every regional hazard ratio fall below 1.
+
+The *conditional* regional consistency probability is the probability of meeting
+the criterion given a statistically significant overall result. In a
+group-sequential design the natural counterpart is, at each look, the probability
+of meeting the criterion among the trials that stop for efficacy at that look.
+
+## The scenario
+
+A three-region phase III oncology superiority trial compares a treatment group
+against control on overall survival, with control median 4.3 months and treatment
+median 5.811 months (hazard ratio about 0.74). Region 1 is Japan, a small region
+(10% of the patients) whose accrual starts three months after the other regions.
+Enrollment runs over a 12.5-month window and survival is exponential.
+
+```{r scenario}
+NSIM    <- 10000       # number of simulated trials
+SEED    <- 1
+
+mst.T   <- 5.811       # treatment median survival
+mst.C   <- 4.3         # control median survival
+N.T     <- c(25, 112, 113)   # treatment sample size per region (region 1 = Japan)
+N.C     <- c(25, 112, 113)   # control sample size per region
+a       <- 12.5        # accrual duration
+a_delay <- 3           # accrual delay for region 1 (Japan starts later than others)
+PI      <- 0.5         # effect-retention fraction for Method 1
+
+E     <- c(142, 248, 354)  # target total events at the three looks
+```
+
+The design is group-sequential with three looks at roughly 40%, 70%, and 100% of
+the final event count. The first look is futility-only, the second is
+efficacy-only, and the final look tests both. Boundaries are on the overall
+log-rank `Z` scale, where treatment benefit is a negative `Z`; in practice they
+would come from `gsDesign` or `rpact`. A boundary set to `NA` omits that rule at
+that look.
+
+```{r boundaries}
+eff.bound <- c(NA, -2.437, -2)   # lower efficacy boundary on logrank.z
+fut.bound <- c(0.381, NA, -2)    # upper (non-binding) futility boundary
+```
+
+## Step 1: simulate the trial with a region-specific accrual delay
+
+The accrual specification in `simdata_fast()` applies to the whole call, so a
+region-specific delay is expressed by generating each region with its own accrual
+window and stacking the results. Region 1 accrues uniformly over `[a_delay, a]`;
+the other regions over `[0, a]`. Each region is generated from an independent stream
+(`seed + k`), which is the right model for independent regional subpopulations. A
+`subgroup` column tags the region, and the shared `sim` index links the regional
+blocks into one trial per simulation.
+
+```{r simulate}
+K      <- length(N.T)
+blocks <- lapply(seq_len(K), function(k) {
+  a.time_k <- if (k == 1L) c(a_delay, a) else c(0, a)
+  dat <- simdata_fast(
+    nsim     = NSIM,
+    n        = c(N.C[k], N.T[k]),
+    a.time   = a.time_k,
+    a.prop   = 1,
+    e.median = list(mst.C, mst.T),
+    seed     = SEED + k
+  )
+  dat$subgroup <- k
+  dat
+})
+data_all <- do.call(rbind, blocks)
+head(data_all)
+```
+
+## Step 2: one event-driven, by-subgroup analysis pass
+
+`analysis_fast()` with `event.looks` cuts each simulated trial at the calendar
+time of the target event over the whole trial population, exactly the timing a
+group-sequential MRCT uses. With `by.subgroup = TRUE` the same cutoff is reused
+for the overall analysis and for each region, so the regional estimates are taken
+at the identical data cut as the overall test. We request the log-rank statistic
+for the overall efficacy decision and the Cox hazard ratio for the consistency
+criteria.
+
+```{r analyze}
+res <- analysis_fast(
+  data        = data_all,
+  control     = 1,
+  event.looks = E,
+  stat        = c("logrank", "coxph"),
+  side        = 1,
+  by.subgroup = TRUE
+)
+head(res[, c("sim", "look", "population", "n.event", "logrank.z", "cox.hr")])
+```
+
+The output is in long form: for each `(sim, look)` there is one `overall` row and
+one row per region (`subgroup_1`, `subgroup_2`, `subgroup_3`).
+
+## Step 3: assemble the per-look effect estimates and the two indicators
+
+A few lines of base R reshape the long output into one row per `(sim, look)`
+carrying the overall log-rank `Z`, the overall hazard ratio, the region-1 hazard
+ratio, and the Method 1 and Method 2 indicators. Where a region has no events yet
+at an early cut (a real possibility for the late-starting region), its hazard
+ratio is `NA`; such an undemonstrated criterion is treated as not met.
+
+```{r indicators}
+ov  <- res[res$population == "overall", ]
+key <- function(d) paste(d$sim, d$look)
+
+# Region-1 hazard ratio aligned to the overall rows
+r1  <- res[res$population == "subgroup_1", ]
+ov$HR.1 <- r1$cox.hr[match(key(ov), key(r1))]
+
+# Method 2: all regional hazard ratios below 1 at this (sim, look)
+reg <- res[res$population != "overall", ]
+all_below_1 <- tapply(reg$cox.hr, key(reg), function(h) all(h < 1))
+ov$M2 <- as.integer(all_below_1[key(ov)])
+
+# Method 1: region 1 retains at least a fraction PI of the overall effect
+ov$M1 <- as.integer((1 - ov$HR.1) > PI * (1 - ov$cox.hr))
+
+# Undemonstrated criteria (NA hazard ratio) count as not met
+ov$M1[is.na(ov$M1)] <- 0L
+ov$M2[is.na(ov$M2)] <- 0L
+```
+
+## Step 4: apply the group-sequential boundaries
+
+The looks are arranged into a simulation-by-look matrix and the boundaries are
+applied in sequence. Each trial stops at its first boundary crossing; when both
+boundaries are crossed at the same look, efficacy takes precedence.
+
+```{r gsd}
+sims  <- sort(unique(ov$sim));  nsim <- length(sims)
+looks <- sort(unique(ov$look)); nlk  <- length(looks)
+cell  <- cbind(match(ov$sim, sims), match(ov$look, looks))
+mk    <- function(v) { m <- matrix(NA_real_, nsim, nlk); m[cell] <- v; m }
+
+Zm   <- mk(ov$logrank.z)
+M1m  <- mk(ov$M1)
+M2m  <- mk(ov$M2)
+Cutm <- mk(ov$cutoff)
+
+effB <- matrix(eff.bound, nsim, nlk, byrow = TRUE)
+futB <- matrix(fut.bound, nsim, nlk, byrow = TRUE)
+eff_cross <- !is.na(effB) & Zm <= effB
+fut_cross <- !is.na(futB) & Zm >= futB
+stop_any  <- eff_cross | fut_cross
+
+first_stop <- apply(stop_any, 1L, function(r) {
+  w <- which(r); if (length(w)) w[1L] else nlk
+})
+reject <- eff_cross[cbind(seq_len(nsim), first_stop)]
+```
+
+## Step 5: conditional regional consistency probabilities
+
+For each look, restrict to the trials that stop for efficacy there and take the
+fraction that also meet each criterion. `Efficacy` is the marginal probability of
+an efficacy stop at the look, `CON_M1` and `CON_M2` are the conditional
+consistency probabilities given an efficacy stop, and `JOI_M1` and `JOI_M2` are
+the joint probabilities of an efficacy stop together with consistency.
+
+```{r consistency}
+con1 <- con2 <- joi1 <- joi2 <- eff <- atime <- rep(NA_real_, nlk)
+for (k in seq_len(nlk)) {
+  atime[k] <- mean(Cutm[, k], na.rm = TRUE)   # calendar time of look k (all trials)
+  sel      <- reject & first_stop == k        # trials stopping for efficacy at look k
+  eff[k]   <- mean(sel)
+  joi1[k]  <- sum(M1m[sel, k]) / nsim          # joint prob (0 when no efficacy stop)
+  joi2[k]  <- sum(M2m[sel, k]) / nsim
+  if (any(sel)) {                              # conditional prob (undefined otherwise)
+    con1[k] <- mean(M1m[sel, k])
+    con2[k] <- mean(M2m[sel, k])
+  }
+}
+
+consistency <- data.frame(
+  look          = looks,
+  Info.Fraction = E / max(E),
+  Events        = E,
+  Analysis_time = atime,
+  Efficacy      = eff,
+  cum.power     = cumsum(eff),
+  CON_M1        = con1,
+  JOI_M1        = joi1,
+  CON_M2        = con2,
+  JOI_M2        = joi2
+)
+consistency
+```
+
+The first look is futility-only (`eff.bound[1] = NA`), so no trial can stop for
+efficacy there. The efficacy-conditional quantities are therefore degenerate at
+look 1: the joint probabilities `JOI_M1` and `JOI_M2` are zero, while the
+conditional probabilities `CON_M1` and `CON_M2` are undefined (`NA`, a
+zero-over-zero ratio). `Analysis_time` is the mean calendar time of the look
+itself, taken over all trials, and so is reported at every look. At the later
+looks the table gives, per analysis, the conditional regional consistency
+probability for each method. Method 2 is the looser criterion and so its
+conditional probability runs higher than Method 1's at both efficacy looks. For
+each method the conditional consistency is comparable at the two efficacy looks,
+if anything slightly higher at the interim, because the trials that cross the
+stringent interim efficacy boundary are enriched for a strong overall effect,
+which also makes the regional criteria more likely to be met. This calendar-driven
+behavior, together with the late-starting region 1 whose events accrue on a
+different schedule, is exactly what the closed-form formulas, which assume a
+single final analysis and simultaneous accrual, cannot capture.
+
+## Tying back to the trio: standard operating characteristics
+
+The third trio function, `simsummary_fast()`, summarizes the same boundaries on
+the overall population to give the usual group-sequential operating
+characteristics, here as an independent check on the efficacy column above.
+
+```{r summary}
+gs <- simsummary_fast(
+  res[res$population == "overall", ],
+  eff.col   = "logrank.z", efficacy = eff.bound,
+  fut.col   = "logrank.z", futility = fut.bound,
+  direction = "lower"
+)
+gs
+```
+
+The per-look `prob.stop.efficacy` from `simsummary_fast()` matches the `Efficacy`
+column computed by hand, and its `overall` row gives the cumulative power and the
+expected information and calendar time at stopping.
+
+## Notes and extensions
+
+The hazard ratio used for the consistency criteria is the Cox estimate from
+`coxph_fast()`. To use the log-scale criterion of Teng et al. (2018) instead,
+replace `cox.hr` with `cox.coef` and test `cox.coef_1 < PI * cox.coef_overall`
+for Method 1 and `cox.coef_s < 0` for all regions for Method 2. The conditional
+probability here is defined on the first efficacy-stopping look, which is the
+standard group-sequential interpretation; the joint and marginal columns are
+provided alongside so other conditioning conventions are easy to derive.
+
+The same composition extends naturally. More regions are added by lengthening the
+sample-size vectors. A different consistency endpoint, for example a
+restricted-mean or milestone-survival contrast, is obtained by requesting that
+statistic in `analysis_fast()` and reading its per-region estimate in place of the
+hazard ratio. Non-proportional hazards are handled by switching the overall
+efficacy statistic to a weighted log-rank or max-combo test. None of this needs a
+new function; it is the existing building blocks recombined.
+
+## References
+
+Ministry of Health, Labour and Welfare. (2007). *Basic principles on global
+clinical trials* (Notification No. 0928010).
+
+Teng, Z., Lin, J., & Zhang, B. (2018). Practical recommendations for regional
+consistency evaluation in multi-regional clinical trials with different
+endpoints. *Statistics in Biopharmaceutical Research*, 10(1), 50-56.
+
+Homma, G. (2024). Cautionary note on regional consistency evaluation in
+multiregional clinical trials with binary outcomes. *Pharmaceutical Statistics*,
+23(3), 385-398.

@@ -66,7 +66,11 @@
 #' @param control A scalar value indicating which level of \code{group}
 #'   represents the control group. Subjects with \code{group != control} are
 #'   treated as the treatment group.
-#' @param conf.int A single numeric value in (0, 1) specifying the confidence
+#' @param side 1 for a one-sided test in the direction of treatment benefit
+#'   (hazard ratio below 1, i.e. a negative coefficient) or 2 for a two-sided
+#'   test (default 2). The reported p-value follows this choice; the confidence
+#'   interval is always two-sided at \code{conf.level}.
+#' @param conf.level A single numeric value in (0, 1) specifying the confidence
 #'   level for the Wald interval. Defaults to 0.95.
 #' @param presorted A logical value. If \code{TRUE}, \code{time},
 #'   \code{event}, and \code{group} are assumed to be already sorted in
@@ -83,8 +87,8 @@
 #'   \item{\code{se(coef)}}{Standard error of \code{coef} on the log scale,
 #'     equal to 1 / sqrt(I_0).}
 #'   \item{\code{lower .95}}{Lower bound of the Wald confidence interval for
-#'     the hazard ratio. The label reflects \code{conf.int} (e.g.,
-#'     \code{"lower .90"} when \code{conf.int = 0.90}).}
+#'     the hazard ratio. The label reflects \code{conf.level} (e.g.,
+#'     \code{"lower .90"} when \code{conf.level = 0.90}).}
 #'   \item{\code{upper .95}}{Upper bound of the Wald confidence interval.}
 #' }
 #' Returns a vector of \code{NA_real_} values (still with class
@@ -110,12 +114,14 @@
 #'            control = 1, presorted = TRUE)
 #'
 #' \donttest{
-#' library(microbenchmark)
-#' microbenchmark(
-#'   coxph_fast = coxph_fast(ovarian$futime, ovarian$fustat, ovarian$rx, 2),
-#'   coxph      = coxph(Surv(futime, fustat) ~ rx, data = ovarian),
-#'   times = 1000
-#' )
+#' # Speed comparison against coxph()
+#' if (requireNamespace("microbenchmark", quietly = TRUE)) {
+#'   microbenchmark::microbenchmark(
+#'     coxph_fast = coxph_fast(ovarian$futime, ovarian$fustat, ovarian$rx, 2),
+#'     coxph      = coxph(Surv(futime, fustat) ~ rx, data = ovarian),
+#'     times = 1000
+#'   )
+#' }
 #' }
 #'
 #' @seealso
@@ -123,20 +129,28 @@
 #' \code{\link{print.coxph_fast}} for the print method.
 #'
 #' @references
+#' Cox, D. R. (1972). Regression models and life-tables. \emph{Journal of the
+#' Royal Statistical Society. Series B (Methodological)}, \emph{34}(2),
+#' 187-220.
+#'
+#' Berry, G., Kitchin, R. M., & Mock, P. A. (1991). A comparison of two simple
+#' hazard ratio estimators based on the logrank test. \emph{Statistics in
+#' Medicine}, \emph{10}(5), 749-755.
+#'
 #' Homma, G. (2025). One step from Pike to Cox: a closed-form hazard ratio
 #' estimator. Manuscript under review.
 #'
-#' Berry, G., Kitchin, R. M., & Mock, P. A. (1991). A comparison of two
-#' simple hazard ratio estimators based on the logrank test.
-#' \emph{Statistics in Medicine}, \emph{10}(5), 749-755.
-#'
 #' @importFrom stats qnorm setNames
 #' @export
-coxph_fast <- function(time, event, group, control,
-                       conf.int = 0.95, presorted = FALSE) {
+coxph_fast <- function(time, event, group, control, side = 2,
+                       conf.level = 0.95, presorted = FALSE) {
+
+  if (!side %in% c(1L, 2L)) {
+    stop("'side' must be either 1 (one-sided) or 2 (two-sided)")
+  }
 
   # Prepare NA output with coxph-compatible names
-  ci_lab <- conf.int * 100
+  ci_lab <- conf.level * 100
   ci_lo  <- sprintf("lower .%g", ci_lab)
   ci_hi  <- sprintf("upper .%g", ci_lab)
   na_out <- setNames(
@@ -150,7 +164,8 @@ coxph_fast <- function(time, event, group, control,
     stop("'time', 'event', and 'group' must have the same length")
   }
   if (n == 0L || sum(event) == 0L) {
-    return(structure(na_out, conf.int = conf.int, class = "coxph_fast"))
+    return(structure(na_out, conf.level = conf.level, side = side,
+                     control = control, class = "coxph_fast"))
   }
 
   # Treatment indicator: 1 = treatment, 0 = control
@@ -171,7 +186,8 @@ coxph_fast <- function(time, event, group, control,
   res <- pihe_core(time, event, j)
 
   if (anyNA(res)) {
-    return(structure(na_out, conf.int = conf.int, class = "coxph_fast"))
+    return(structure(na_out, conf.level = conf.level, side = side,
+                     control = control, class = "coxph_fast"))
   }
 
   theta_0 <- res[1L]
@@ -186,7 +202,7 @@ coxph_fast <- function(time, event, group, control,
   # Wald SE and CI on the log scale
   se_coef <- 1 / sqrt(I_0)
   coef    <- log(theta_hat)
-  z       <- qnorm(1 - (1 - conf.int) / 2)
+  z       <- qnorm(1 - (1 - conf.level) / 2)
 
   out <- setNames(
     c(coef, theta_hat, se_coef,
@@ -195,5 +211,6 @@ coxph_fast <- function(time, event, group, control,
     c("coef", "exp(coef)", "se(coef)", ci_lo, ci_hi)
   )
 
-  structure(out, conf.int = conf.int, class = "coxph_fast")
+  structure(out, conf.level = conf.level, side = side, control = control,
+            class = "coxph_fast")
 }

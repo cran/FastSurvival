@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Multi-arm trials: K-arm generation and pairwise comparisons against a shared control</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Multi-arm trials: K-arm generation and
+pairwise comparisons against a shared control</h1>
+
+
+
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>A multi-arm trial randomizes subjects to a shared control and two or
+more experimental arms, and each experimental arm is compared against
+the same control. This is the standard screening design for several
+candidate doses or regimens, where the goal is to identify which
+experimental arms beat control while controlling the family-wise error
+rate across the comparisons.</p>
+<p><code>simdata_fast</code> generates such a trial directly. When
+<code>n</code> is a vector of length greater than two together with a
+per-arm survival list, each arm is generated with the validated
+single-group kernel over a common accrual window, and the arms are
+stacked into one data frame with a <code>group</code> column labeled 1
+to <code>length(n)</code>. The analysis path keeps its two-group
+contract, so a multi-arm design is analyzed as a set of pairwise
+contrasts. Each experimental arm is compared against the control by
+subsetting the generated data to those two arms and calling
+<code>analysis_fast</code> once per contrast. Because every contrast
+reuses the same control arm, the pairwise statistics are positively
+correlated, and that correlation is what a Dunnett-type adjustment
+exploits to be less conservative than a Bonferroni correction.</p>
+<p>This vignette generates a three-arm trial (one control and two
+experimental arms), runs the two pairwise log-rank tests, and reports
+the operating characteristics of the screening design under a Bonferroni
+correction, including the disjunctive power of finding at least one
+winning arm and the probability of selecting the truly better
+experimental arm. It then confirms empirically that the family-wise
+error rate is controlled under the global null.</p>
+</div>
+<div id="design-parameters" class="section level2">
+<h2>Design parameters</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>nsim <span class="ot">&lt;-</span> <span class="dv">2000</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>seed <span class="ot">&lt;-</span> <span class="dv">20260711</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co"># Three arms: group 1 = control, groups 2 and 3 = experimental.</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="co"># Per-arm sample size (balanced 1:1:1 randomization).</span></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>n_arm <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">150</span>, <span class="dv">150</span>, <span class="dv">150</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a><span class="co"># Median survival by arm, in months. The two experimental arms have an</span></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a><span class="co"># increasing benefit over control.</span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>mst <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">control =</span> <span class="dv">12</span>, <span class="at">dose_low =</span> <span class="dv">16</span>, <span class="at">dose_high =</span> <span class="dv">20</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="co"># Piecewise-uniform accrual: constant rate over 12 months enrolling all 450.</span></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>a_time <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">12</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a>a_rate <span class="ot">&lt;-</span> <span class="fu">sum</span>(n_arm) <span class="sc">/</span> <span class="dv">12</span></span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a><span class="co"># Single calendar analysis time, in months.</span></span>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a>analysis_month <span class="ot">&lt;-</span> <span class="dv">30</span></span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a><span class="co"># One-sided family-wise significance level and the number of experimental arms.</span></span>
+<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a>alpha_total <span class="ot">&lt;-</span> <span class="fl">0.025</span></span>
+<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a>n_contrast  <span class="ot">&lt;-</span> <span class="fu">length</span>(n_arm) <span class="sc">-</span> <span class="dv">1</span><span class="dt">L</span></span>
+<span id="cb1-22"><a href="#cb1-22" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" tabindex="-1"></a><span class="co"># Implied exponential hazard ratios of each experimental arm versus control.</span></span>
+<span id="cb1-24"><a href="#cb1-24" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb1-25"><a href="#cb1-25" tabindex="-1"></a>  <span class="at">arm =</span> <span class="fu">names</span>(mst)[<span class="sc">-</span><span class="dv">1</span>],</span>
+<span id="cb1-26"><a href="#cb1-26" tabindex="-1"></a>  <span class="at">median =</span> mst[<span class="sc">-</span><span class="dv">1</span>],</span>
+<span id="cb1-27"><a href="#cb1-27" tabindex="-1"></a>  <span class="at">HR_vs_control =</span> <span class="fu">round</span>(mst[<span class="st">&quot;control&quot;</span>] <span class="sc">/</span> mst[<span class="sc">-</span><span class="dv">1</span>], <span class="dv">3</span>),</span>
+<span id="cb1-28"><a href="#cb1-28" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">NULL</span></span>
+<span id="cb1-29"><a href="#cb1-29" tabindex="-1"></a>)</span>
+<span id="cb1-30"><a href="#cb1-30" tabindex="-1"></a><span class="co">#&gt;         arm median HR_vs_control</span></span>
+<span id="cb1-31"><a href="#cb1-31" tabindex="-1"></a><span class="co">#&gt; 1  dose_low     16          0.75</span></span>
+<span id="cb1-32"><a href="#cb1-32" tabindex="-1"></a><span class="co">#&gt; 2 dose_high     20          0.60</span></span></code></pre></div>
+<p>The experimental arm with the longer median has the smaller hazard
+ratio and is the stronger candidate.</p>
+</div>
+<div id="data-generation" class="section level2">
+<h2>Data generation</h2>
+<p>A single <code>simdata_fast</code> call generates all three arms. The
+per-arm medians are supplied as an <code>e.median</code> list with one
+element per arm, and the arms share the accrual window and the master
+seed.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="at">nsim     =</span> nsim,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="at">n        =</span> n_arm,</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">a.time   =</span> a_time,</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">a.rate   =</span> a_rate,</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">e.median =</span> <span class="fu">list</span>(mst[<span class="st">&quot;control&quot;</span>], mst[<span class="st">&quot;dose_low&quot;</span>], mst[<span class="st">&quot;dose_high&quot;</span>]),</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">seed     =</span> seed</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>)</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co"># One row per subject per simulation; the group column labels the arm.</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="fu">table</span>(df<span class="sc">$</span>group[df<span class="sc">$</span>sim <span class="sc">==</span> <span class="dv">1</span>])</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="co">#&gt;   1   2   3 </span></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="co">#&gt; 150 150 150</span></span></code></pre></div>
+</div>
+<div id="pairwise-analysis-against-the-shared-control" class="section level2">
+<h2>Pairwise analysis against the shared control</h2>
+<p>Each experimental arm is compared against the control by restricting
+the data to that arm and the control and calling
+<code>analysis_fast</code> with <code>control = 1</code>. On a two-arm
+subset the analysis is the ordinary two-group log-rank test, one-sided
+in the direction of treatment benefit, with the natural sign convention
+in which a negative Z favors the experimental arm.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>control_arm <span class="ot">&lt;-</span> <span class="dv">1</span><span class="dt">L</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>exp_arms    <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(<span class="fu">sort</span>(<span class="fu">unique</span>(df<span class="sc">$</span>group)), control_arm)</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># Matrix of one-sided log-rank statistics and p-values, one column per contrast.</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>Z <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, <span class="at">nrow =</span> nsim, <span class="at">ncol =</span> n_contrast)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>P <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, <span class="at">nrow =</span> nsim, <span class="at">ncol =</span> n_contrast)</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="fu">colnames</span>(Z) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(P) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;arm&quot;</span>, exp_arms, <span class="st">&quot;_vs_ctrl&quot;</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="cf">for</span> (k <span class="cf">in</span> <span class="fu">seq_along</span>(exp_arms)) {</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>  sub <span class="ot">&lt;-</span> df[df<span class="sc">$</span>group <span class="sc">%in%</span> <span class="fu">c</span>(control_arm, exp_arms[k]), ]</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  res <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>    sub,</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>    <span class="at">control    =</span> control_arm,</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>    <span class="at">time.looks =</span> analysis_month,</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>    <span class="at">stat       =</span> <span class="st">&quot;logrank&quot;</span>,</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>    <span class="at">side       =</span> <span class="dv">1</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>  )</span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>  Z[, k] <span class="ot">&lt;-</span> res<span class="sc">$</span>logrank.z</span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>  P[, k] <span class="ot">&lt;-</span> res<span class="sc">$</span>logrank.p</span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>}</span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">round</span>(P, <span class="dv">4</span>))</span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt;      arm2_vs_ctrl arm3_vs_ctrl</span></span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt; [1,]       0.0016        0e+00</span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; [2,]       0.0089        0e+00</span></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt; [3,]       0.0111        0e+00</span></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="co">#&gt; [4,]       0.0010        2e-04</span></span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co">#&gt; [5,]       0.0000        0e+00</span></span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="co">#&gt; [6,]       0.1123        7e-04</span></span></code></pre></div>
+</div>
+<div id="the-pairwise_fast-convenience-wrapper" class="section level2">
+<h2>The <code>pairwise_fast()</code> convenience wrapper</h2>
+<p>The loop above is packaged by <code>pairwise_fast</code>, which runs
+the control-versus-arm analysis for every experimental arm and stacks
+the results into one long data frame with an <code>arm</code> column.
+With <code>time.looks</code> all contrasts share the fixed calendar
+cutoff, and <code>adjust = &quot;bonferroni&quot;</code> appends a
+<code>p.adj</code> column that multiplies each p-value by the number of
+contrasts.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>pw <span class="ot">&lt;-</span> <span class="fu">pairwise_fast</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  df,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">control    =</span> control_arm,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">time.looks =</span> analysis_month,</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">stat       =</span> <span class="st">&quot;logrank&quot;</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">side       =</span> <span class="dv">1</span>,</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">adjust     =</span> <span class="st">&quot;bonferroni&quot;</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>)</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="fu">head</span>(pw[, <span class="fu">c</span>(<span class="st">&quot;arm&quot;</span>, <span class="st">&quot;sim&quot;</span>, <span class="st">&quot;cutoff&quot;</span>, <span class="st">&quot;logrank.z&quot;</span>, <span class="st">&quot;logrank.p&quot;</span>, <span class="st">&quot;p.adj&quot;</span>)])</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt;   arm sim cutoff logrank.z    logrank.p        p.adj</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt; 1   2   1     30 -2.949901 1.589381e-03 3.178762e-03</span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt; 2   2   2     30 -2.369475 8.906683e-03 1.781337e-02</span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt; 3   2   3     30 -2.286564 1.111065e-02 2.222130e-02</span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; 4   2   4     30 -3.101323 9.632898e-04 1.926580e-03</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt; 5   2   5     30 -4.009756 3.039077e-05 6.078154e-05</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt; 6   2   6     30 -1.214419 1.122938e-01 2.245877e-01</span></span></code></pre></div>
+<p>The marginal per-contrast rejection rates from the wrapper reproduce
+the manual loop above.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">tapply</span>(pw<span class="sc">$</span>logrank.p <span class="sc">&lt;=</span> alpha_total, pw<span class="sc">$</span>arm, mean), <span class="dv">3</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt;     2     3 </span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt; 0.539 0.941</span></span></code></pre></div>
+<p>An event-driven screening design instead lets a designated primary
+contrast fix the data cutoff. Here arm 3 is the primary comparison, its
+target of 200 control-plus-arm-3 events defines the per-simulation
+calendar cutoff, and both contrasts are analyzed at that same
+cutoff.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>pw_ev <span class="ot">&lt;-</span> <span class="fu">pairwise_fast</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  df,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="at">control     =</span> control_arm,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="at">event.looks =</span> <span class="dv">200</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="at">primary     =</span> <span class="dv">3</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="at">stat        =</span> <span class="st">&quot;logrank&quot;</span>,</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  <span class="at">side        =</span> <span class="dv">1</span>,</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>  <span class="at">adjust      =</span> <span class="st">&quot;bonferroni&quot;</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>)</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="fu">head</span>(pw_ev[, <span class="fu">c</span>(<span class="st">&quot;arm&quot;</span>, <span class="st">&quot;sim&quot;</span>, <span class="st">&quot;cutoff&quot;</span>, <span class="st">&quot;reached&quot;</span>, <span class="st">&quot;logrank.z&quot;</span>, <span class="st">&quot;p.adj&quot;</span>)])</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co">#&gt;   arm sim   cutoff reached logrank.z        p.adj</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt; 1   2   1 30.41747    TRUE -2.948070 0.0031976438</span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt; 2   2   2 28.86407    TRUE -2.304046 0.0212200415</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt; 3   2   3 30.85221    TRUE -2.390590 0.0168213177</span></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt; 4   2   4 30.28744    TRUE -3.230967 0.0012337209</span></span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a><span class="co">#&gt; 5   2   5 30.39027    TRUE -3.860549 0.0001131327</span></span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="co">#&gt; 6   2   6 28.89168    TRUE -1.090690 0.2754092176</span></span></code></pre></div>
+<p>The two contrasts at a given simulation carry the same
+<code>cutoff</code>, which is the calendar time at which the primary
+contrast reached its event target.</p>
+</div>
+<div id="operating-characteristics-under-the-alternative" class="section level2">
+<h2>Operating characteristics under the alternative</h2>
+<p>The screening design rejects the control-versus-arm null for an
+experimental arm when its one-sided p-value falls below the
+multiplicity-adjusted threshold. A Bonferroni correction spends the
+family-wise level equally across the two contrasts, giving a
+per-contrast threshold of <code>alpha_total / n_contrast</code>. The
+marginal (unadjusted) power of each contrast is shown alongside the
+adjusted power for reference.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>thr_marginal   <span class="ot">&lt;-</span> alpha_total</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>thr_bonferroni <span class="ot">&lt;-</span> alpha_total <span class="sc">/</span> n_contrast</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>reject_marginal   <span class="ot">&lt;-</span> P <span class="sc">&lt;=</span> thr_marginal</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>reject_bonferroni <span class="ot">&lt;-</span> P <span class="sc">&lt;=</span> thr_bonferroni</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>power_table <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>  <span class="at">contrast          =</span> <span class="fu">colnames</span>(P),</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>  <span class="at">power_marginal    =</span> <span class="fu">round</span>(<span class="fu">colMeans</span>(reject_marginal), <span class="dv">3</span>),</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>  <span class="at">power_bonferroni  =</span> <span class="fu">round</span>(<span class="fu">colMeans</span>(reject_bonferroni), <span class="dv">3</span>),</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">NULL</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>)</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>power_table</span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt;       contrast power_marginal power_bonferroni</span></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt; 1 arm2_vs_ctrl          0.539            0.431</span></span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a><span class="co">#&gt; 2 arm3_vs_ctrl          0.941            0.899</span></span></code></pre></div>
+<p>The disjunctive power is the probability of declaring at least one
+experimental arm superior to control under the Bonferroni rule. The
+probability of correctly selecting the stronger experimental arm is the
+probability that the arm with the larger true effect is among the
+rejected arms.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>any_reject   <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(reject_bonferroni) <span class="sc">&gt;</span> <span class="dv">0</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co"># The stronger experimental arm is the last column (largest median).</span></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>stronger_col <span class="ot">&lt;-</span> n_contrast</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>select_stronger <span class="ot">&lt;-</span> reject_bonferroni[, stronger_col]</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>  <span class="at">quantity =</span> <span class="fu">c</span>(<span class="st">&quot;Disjunctive power (any arm beats control)&quot;</span>,</span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>               <span class="st">&quot;Power to declare the stronger arm&quot;</span>,</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>               <span class="st">&quot;Expected number of arms declared&quot;</span>),</span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>  <span class="at">value =</span> <span class="fu">c</span>(<span class="fu">round</span>(<span class="fu">mean</span>(any_reject), <span class="dv">3</span>),</span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>            <span class="fu">round</span>(<span class="fu">mean</span>(select_stronger), <span class="dv">3</span>),</span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a>            <span class="fu">round</span>(<span class="fu">mean</span>(<span class="fu">rowSums</span>(reject_bonferroni)), <span class="dv">3</span>)),</span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">NULL</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>)</span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt;                                    quantity value</span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt; 1 Disjunctive power (any arm beats control) 0.911</span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt; 2         Power to declare the stronger arm 0.899</span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co">#&gt; 3          Expected number of arms declared 1.330</span></span></code></pre></div>
+</div>
+<div id="correlation-between-the-contrasts" class="section level2">
+<h2>Correlation between the contrasts</h2>
+<p>The two pairwise log-rank statistics share the control arm, so they
+are positively correlated. This correlation is the reason a Dunnett
+adjustment is less conservative than Bonferroni, since Bonferroni
+ignores it and treats the comparisons as if they were independent.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">round</span>(stats<span class="sc">::</span><span class="fu">cor</span>(Z, <span class="at">use =</span> <span class="st">&quot;complete.obs&quot;</span>), <span class="dv">3</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="co">#&gt;              arm2_vs_ctrl arm3_vs_ctrl</span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co">#&gt; arm2_vs_ctrl        1.000        0.508</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co">#&gt; arm3_vs_ctrl        0.508        1.000</span></span></code></pre></div>
+<p>For balanced allocation with a shared control the theoretical
+correlation of the two standardized statistics is close to one half, and
+the empirical value here reproduces that magnitude to simulation
+error.</p>
+</div>
+<div id="family-wise-error-rate-under-the-global-null" class="section level2">
+<h2>Family-wise error rate under the global null</h2>
+<p>Regenerating the trial with all three arms sharing the control median
+gives the global null, under which no experimental arm truly beats
+control. The Bonferroni rule should reject at least one arm no more than
+the nominal family-wise level.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>df0 <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>  <span class="at">nsim     =</span> nsim,</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>  <span class="at">n        =</span> n_arm,</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>  <span class="at">a.time   =</span> a_time,</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>  <span class="at">a.rate   =</span> a_rate,</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>  <span class="at">e.median =</span> <span class="fu">list</span>(mst[<span class="st">&quot;control&quot;</span>], mst[<span class="st">&quot;control&quot;</span>], mst[<span class="st">&quot;control&quot;</span>]),</span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>  <span class="at">seed     =</span> seed <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>)</span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>P0 <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, <span class="at">nrow =</span> nsim, <span class="at">ncol =</span> n_contrast)</span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="cf">for</span> (k <span class="cf">in</span> <span class="fu">seq_along</span>(exp_arms)) {</span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a>  sub0 <span class="ot">&lt;-</span> df0[df0<span class="sc">$</span>group <span class="sc">%in%</span> <span class="fu">c</span>(control_arm, exp_arms[k]), ]</span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>  res0 <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(sub0, <span class="at">control =</span> control_arm,</span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a>                        <span class="at">time.looks =</span> analysis_month, <span class="at">stat =</span> <span class="st">&quot;logrank&quot;</span>, <span class="at">side =</span> <span class="dv">1</span>)</span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a>  P0[, k] <span class="ot">&lt;-</span> res0<span class="sc">$</span>logrank.p</span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a>}</span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a></span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a>  <span class="at">quantity =</span> <span class="fu">c</span>(<span class="st">&quot;Per-contrast type I error (nominal)&quot;</span>,</span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a>               <span class="st">&quot;Family-wise error, Bonferroni&quot;</span>),</span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a>  <span class="at">value =</span> <span class="fu">c</span>(<span class="fu">round</span>(<span class="fu">mean</span>(P0 <span class="sc">&lt;=</span> alpha_total), <span class="dv">3</span>),</span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a>            <span class="fu">round</span>(<span class="fu">mean</span>(<span class="fu">rowSums</span>(P0 <span class="sc">&lt;=</span> thr_bonferroni) <span class="sc">&gt;</span> <span class="dv">0</span>), <span class="dv">3</span>)),</span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">NULL</span></span>
+<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a>)</span>
+<span id="cb10-25"><a href="#cb10-25" tabindex="-1"></a><span class="co">#&gt;                              quantity value</span></span>
+<span id="cb10-26"><a href="#cb10-26" tabindex="-1"></a><span class="co">#&gt; 1 Per-contrast type I error (nominal) 0.024</span></span>
+<span id="cb10-27"><a href="#cb10-27" tabindex="-1"></a><span class="co">#&gt; 2       Family-wise error, Bonferroni 0.022</span></span></code></pre></div>
+<p>The per-contrast error is near the nominal one-sided level, and the
+Bonferroni family-wise error is at or below the target, confirming that
+the screening rule controls the error rate. A Dunnett procedure would
+recover some of the conservatism by using the shared-control
+correlation, at the cost of the closed-form simplicity of the Bonferroni
+threshold.</p>
+</div>
+<div id="remarks" class="section level2">
+<h2>Remarks</h2>
+<p>The multi-arm generation reuses the validated single-group kernel
+once per arm, so every survival, dropout, and accrual draw comes from
+the same primitives that back the two-group path, and the whole study
+runs in a few seconds. The analysis keeps its two-group contract, so
+multiplicity and arm selection are handled as a thin post-processing
+layer over the pairwise statistics rather than inside the analysis
+kernel. This keeps the design flexible. Any of the statistics offered by
+<code>analysis_fast</code>, not only the log-rank test, can drive the
+pairwise comparisons, and any multiple-comparison procedure can be
+applied to the resulting p-values.</p>
+<p>Multi-arm mode shares the master seed across arms and generates each
+arm over a common accrual window, which is adequate for
+operating-characteristic screening. It does not reproduce a single
+randomization list with a common accrual stream, and it does not combine
+with subgroups or the illness-death model, both of which remain
+two-group.</p>
+<div id="references" class="section level3">
+<h3>References</h3>
+<p>Dunnett, C. W. (1955). A multiple comparison procedure for comparing
+several treatments with a control. <em>Journal of the American
+Statistical Association</em>, 50(272), 1096-1121.</p>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

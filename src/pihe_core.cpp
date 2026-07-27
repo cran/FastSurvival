@@ -4,6 +4,20 @@
 #include <vector>
 using namespace Rcpp;
 
+// Per-event-time summary for the PiHE two-pass computation. Defined at file
+// scope so the pointer-based implementation can take a reusable buffer of it
+// from the caller (the fused analysis loop) and avoid reallocating per cell.
+struct PiheEvSummary {
+  double n1k;
+  double n0k;
+  double OTk;
+  double Ok;
+};
+
+// Forward declaration of the pointer-based implementation (defined below).
+void pihe_core_impl(const double*, const int*, const int*, int,
+                    std::vector<PiheEvSummary>&, double*);
+
 //' Core PiHE hazard ratio computation (C++ backend)
 //'
 //' @description
@@ -39,11 +53,30 @@ NumericVector pihe_core(
     const IntegerVector& event_sorted,
     const IntegerVector& j_sorted
 ) {
-  const NumericVector na4 = NumericVector::create(
-    NA_REAL, NA_REAL, NA_REAL, NA_REAL);
-
   const int n = time_sorted.size();
-  if (n == 0) return na4;
+  std::vector<PiheEvSummary> ev;
+  double out[4];
+  pihe_core_impl(time_sorted.begin(), event_sorted.begin(),
+                 j_sorted.begin(), n, ev, out);
+  return NumericVector::create(out[0], out[1], out[2], out[3]);
+}
+
+// Pointer-based implementation with external linkage. Writes
+// theta_0, U_0, I_0, J_0 into out[0..3], or four NA values when the estimate
+// cannot be computed. The per-event-time summaries are stored in the
+// caller-supplied buffer ev, which is cleared on entry and reused across cells
+// to avoid a reserve(n) allocation per call. Algorithm identical to the
+// exported wrapper above.
+void pihe_core_impl(
+    const double* time_sorted,
+    const int* event_sorted,
+    const int* j_sorted,
+    int n,
+    std::vector<PiheEvSummary>& ev,
+    double* out
+) {
+  out[0] = NA_REAL; out[1] = NA_REAL; out[2] = NA_REAL; out[3] = NA_REAL;
+  if (n == 0) return;
 
   // Initialize at-risk counts: count totals per group in one short loop
   int n1 = 0, n0 = 0;
@@ -51,16 +84,8 @@ NumericVector pihe_core(
     if (j_sorted[k] == 1) ++n1; else ++n0;
   }
 
-  // Per-event-time summary stored as a struct for cache locality.
-  // Reserve n: an upper bound on distinct event times. No prepass needed.
-  struct EvSummary {
-    double n1k;
-    double n0k;
-    double OTk;
-    double Ok;
-  };
-  std::vector<EvSummary> ev;
-  ev.reserve(n);
+  ev.clear();
+  if ((int) ev.capacity() < n) ev.reserve(n);
 
   double O_T = 0.0, O_C = 0.0, E_T = 0.0, E_C = 0.0;
 
@@ -98,7 +123,7 @@ NumericVector pihe_core(
       E_T += dd * dn1 / dnj;
       E_C += dd * dn0 / dnj;
 
-      ev.push_back(EvSummary{dn1, dn0, dd1, dd});
+      ev.push_back(PiheEvSummary{dn1, dn0, dd1, dd});
     }
 
     // Decrement at-risk counts by block size
@@ -107,7 +132,7 @@ NumericVector pihe_core(
     i   = j;
   }
 
-  if (O_T == 0.0 || O_C == 0.0 || E_T == 0.0 || E_C == 0.0) return na4;
+  if (O_T == 0.0 || O_C == 0.0 || E_T == 0.0 || E_C == 0.0) return;
 
   // Pike anchor
   const double theta_0 = (O_T * E_C) / (O_C * E_T);
@@ -116,9 +141,9 @@ NumericVector pihe_core(
   double U_0 = 0.0, I_0 = 0.0, J_0 = 0.0;
   const std::size_t K = ev.size();
   for (std::size_t k = 0; k < K; ++k) {
-    const EvSummary& e = ev[k];
+    const PiheEvSummary& e = ev[k];
     const double denom = e.n0k + e.n1k * theta_0;
-    if (denom == 0.0) return na4;
+    if (denom == 0.0) return;
 
     const double p_k = e.n1k * theta_0 / denom;
     const double q_k = 1.0 - p_k;
@@ -130,7 +155,7 @@ NumericVector pihe_core(
     J_0 += Opq * (1.0 - 2.0 * p_k);
   }
 
-  if (!std::isfinite(I_0) || I_0 == 0.0) return na4;
+  if (!std::isfinite(I_0) || I_0 == 0.0) return;
 
-  return NumericVector::create(theta_0, U_0, I_0, J_0);
+  out[0] = theta_0; out[1] = U_0; out[2] = I_0; out[3] = J_0;
 }

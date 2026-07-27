@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Investigating the Freidlin and Korn strong null scenario</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Investigating the Freidlin and Korn strong
+null scenario</h1>
+
+
+
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>Weighted log-rank tests and the MaxCombo test gain power by
+emphasizing the part of the follow-up where the treatment effect is
+expected to appear. Freidlin and Korn (2019) caution that this same
+emphasis can be a liability: a test that down-weights early events can
+declare the experimental arm superior even when that arm is uniformly
+worse, because a late portion of the survival curves where the
+experimental hazard happens to be lower is allowed to dominate the test
+statistic. This vignette reproduces the strong null scenario they use to
+make that point. To keep the comparison interpretable, it also includes
+the weak null in which the two arms are identical, so that the behavior
+under the strong null can be read against a baseline in which every
+method is valid. In the terminology of Magirr and Burman (2019), the
+weak null is the hypothesis of equal survival functions, while the
+strong null is the hypothesis that the experimental arm is no better
+than the control arm at any time point; the scenario of an experimental
+arm that is uniformly worse is one point in this strong null.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(FastSurvival)</span></code></pre></div>
+</div>
+<div id="the-two-scenarios" class="section level2">
+<h2>The two scenarios</h2>
+<p>Both scenarios share a control arm with a constant hazard of 0.25 per
+year. In the weak null the experimental arm is identical to the control
+arm. In the strong null the experimental arm has a very large hazard for
+a short initial period (early harm) and a slightly lower hazard
+thereafter; the parameters follow the Freidlin and Korn (2019) example
+as implemented in the <code>simtrial</code> package documentation,
+namely an experimental hazard ratio of 16 for the first 0.1 year
+followed by 0.76 afterwards. The analysis is at 5 years.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>e_time <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.1</span>, <span class="cn">Inf</span>)         <span class="co"># change point at 0.1 year</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>cut    <span class="ot">&lt;-</span> <span class="dv">5</span>                      <span class="co"># analysis at 5 years</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>scenarios <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">equal =</span> <span class="fu">list</span>(</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>    <span class="at">label =</span> <span class="st">&quot;Equal survival (weak null)&quot;</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>    <span class="at">haz_c =</span> <span class="fu">c</span>(<span class="fl">0.25</span>, <span class="fl">0.25</span>), <span class="at">haz_e =</span> <span class="fu">c</span>(<span class="fl">0.25</span>, <span class="fl">0.25</span>)),</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="at">strong =</span> <span class="fu">list</span>(</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>    <span class="at">label =</span> <span class="st">&quot;Experimental uniformly worse (strong null)&quot;</span>,</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>    <span class="at">haz_c =</span> <span class="fu">c</span>(<span class="fl">0.25</span>, <span class="fl">0.25</span>), <span class="at">haz_e =</span> <span class="fu">c</span>(<span class="dv">16</span>, <span class="fl">0.76</span>) <span class="sc">*</span> <span class="fl">0.25</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>)</span></code></pre></div>
+<p>The decisive feature of the strong null is that the experimental
+survival curve lies below the control curve for the whole of the
+follow-up. The brief but extreme early hazard drops the experimental
+survivors far enough that the modestly lower hazard afterwards never
+lets them catch up. The hazard ratio, however, falls below one after the
+first 0.1 year, and it is this late region that late-emphasis tests
+reward.</p>
+<p><img role="img" src="data:image/png;base64,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" /><!-- --></p>
+<p>The experimental arm is worse at every time point on the survival
+scale, even though its hazard is lower than the control hazard after the
+first 0.1 year.</p>
+</div>
+<div id="methods-compared" class="section level2">
+<h2>Methods compared</h2>
+<p>Four methods are compared. The unweighted log-rank test weights all
+events equally. The Fleming-Harrington FH(0,1) weighted log-rank test
+up-weights late events and is the test most directly affected by the
+concern raised above. The MaxCombo test takes the most significant of a
+set of Fleming-Harrington components, so it inherits the behavior of its
+late-emphasis members. The modestly-weighted log-rank test of Magirr and
+Burman (2019) also up-weights late events, but it caps the weight so
+that no single region can dominate, which is intended to prevent exactly
+the kind of spurious rejection at issue here.</p>
+<p>A single simulated data set is reused across the methods. The
+weighted log-rank tests each occupy the <code>logrank.*</code> columns,
+so they are obtained from separate <code>analysis_fast</code> calls; the
+analysis is a calendar-time cut at 5 years and testing is one-sided in
+the direction of experimental benefit.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>NSIM    <span class="ot">&lt;-</span> <span class="dv">2000</span><span class="dt">L</span>     <span class="co"># raise (e.g. 5000) for tighter Monte Carlo error</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>N_TOTAL <span class="ot">&lt;-</span> <span class="dv">2000</span><span class="dt">L</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>ALPHA   <span class="ot">&lt;-</span> <span class="fl">0.025</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>SIDE    <span class="ot">&lt;-</span> <span class="dv">1</span><span class="dt">L</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>T_STAR  <span class="ot">&lt;-</span> <span class="fl">0.5</span>       <span class="co"># modestly-weighted log-rank delay (years)</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>SEED    <span class="ot">&lt;-</span> <span class="dv">20240601</span><span class="dt">L</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>run_one_scenario <span class="ot">&lt;-</span> <span class="cf">function</span>(scn) {</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  dataset <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>    <span class="at">nsim     =</span> NSIM,</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>    <span class="at">n        =</span> <span class="fu">rep</span>(N_TOTAL <span class="sc">%/%</span> <span class="dv">2</span><span class="dt">L</span>, <span class="dv">2</span><span class="dt">L</span>),</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>    <span class="at">a.time   =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">1e-4</span>),       <span class="co"># near-instantaneous enrollment</span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>    <span class="at">a.prop   =</span> <span class="dv">1</span>,</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>    <span class="at">e.hazard =</span> <span class="fu">list</span>(scn<span class="sc">$</span>haz_c, scn<span class="sc">$</span>haz_e),</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>    <span class="at">e.time   =</span> e_time,</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>    <span class="at">seed     =</span> SEED</span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>  )</span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>  res_lr   <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(dataset, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">time.looks =</span> cut,</span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>                            <span class="at">stat =</span> <span class="st">&quot;logrank&quot;</span>, <span class="at">side =</span> SIDE)</span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>  res_fh01 <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(dataset, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">time.looks =</span> cut,</span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a>                            <span class="at">stat =</span> <span class="st">&quot;logrank&quot;</span>, <span class="at">weight =</span> <span class="st">&quot;fh&quot;</span>,</span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a>                            <span class="at">rho =</span> <span class="dv">0</span>, <span class="at">gamma =</span> <span class="dv">1</span>, <span class="at">side =</span> SIDE)</span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a>  res_mb   <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(dataset, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">time.looks =</span> cut,</span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a>                            <span class="at">stat =</span> <span class="st">&quot;logrank&quot;</span>, <span class="at">weight =</span> <span class="st">&quot;mwlrt&quot;</span>,</span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a>                            <span class="at">t_star =</span> T_STAR, <span class="at">side =</span> SIDE)</span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a>  res_mc   <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(dataset, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">time.looks =</span> cut,</span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a>                            <span class="at">stat =</span> <span class="st">&quot;maxcombo&quot;</span>,</span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a>                            <span class="at">mc.rho =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">1</span>), <span class="at">mc.gamma =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">1</span>),</span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a>                            <span class="at">side =</span> SIDE)</span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a></span>
+<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a>  reject_in_favor <span class="ot">&lt;-</span> <span class="cf">function</span>(res, pcol) {</span>
+<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a>    ok <span class="ot">&lt;-</span> res<span class="sc">$</span>reached</span>
+<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a>    <span class="fu">mean</span>(res[[pcol]][ok] <span class="sc">&lt;=</span> ALPHA, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a>  }</span>
+<span id="cb3-36"><a href="#cb3-36" tabindex="-1"></a>  <span class="fu">c</span>(<span class="st">&quot;Log-rank&quot;</span>          <span class="ot">=</span> <span class="fu">reject_in_favor</span>(res_lr,   <span class="st">&quot;logrank.p&quot;</span>),</span>
+<span id="cb3-37"><a href="#cb3-37" tabindex="-1"></a>    <span class="st">&quot;FH(0,1)&quot;</span>           <span class="ot">=</span> <span class="fu">reject_in_favor</span>(res_fh01, <span class="st">&quot;logrank.p&quot;</span>),</span>
+<span id="cb3-38"><a href="#cb3-38" tabindex="-1"></a>    <span class="st">&quot;Modestly weighted&quot;</span> <span class="ot">=</span> <span class="fu">reject_in_favor</span>(res_mb,   <span class="st">&quot;logrank.p&quot;</span>),</span>
+<span id="cb3-39"><a href="#cb3-39" tabindex="-1"></a>    <span class="st">&quot;MaxCombo&quot;</span>          <span class="ot">=</span> <span class="fu">reject_in_favor</span>(res_mc,   <span class="st">&quot;maxcombo.p&quot;</span>))</span>
+<span id="cb3-40"><a href="#cb3-40" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="results" class="section level2">
+<h2>Results</h2>
+<p>The reported quantity is the one-sided rejection rate in favor of the
+experimental arm. Under the weak null the two arms are identical, so
+this is the ordinary one-sided type I error rate and every valid test
+should be near 2.5%. Under the strong null the experimental arm is
+uniformly worse, so a test that respects the survival ordering should
+keep the rate at or below 2.5%; a rate well above 2.5% means the test is
+declaring a harmful treatment beneficial.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>rates <span class="ot">&lt;-</span> <span class="fu">vapply</span>(scenarios, run_one_scenario, <span class="fu">numeric</span>(<span class="dv">4</span><span class="dt">L</span>))</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="fu">colnames</span>(rates) <span class="ot">&lt;-</span> <span class="fu">vapply</span>(scenarios, <span class="cf">function</span>(s) s<span class="sc">$</span>label, <span class="fu">character</span>(<span class="dv">1</span><span class="dt">L</span>))</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="fu">round</span>(rates, <span class="dv">3</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt;                   Equal survival (weak null)</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; Log-rank                               0.028</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; FH(0,1)                                0.026</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt; Modestly weighted                      0.028</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; MaxCombo                               0.025</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt;                   Experimental uniformly worse (strong null)</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt; Log-rank                                               0.000</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt; FH(0,1)                                                0.610</span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt; Modestly weighted                                      0.000</span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt; MaxCombo                                               0.515</span></span></code></pre></div>
+<table>
+<caption>One-sided rejection rate in favor of the experimental arm (2000
+simulated trials, n = 2000). Under the weak null every valid test is
+near 2.5%; under the strong null the experimental arm is uniformly
+worse, so a rate above 2.5% reflects a spurious finding.</caption>
+<colgroup>
+<col width="20%" />
+<col width="30%" />
+<col width="48%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="right">Equal survival (weak null)</th>
+<th align="right">Experimental uniformly worse (strong null)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Log-rank</td>
+<td align="right">0.028</td>
+<td align="right">0.000</td>
+</tr>
+<tr class="even">
+<td align="left">FH(0,1)</td>
+<td align="right">0.026</td>
+<td align="right">0.610</td>
+</tr>
+<tr class="odd">
+<td align="left">Modestly weighted</td>
+<td align="right">0.028</td>
+<td align="right">0.000</td>
+</tr>
+<tr class="even">
+<td align="left">MaxCombo</td>
+<td align="right">0.025</td>
+<td align="right">0.515</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="interpretation" class="section level2">
+<h2>Interpretation</h2>
+<p>Under the weak null all four methods sit near the nominal 2.5%,
+confirming that each is a valid one-sided test when the survival curves
+are equal. The contrast appears under the strong null. The unweighted
+log-rank test keeps the rejection rate in favor of the experimental arm
+near zero: it weights the early harm and the late separation in
+proportion to the events occurring at each, so the early harm offsets
+the late region and the test correctly almost never favors the worse
+arm. The FH(0,1) test and the MaxCombo test instead reject in favor of
+the experimental arm at a high rate, because down-weighting the early
+events removes the evidence of harm and lets the late region drive the
+result. This is the behavior Freidlin and Korn (2019) warn against: a
+statistically significant result in favor of a treatment that is, by
+construction, never better on the survival scale. The modestly-weighted
+log-rank test of Magirr and Burman (2019) behaves like the log-rank test
+here, since capping the weights prevents the late region from
+dominating, which is why it remains a useful member of the weighted
+family even when unbounded late-emphasis tests do not.</p>
+<p>None of this means that emphasizing late events is never appropriate.
+Freidlin and Korn (2019) note that a test down-weighting early events
+can be justified when it is known in advance that the intervention
+cannot affect early outcomes, as in some screening and prevention
+trials, and they regard methods for non-proportional hazards as useful
+secondary analyses. The caution is specific: when the survival ordering
+is not known in advance, a primary analysis built on a late-emphasis
+test can convert a clinically meaningless or harmful pattern into a
+significant result, whereas a log-rank-based primary analysis is robust
+to this failure.</p>
+</div>
+<div id="notes" class="section level2">
+<h2>Notes</h2>
+<p>The strong null parameters follow the Freidlin and Korn (2019)
+example as given in the <code>simtrial</code> package documentation. The
+modestly-weighted log-rank delay <code>T_STAR</code> and the number of
+simulated trials <code>NSIM</code> are set at the top of the design
+chunk and can be changed; <code>NSIM</code> is kept modest so the
+vignette builds quickly, and a larger value tightens the Monte Carlo
+error on the reported rates.</p>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<p>Freidlin, B., &amp; Korn, E. L. (2019). Methods for accommodating
+nonproportional hazards in clinical trials: Ready for the primary
+analysis? <em>Journal of Clinical Oncology</em>, 37(35), 3455-3459.</p>
+<p>Magirr, D., &amp; Burman, C.-F. (2019). Modestly weighted logrank
+tests. <em>Statistics in Medicine</em>, 38(20), 3782-3790.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -10,261 +10,81 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment  = "#>",
-  fig.align = "center"
+  comment  = "#>"
 )
 ```
 
 # Overview
 
-FastSurvival provides fast alternatives to three standard functions in the
-`survival` package (`survfit()`, `survdiff()`, `coxph()`) together with a
-clinical trial data simulator (`simdata_fast()`). All functions are designed
-for repeated evaluation inside simulation loops, and the core computations
-are implemented in C++ via `Rcpp`.
-
-This vignette has three parts:
-
-1. **Numerical agreement**: confirm that `survfit_fast()`, `survdiff_fast()`,
-   and `coxph_fast()` return the same numerical results as the corresponding
-   functions in the `survival` package.
-2. **Speed comparison**: measure execution times against the `survival`
-   package using `microbenchmark`.
-3. **Simulation example**: generate data with `simdata_fast()` (`nsim = 100`)
-   and summarize the results of applying the three analysis functions to
-   each simulated trial.
+FastSurvival provides fast alternatives to the standard survival analysis
+functions in the [survival](https://cran.r-project.org/package=survival)
+package, together with a simulation layer for designing and evaluating
+time-to-event trials. Every function is designed for repeated evaluation
+inside large simulation loops, where the iterative or object-building
+overhead of the standard implementations becomes a bottleneck. Core
+computations are implemented in C++ via Rcpp.
 
 ```{r load-pkg}
 library(FastSurvival)
+```
+
+# Function families
+
+The package has two families of functions.
+
+The estimation and testing functions operate on a single dataset and return
+an S3 object with a `print()` method. `survfit_fast()` evaluates the
+Kaplan-Meier estimate at a single time point. `survdiff_fast()` computes the
+log-rank test and its weighted and stratified variants. `coxph_fast()`
+returns a closed-form hazard ratio. `rmst_fast()` returns the restricted mean
+survival time, and `wmst_fast()` the window mean survival time over an
+interval. `milestone_fast()` compares survival at a milestone timepoint, and
+`medsurv_fast()` compares median survival times. `maxcombo_fast()` computes the
+max-combo test, `rmw_fast()` the robust modestly-weighted log-rank test, and
+`wkm_fast()` the weighted Kaplan-Meier (Pepe-Fleming) test. `ahsw_fast()`
+computes the average hazard with survival weight, and `ahr_fast()` the
+Kalbfleisch-Prentice average hazard ratio.
+
+The simulation functions support a full simulation study. `simdata_fast()`
+generates individual patient data for one- or two-group trials.
+`analysis_fast()` performs interim or sequential analyses of the simulated
+data at one or more looks, and can compute any of the estimation and testing
+statistics above, optionally within subgroups. `simsummary_fast()` aggregates
+the operating characteristics from the analysis output against supplied
+boundaries.
+
+# A minimal example
+
+The following example uses the `ovarian` dataset from the survival package,
+with a one-sided test of treatment benefit (`side = 1`).
+
+```{r quick}
 library(survival)
-```
 
-# 1. Numerical agreement with the `survival` package
-
-We use the `ovarian` dataset bundled with the `survival` package for the
-agreement checks.
-
-```{r data}
+# Single-time-point Kaplan-Meier estimate
 ord <- order(ovarian$futime)
-t_s <- ovarian$futime[ord]
-e_s <- ovarian$fustat[ord]
-g_s <- ovarian$rx[ord]
+survfit_fast(ovarian$futime[ord], ovarian$fustat[ord],
+             t_eval = 500, conf.type = "log")
+
+# Log-rank test
+survdiff_fast(ovarian$futime, ovarian$fustat, ovarian$rx,
+              control = 1, side = 1)
+
+# Hazard ratio via the Pike-Halley Estimator
+coxph_fast(ovarian$futime, ovarian$fustat, ovarian$rx,
+           control = 1, side = 1)
 ```
 
-## 1.1 `survfit_fast()` versus `survfit()` + `summary()`
+# Where to go next
 
-We evaluate the Kaplan-Meier estimate at the landmark time `t = 500`.
-
-```{r survfit-agreement}
-# FastSurvival
-fit_fast <- survfit_fast(t_s, e_s, t_eval = 500, conf.type = "log")
-fit_fast
-
-# survival
-fit_ref <- survfit(Surv(futime, fustat) ~ 1, data = ovarian, conf.type = "log")
-summary(fit_ref, times = 500)
-```
-
-The survival estimate, standard error, and confidence interval at
-`t = 500` agree between the two implementations.
-
-## 1.2 `survdiff_fast()` versus `survdiff()`
-
-```{r survdiff-agreement}
-# FastSurvival (two-sided chi-square statistic)
-sd_fast <- survdiff_fast(ovarian$futime, ovarian$fustat, ovarian$rx,
-                         control = 1, side = 2)
-sd_fast
-
-# survival
-sd_ref <- survdiff(Surv(futime, fustat) ~ rx, data = ovarian)
-sd_ref
-
-cat("survdiff_fast chi-square:", as.numeric(sd_fast), "\n")
-cat("survdiff      chi-square:", sd_ref$chisq,       "\n")
-```
-
-The observed and expected counts, the chi-square statistic, and the p-value
-agree.
-
-## 1.3 `coxph_fast()` versus `coxph()`
-
-`coxph()` treats `rx` as numeric with `rx = 1` as the reference level, so we
-set `control = 1` for a consistent comparison. `coxph_fast()` is based on
-the Pike-Halley Estimator (Homma, 2025), a closed-form approximation to the
-Cox partial likelihood maximizer; the residual difference is of order
-O_p(n^{-3/2}).
-
-```{r coxph-agreement}
-# FastSurvival
-cx_fast <- coxph_fast(ovarian$futime, ovarian$fustat, ovarian$rx, control = 1)
-cx_fast
-
-# survival
-cx_ref <- summary(coxph(Surv(futime, fustat) ~ rx, data = ovarian))
-cx_ref$coefficients
-cx_ref$conf.int
-
-cat("coxph_fast HR :", cx_fast["exp(coef)"], "\n")
-cat("coxph      HR :", cx_ref$coefficients[, "exp(coef)"], "\n")
-```
-
-The hazard ratio, standard error, and Wald confidence interval agree to
-the expected order of accuracy.
-
-# 2. Speed comparison
-
-The following benchmark compares `FastSurvival` against the `survival`
-package using `microbenchmark` on the `ovarian` dataset (n = 26). Because
-the FastSurvival functions are designed for use inside simulation loops
-where the data are generated in sorted order, we set `presorted = TRUE` and
-sort the input once outside the benchmark.
-
-```{r benchmark, message = FALSE}
-library(microbenchmark)
-
-ord <- order(ovarian$futime)
-t_s <- ovarian$futime[ord]
-e_s <- ovarian$fustat[ord]
-g_s <- ovarian$rx[ord]
-
-bm <- microbenchmark(
-  survfit_fast  = survfit_fast(t_s, e_s, t_eval = 500),
-  survfit       = summary(survfit(Surv(futime, fustat) ~ 1, data = ovarian),
-                          times = 500),
-  survdiff_fast = survdiff_fast(t_s, e_s, g_s, control = 1, side = 2,
-                                presorted = TRUE),
-  survdiff      = survdiff(Surv(futime, fustat) ~ rx, data = ovarian),
-  coxph_fast    = coxph_fast(t_s, e_s, g_s, control = 1, presorted = TRUE),
-  coxph         = coxph(Surv(futime, fustat) ~ rx, data = ovarian),
-  times = 100
-)
-print(bm)
-```
-
-The exact timings depend on the hardware and the random fluctuation
-inherent in microbenchmarks, but on the `ovarian` dataset all three
-FastSurvival functions are roughly 40 times faster than their counterparts
-in the `survival` package. The speed gain typically grows with the sample
-size; on a phase-3 trial sized dataset (n = 600, event rate 80%) the speed
-gains observed in development reach roughly 50x for `survfit_fast()`, 40x
-for `survdiff_fast()`, and 30x for `coxph_fast()`.
-
-# 3. Simulation example
-
-We now generate `nsim = 100` trials with `simdata_fast()` and apply the
-three analysis functions to each simulated dataset.
-
-## 3.1 Generate simulated data
-
-We consider a two-group parallel trial with 100 patients per group,
-12-month accrual, exponential survival with median 18 months in the control
-group and 24 months in the treatment group, and a small constant dropout
-hazard.
-
-```{r simulate}
-set.seed(42)
-df <- simdata_fast(
-  nsim     = 100,
-  n        = c(100, 100),
-  a.time   = c(0, 12),
-  a.rate   = 200 / 12,
-  e.median = list(18, 24),
-  d.hazard = list(0.01, 0.01),
-  seed     = 42
-)
-head(df)
-```
-
-## 3.2 Apply the three analysis functions to each simulated trial
-
-For each of the 100 simulated trials, we run:
-
-- `survfit_fast()` on the treatment group to obtain the Kaplan-Meier estimate
-  at the landmark time `t = 18` months;
-- `survdiff_fast()` to obtain the two-sided chi-square statistic and p-value;
-- `coxph_fast()` to obtain the hazard ratio estimate and its Wald confidence
-  interval.
-
-```{r analyse}
-nsim   <- 100L
-t_land <- 18
-
-km_mat <- matrix(NA_real_, nrow = nsim, ncol = 4L,
-                 dimnames = list(NULL,
-                                 c("surv", "std.err", "lower", "upper")))
-ld_vec <- numeric(nsim)   # log-rank chi-square
-hr_mat <- matrix(NA_real_, nrow = nsim, ncol = 5L,
-                 dimnames = list(NULL,
-                                 c("coef", "exp(coef)", "se(coef)",
-                                   "lower .95", "upper .95")))
-
-for (s in seq_len(nsim)) {
-  d <- df[df$sim == s, ]
-
-  # Treatment-group KM at t = 18 (sort once)
-  d_trt <- d[d$group == 2L, ]
-  ord_t <- order(d_trt$tte)
-  km_mat[s, ] <- unclass(
-    survfit_fast(d_trt$tte[ord_t], d_trt$event[ord_t], t_eval = t_land)
-  )
-
-  # Pooled sort for log-rank and Cox
-  ord_p <- order(d$tte)
-  t_p   <- d$tte[ord_p]
-  e_p   <- d$event[ord_p]
-  g_p   <- d$group[ord_p]
-
-  ld_vec[s] <- as.numeric(
-    survdiff_fast(t_p, e_p, g_p, control = 1L, side = 2L, presorted = TRUE)
-  )
-  hr_mat[s, ] <- unclass(
-    coxph_fast(t_p, e_p, g_p, control = 1L, presorted = TRUE)
-  )
-}
-```
-
-## 3.3 Summarize the results across 100 simulations
-
-```{r summarize}
-# Landmark survival in the treatment group at t = 18
-km_summary <- c(
-  mean_surv    = mean(km_mat[, "surv"]),
-  sd_surv      = sd(km_mat[, "surv"]),
-  mean_std_err = mean(km_mat[, "std.err"])
-)
-km_summary
-
-# Log-rank test: empirical power at alpha = 0.05 (two-sided)
-p_logrank   <- pchisq(ld_vec, df = 1L, lower.tail = FALSE)
-power_empir <- mean(p_logrank < 0.05)
-cat(sprintf("Empirical power (log-rank, two-sided, alpha = 0.05): %.2f\n",
-            power_empir))
-
-# Hazard ratio summary
-hr_summary <- c(
-  mean_HR     = mean(hr_mat[, "exp(coef)"]),
-  sd_HR       = sd(hr_mat[, "exp(coef)"]),
-  mean_log_HR = mean(hr_mat[, "coef"]),
-  sd_log_HR   = sd(hr_mat[, "coef"]),
-  cover_95    = mean(hr_mat[, "lower .95"] <= (18 / 24) &
-                     hr_mat[, "upper .95"] >= (18 / 24))
-)
-hr_summary
-```
-
-Under exponential survival with medians 18 and 24 months in the control and
-treatment groups, the true hazard ratio is `(log(2) / 24) / (log(2) / 18) =
-18 / 24 = 0.75`. Across the 100 simulated trials, the average
-treatment-group landmark survival at `t = 18` months was around 0.60,
-consistent with `exp(-log(2) * 18 / 24)` after accounting for censoring from
-the administrative cutoff and dropout. The average hazard ratio estimate
-from `coxph_fast()` was close to the true value 0.75, and the empirical
-coverage of the 95% Wald confidence interval was near the nominal 95%
-level. The empirical power of the two-sided log-rank test at alpha = 0.05
-was around 0.5, reflecting the modest sample size (200 patients total)
-relative to the modest treatment effect (HR = 0.75) under the chosen
-accrual and dropout settings.
+Several further vignettes cover the package in depth. *Validation of
+FastSurvival* checks numerical agreement with established packages on a real
+clinical-trial dataset. *Speed comparison* quantifies the performance gain.
+*Group sequential design with the simulation trio* demonstrates
+`simdata_fast()`, `analysis_fast()`, and `simsummary_fast()` against a gsDesign
+reference. Further applied vignettes work the simulation trio through
+nonproportional-hazards, correlated multiple-endpoint, and multiregional
+settings.
 
 # References
 

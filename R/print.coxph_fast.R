@@ -28,9 +28,9 @@
 #' @method print coxph_fast
 print.coxph_fast <- function(x, digits = max(1L, getOption("digits") - 3L), ...) {
 
-  # Detect whether the estimate is available
+  # Detect whether the estimate is available.
   if (anyNA(x)) {
-    cat("Pike-Halley Estimator (closed-form hazard ratio)\n\n")
+    cat("Pike-Halley estimator for the hazard ratio (two-group)\n\n")
     cat("  Estimate not available (insufficient data).\n")
     return(invisible(x))
   }
@@ -38,17 +38,22 @@ print.coxph_fast <- function(x, digits = max(1L, getOption("digits") - 3L), ...)
   coef_v    <- x[["coef"]]
   hr_v      <- x[["exp(coef)"]]
   se_v      <- x[["se(coef)"]]
-  conf.int  <- attr(x, "conf.int")
-  if (is.null(conf.int)) conf.int <- 0.95
-  ci_lab    <- conf.int * 100
+  conf.level <- attr(x, "conf.level")
+  if (is.null(conf.level)) conf.level <- 0.95
+  side      <- attr(x, "side")
+  if (is.null(side)) side <- 2L
+  control   <- attr(x, "control")
+  ci_lab    <- conf.level * 100
   lo_v      <- x[[sprintf("lower .%g", ci_lab)]]
   hi_v      <- x[[sprintf("upper .%g", ci_lab)]]
 
-  # Wald z and two-sided p-value
+  # Wald z and p-value following the requested alternative. Treatment benefit
+  # corresponds to a hazard ratio below 1 (negative coefficient), so the
+  # one-sided test uses the lower tail.
   z_v <- coef_v / se_v
-  p_v <- 2 * pnorm(-abs(z_v))
+  p_v <- if (side == 1L) pnorm(z_v) else 2 * pnorm(-abs(z_v))
 
-  # Coefficient table: matches the column layout of summary(coxph(...))$coefficients
+  # Coefficient table: matches the column layout of summary(coxph(...))$coefficients.
   coef_mat <- matrix(
     c(coef_v, hr_v, se_v, z_v, p_v),
     nrow = 1L,
@@ -58,7 +63,7 @@ print.coxph_fast <- function(x, digits = max(1L, getOption("digits") - 3L), ...)
     )
   )
 
-  # Confidence interval table: matches summary(coxph(...))$conf.int
+  # Confidence interval table: matches summary(coxph(...))$conf.int.
   ci_mat <- matrix(
     c(hr_v, 1 / hr_v, lo_v, hi_v),
     nrow = 1L,
@@ -70,7 +75,12 @@ print.coxph_fast <- function(x, digits = max(1L, getOption("digits") - 3L), ...)
     )
   )
 
-  cat("Pike-Halley Estimator (closed-form hazard ratio)\n\n")
+  cat("Pike-Halley estimator for the hazard ratio (two-group)\n\n")
+  if (!is.null(control)) {
+    cat(sprintf("  control = %s\n", format(control)))
+  }
+  cat(sprintf("  alternative = %s\n\n",
+              if (side == 1L) "one.sided" else "two.sided"))
   cat("Coefficients:\n")
   printCoefmat(coef_mat, digits = digits, has.Pvalue = TRUE, P.values = TRUE)
   cat("\n")

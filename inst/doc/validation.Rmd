@@ -1,0 +1,520 @@
+---
+title: "Validation of FastSurvival"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Validation of FastSurvival}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>"
+)
+have_survival <- requireNamespace("survival", quietly = TRUE)
+have_survRM2  <- requireNamespace("survRM2", quietly = TRUE)
+have_survAH   <- requireNamespace("survAH", quietly = TRUE)
+have_nph      <- requireNamespace("nph", quietly = TRUE)
+have_nphRCT   <- requireNamespace("nphRCT", quietly = TRUE)
+```
+
+# Purpose
+
+FastSurvival is built for speed, but a fast estimator is only useful if it
+returns the same answer as the established implementation. This vignette
+checks the numerical agreement between each FastSurvival function and a
+reference, on a real clinical-trial dataset. We use the `gbsg` data from the
+survival package, the German Breast Cancer Study Group cohort of 686 patients,
+with recurrence-free survival time `rfstime` (in days), the event indicator
+`status`, and the treatment indicator `hormon` (0 = no hormonal therapy,
+1 = hormonal therapy). Throughout we take the no-hormone arm as the control
+(`control = 0`) and report one-sided tests of treatment benefit (`side = 1`).
+
+The references are: the survival package for the Kaplan-Meier estimate, the
+log-rank test, the Cox hazard ratio, milestone survival, and the median
+survival comparison; survRM2 for the restricted mean survival time; survAH for
+the average hazard with survival weight; nph for the weighted log-rank test and
+the max-combo test; and nphRCT for the robust modestly-weighted test. The
+window mean survival time and the weighted Kaplan-Meier statistic, which have
+no direct package counterpart on CRAN, are checked against a Kaplan-Meier
+integral computed from `survfit()` and against the restricted mean survival
+time identity, respectively. The same comparisons form the basis of the
+automated test suite shipped with the package.
+
+```{r load}
+library(FastSurvival)
+```
+
+# Reference data
+
+```{r data, eval = have_survival}
+library(survival)
+
+# German Breast Cancer Study Group cohort
+str(gbsg[, c("rfstime", "status", "hormon")])
+table(hormon = gbsg$hormon)
+```
+
+# Kaplan-Meier survival
+
+`survfit_fast()` evaluates the Kaplan-Meier estimate at a single time point.
+We compare against `summary(survfit(...))` at the same time (1000 days).
+
+```{r km, eval = have_survival}
+# survfit_fast assumes time-sorted input; the C++ core groups tied times in the
+# survival::survfit risk-set convention, so the data only need ordering by time.
+ord  <- order(gbsg$rfstime)
+fast <- survfit_fast(gbsg$rfstime[ord], gbsg$status[ord],
+                     t_eval = 1000, conf.type = "log-log")
+
+fit  <- survfit(Surv(rfstime, status) ~ 1, data = gbsg)
+ref  <- summary(fit, times = 1000)
+
+data.frame(
+  quantity = c("survival", "std.err"),
+  fast     = c(unclass(fast)["surv"], unclass(fast)["std.err"]),
+  survival = c(ref$surv, ref$std.err),
+  row.names = NULL
+)
+```
+
+# Log-rank test
+
+`survdiff_fast()` with `side = 1` returns a signed Z-score. Its square is the
+chi-square statistic from `survdiff()`.
+
+```{r logrank, eval = have_survival}
+fast_lr <- survdiff_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
+                         control = 0, side = 1)
+
+ref_lr  <- survdiff(Surv(rfstime, status) ~ hormon, data = gbsg)
+
+c(fast = as.numeric(fast_lr)^2, survival = ref_lr$chisq)
+```
+
+# Weighted log-rank test
+
+`survdiff_fast()` also computes Fleming-Harrington G(rho, gamma) weighted
+log-rank tests through the `weight = "fh"` argument. The
+[nph](https://cran.r-project.org/package=nph) package provides
+`logrank.test()` with the same family, so we compare the chi-square statistic
+(the squared one-sided Z) across several weight choices.
+
+```{r wlr, eval = have_survival && have_nph}
+fh_grid <- data.frame(rho = c(0, 1, 0, 1), gamma = c(1, 0, 0, 1))
+
+do.call(rbind, lapply(seq_len(nrow(fh_grid)), function(i) {
+  r <- fh_grid$rho[i]
+  g <- fh_grid$gamma[i]
+  fast <- as.numeric(survdiff_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
+                                   control = 0, side = 1,
+                                   weight = "fh", rho = r, gamma = g))
+  nph_chisq <- nph::logrank.test(gbsg$rfstime, gbsg$status, gbsg$hormon,
+                                 rho = r, gamma = g)$test$Chisq
+  data.frame(rho = r, gamma = g, fast = fast^2, nph = nph_chisq)
+}))
+```
+
+The two implementations agree to numerical precision across the weight family,
+including the ordinary log-rank test recovered at `rho = 0, gamma = 0`.
+
+# Cox hazard ratio
+
+`coxph_fast()` returns the Pike-Halley Estimator, a closed-form approximation
+to the Cox partial likelihood maximizer. We report the log hazard ratio from
+both; the sign convention is the same and `side` does not affect the point
+estimate.
+
+```{r cox, eval = have_survival}
+fast_hr <- coxph_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
+                      control = 0, side = 1)
+
+ref_cox <- coxph(Surv(rfstime, status) ~ hormon, data = gbsg)
+
+c(fast = unclass(fast_hr)["coef"], cox = unname(coef(ref_cox)))
+```
+
+Because the Pike-Halley Estimator is a closed-form approximation rather than
+the exact partial-likelihood maximizer, the two log hazard ratios are not
+expected to be identical. They differ slightly, here in the fourth decimal
+place, which reflects the approximation and is not a sign of error.
+
+# Restricted mean survival time
+
+`rmst_fast()` integrates the Kaplan-Meier survival curve up to a horizon. We
+compare the two-group RMST difference against `survRM2::rmst2()` at 1000 days.
+
+```{r rmst, eval = have_survival && have_survRM2}
+library(survRM2)
+
+tau <- 1000
+
+fast_rmst <- rmst_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
+                       control = 0, tau = tau, side = 1)
+
+ref_rmst  <- rmst2(time = gbsg$rfstime, status = gbsg$status,
+                   arm = gbsg$hormon, tau = tau)
+
+c(fast = unclass(fast_rmst)["diff"],
+  survRM2 = ref_rmst$unadjusted.result[1, 1])
+```
+
+# Window mean survival time
+
+`wmst_fast()` integrates the Kaplan-Meier curve between a lower and an upper
+window limit, generalizing the restricted mean survival time. CRAN has no
+dedicated WMST package, so we validate the per-group windowed area directly
+against a Kaplan-Meier step-function integral computed from `survfit()` over
+the same window. A full comparison against the `survWMST` package, which is
+distributed on GitHub, is provided in
+`tools/compare_wmst_survwmst.R`.
+
+```{r wmst, eval = have_survival}
+tau1 <- 200
+tau2 <- 1000
+
+fast_wm <- wmst_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
+                     control = 0, side = 1, tau1 = tau1, tau2 = tau2)
+
+# Integral of the Kaplan-Meier step function over [lo, hi] for one group.
+km_window_area <- function(gi, lo, hi) {
+  sf <- survfit(Surv(rfstime, status) ~ 1, data = gbsg[gbsg$hormon == gi, ])
+  tk <- c(0, sf$time)
+  sk <- c(1, sf$surv)
+  brk  <- sort(unique(c(lo, hi, sf$time[sf$time > lo & sf$time < hi])))
+  area <- 0
+  for (b in seq_len(length(brk) - 1L)) {
+    u  <- brk[b]
+    su <- sk[max(which(tk <= u))]
+    area <- area + su * (brk[b + 1L] - u)
+  }
+  area
+}
+
+data.frame(
+  group    = c("control", "treatment"),
+  fast     = unclass(fast_wm)[c("wmst.control", "wmst.treatment")],
+  survfit  = c(km_window_area(0, tau1, tau2), km_window_area(1, tau1, tau2)),
+  row.names = NULL
+)
+```
+
+# Weighted Kaplan-Meier test
+
+`wkm_fast()` computes the weighted Kaplan-Meier (Pepe-Fleming) test, the
+weighted integral of the difference between the two Kaplan-Meier curves. With
+the constant weight the weighted difference reduces exactly to the difference
+in restricted mean survival time over the observed range, which gives a clean
+internal check against `rmst_fast()` evaluated at the largest observed time.
+
+```{r wkm, eval = have_survival}
+tmax <- max(gbsg$rfstime)
+
+fast_wk <- wkm_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
+                    control = 0, side = 1, weight = "constant")
+
+ref_rm  <- rmst_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
+                     control = 0, tau = tmax, side = 1)
+
+c(wkm.constant = unclass(fast_wk)["wdiff"], rmst = unclass(ref_rm)["diff"])
+```
+
+With the default Pepe-Fleming weight, `wkm_fast()` reproduces the weighted
+Kaplan-Meier statistic of the `nphsim` package. Because `nphsim` is distributed
+only on GitHub, that comparison is kept in
+`tools/compare_wkm_nphsim.R` (which also bundles a survival-only
+reproduction of the statistic) and in the test suite, rather than in this
+vignette.
+
+# Milestone survival
+
+`milestone_fast()` compares Kaplan-Meier survival between two groups at a
+milestone timepoint. The per-group survival probabilities match those from
+`survfit()`.
+
+```{r milestone, eval = have_survival}
+tstar <- 1000
+
+fast_ms <- milestone_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
+                          control = 0, tau = tstar, method = "loglog",
+                          side = 1)
+
+fit_g <- survfit(Surv(rfstime, status) ~ hormon, data = gbsg)
+ref_g <- summary(fit_g, times = tstar)
+
+data.frame(
+  group    = c("control", "treatment"),
+  fast     = fast_ms$surv[c("control", "treatment")],
+  survival = ref_g$surv,
+  row.names = NULL
+)
+```
+
+# Median survival time
+
+`medsurv_fast()` estimates the Kaplan-Meier median survival time and, for two
+groups, their difference. The point estimate is the Kaplan-Meier median (the
+first time at which the product-limit curve reaches 0.5), the same convention
+as `survfit()`, so the per-group medians match those reported by `survfit()`
+exactly.
+
+```{r medsurv, eval = have_survival}
+fast_med <- medsurv_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
+                         control = 0, side = 1, method = "nph")
+
+fit_med <- survfit(Surv(rfstime, status) ~ hormon, data = gbsg)
+med_ref <- summary(fit_med)$table[, "median"]
+
+data.frame(
+  group    = c("control", "treatment"),
+  fast     = unclass(fast_med)[c("median.control", "median.treatment")],
+  survival = c(med_ref[1], med_ref[2]),
+  row.names = NULL
+)
+```
+
+We use `survfit()` as the reference here, rather than `nph::nphparams()`,
+because the two define the median on different survival curves: `survfit()`
+and `medsurv_fast()` use the Kaplan-Meier (product-limit) median, whereas
+`nph::nphparams()` reads the median off the Nelson-Aalen curve,
+S(t) = exp(-H(t)), which lies above the Kaplan-Meier curve and so can cross 0.5
+at a later time on tied data. The `method = "nph"` standard error reproduces
+the `nph::nphparams()` standard error to numerical precision when the two
+medians coincide; that comparison is run on tie-free scenarios in
+`tools/compare_medsurv_nphparams.R` and in the package test suite.
+
+# Average hazard with survival weight
+
+`ahsw_fast()` computes the average hazard with survival weight of Uno and
+Horiguchi. We compare the per-group average hazard against `survAH::ah2()`.
+
+```{r ahsw, eval = have_survival && have_survAH}
+library(survAH)
+
+tau <- 1000
+
+fast_ah <- ahsw_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
+                     control = 0, tau = tau, side = 1)
+
+ref_ah  <- ah2(time = gbsg$rfstime, status = gbsg$status,
+               arm = gbsg$hormon, tau = tau)
+
+data.frame(
+  quantity = c("AH (control)", "AH (treatment)"),
+  fast     = unclass(fast_ah)[c("ah.ctrl", "ah.trt")],
+  survAH   = c(ref_ah$ah["AH (arm0)", "Est."],
+               ref_ah$ah["AH (arm1)", "Est."]),
+  row.names = NULL
+)
+```
+
+The average hazard is the ratio of the cumulative event probability to the
+restricted mean survival time, so for the `gbsg` data, where follow-up is
+measured in days, the values are on the order of 1e-04 per day in both groups.
+
+# Average hazard ratio
+
+`ahr_fast()` computes the Kalbfleisch-Prentice average hazard ratio between two
+groups over a restricted interval. The reference implementation is `ahrKM()`
+from the AHR package, but that package has been archived on CRAN, so here we
+check the point estimates against a direct survival-based computation: each
+group's Kaplan-Meier curve from `survfit()`, integrated to form the group
+shares of the total hazard.
+
+```{r ahr, eval = have_survival}
+tau <- 1000
+
+fast_ahr <- ahr_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
+                     control = 0, tau = tau, side = 1)
+
+g  <- gbsg$hormon
+ev <- c(gbsg$rfstime[g == 0 & gbsg$status == 1],
+        gbsg$rfstime[g == 1 & gbsg$status == 1])
+grid <- sort(unique(c(0, ev[ev <= tau], tau)))
+
+km_on_grid <- function(gi) {
+  sf <- survfit(Surv(rfstime, status) ~ 1, data = gbsg[g == gi, ])
+  approxfun(sf$time, sf$surv, method = "constant",
+            yleft = 1, rule = 2, f = 0)(grid)
+}
+
+S0  <- km_on_grid(0)
+S1  <- km_on_grid(1)
+m   <- length(grid)
+dS0 <- S0 - c(1, S0[-m])
+GL  <- S0[m] * S1[m]
+ref_theta_ctrl <- -sum(S1 * dS0) / (1 - GL)
+
+data.frame(
+  quantity  = c("theta (control)", "theta (treatment)", "AHR"),
+  fast      = c(fast_ahr$theta[[1]], fast_ahr$theta[[2]], fast_ahr$ahr),
+  reference = c(ref_theta_ctrl, 1 - ref_theta_ctrl,
+                (1 - ref_theta_ctrl) / ref_theta_ctrl),
+  row.names = NULL
+)
+```
+
+The point estimates match the survival-based reference to numerical precision.
+The average hazard ratio was additionally cross-checked against the archived
+AHR package, the reference implementation used by Dormuth et al. (2024): the
+two group shares, the average hazard ratio, the variances, and both test
+statistics agree to within the order of 1e-15. That external comparison is
+reproducible with the `tools/compare_ahr_ahrKM.R` script shipped in the package
+sources.
+
+# Max-combo test
+
+`maxcombo_fast()` computes the max-combo test, the most extreme of a set of
+Fleming-Harrington weighted log-rank statistics. The `nph` package provides
+`logrank.maxtest()`, whose default weight set is FH(0, 0), FH(0, 1), and
+FH(1, 0). We request the same three weights from `maxcombo_fast()` and compare
+the component Z-scores. The individual Z-scores are kept in the `z` attribute,
+signed so that a negative value indicates benefit for the treatment group under
+the package convention. Because `nph` orients the contrast in the opposite
+direction, the signs are mirrored, so we compare absolute values.
+
+```{r maxcombo, eval = have_survival && have_nph}
+rho   <- c(0, 0, 1)
+gamma <- c(0, 1, 0)
+
+fast_mc <- maxcombo_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
+                         control = 0, side = 1, rho = rho, gamma = gamma)
+
+nph_mc <- nph::logrank.maxtest(gbsg$rfstime, gbsg$status, gbsg$hormon)
+
+data.frame(
+  weight = c("FH(0,0)", "FH(0,1)", "FH(1,0)"),
+  fast   = abs(attr(fast_mc, "z")),
+  nph    = abs(nph_mc$tests$z),
+  row.names = NULL
+)
+```
+
+The component statistics agree in absolute value. The final max-combo statistic
+is the largest of these, which for the one-sided test is the most extreme
+component Z. The p-values from the two packages are close but not identical,
+since they use different numerical methods for the joint distribution (a
+multivariate normal integral here, a Bonferroni-style combination in `nph`).
+
+# Robust modestly-weighted log-rank test
+
+`rmw_fast()` computes the robust modestly-weighted (rMW) test of Magirr and
+Öhrn, the maximum of the standard log-rank statistic and a single
+modestly-weighted log-rank statistic. Each component is a weighted log-rank
+test, so we check the two component Z-scores against
+[nphRCT](https://cran.r-project.org/package=nphRCT), the implementation used by
+the method's authors. The modestly-weighted component uses the
+survival-threshold parameterization, so `s_star = 1` recovers the standard
+log-rank test and `s_star = 0.5` gives the modestly-weighted component. As with
+the max-combo test the package orients a negative Z toward treatment benefit
+while `nphRCT` uses the opposite sign, so we compare absolute values.
+
+```{r rmw, eval = have_survival && have_nphRCT}
+gbsg_df <- data.frame(
+  time  = gbsg$rfstime,
+  event = gbsg$status,
+  arm   = factor(ifelse(gbsg$hormon == 0, "control", "experimental"),
+                 levels = c("control", "experimental"))
+)
+
+fit_rmw <- rmw_fast(gbsg_df$time, gbsg_df$event, gbsg_df$arm,
+                    control = "control", side = 1, s_star = 0.5)
+
+z_lr_nph <- nphRCT::wlrt(Surv(time, event) ~ arm, data = gbsg_df,
+                         method = "mw", s_star = 1)$z
+z_mw_nph <- nphRCT::wlrt(Surv(time, event) ~ arm, data = gbsg_df,
+                         method = "mw", s_star = 0.5)$z
+
+data.frame(
+  component = c("log-rank (s_star = 1)", "modestly-weighted (s_star = 0.5)"),
+  fast      = abs(attr(fit_rmw, "z")),
+  nphRCT    = abs(c(z_lr_nph, z_mw_nph)),
+  row.names = NULL
+)
+```
+
+The component statistics agree in absolute value. The null correlation of the
+two components, reported in the `corr` attribute, matches the covariance
+computed by the authors' `find_cor` routine to numerical precision. The
+combined statistic and one-sided p-value then follow from the bivariate normal
+distribution of the two components, evaluated with `mvtnorm::pmvnorm`. On the
+POPLAR overall-survival data analyzed in the original article, `rmw_fast()`
+reproduces the published one-sided p-values of 0.0028 for the log-rank test,
+0.0009 for the modestly-weighted test, and 0.0012 for the rMW test, with a
+component correlation of 0.97.
+
+# Summary
+
+Across all functions the FastSurvival results reproduce the reference values on
+the `gbsg` data. The point estimates and test statistics agree to numerical
+precision for the Kaplan-Meier, log-rank, weighted log-rank, RMST, milestone,
+median, and average-hazard quantities; the window mean survival time matches a
+Kaplan-Meier integral and the weighted Kaplan-Meier statistic matches the RMST
+identity; the average hazard ratio matches a survival-based reference; and the
+closed-form Cox hazard ratio agrees with the partial-likelihood maximizer to
+the order expected for the Pike-Halley approximation. This agreement is verified
+continuously by the package test suite.
+
+# References
+ 
+Kaplan, E. L., & Meier, P. (1958). Nonparametric estimation from incomplete
+observations. *Journal of the American Statistical Association*, 53(282),
+457-481.
+ 
+Mantel, N. (1966). Evaluation of survival data and two new rank order
+statistics arising in its consideration. *Cancer Chemotherapy Reports*,
+50(3), 163-170.
+ 
+Fleming, T. R., & Harrington, D. P. (1991). *Counting Processes and Survival
+Analysis*. New York: John Wiley & Sons.
+ 
+Cox, D. R. (1972). Regression models and life-tables. *Journal of the Royal
+Statistical Society. Series B (Methodological)*, 34(2), 187-220.
+ 
+Homma, G. (2025). One step from Pike to Cox: a closed-form hazard ratio
+estimator. *Manuscript under review.*
+ 
+Royston, P., & Parmar, M. K. B. (2013). Restricted mean survival time: an
+alternative to the hazard ratio for the design and analysis of randomized
+trials with a time-to-event outcome. *BMC Medical Research Methodology*, 13,
+152.
+ 
+Paukner, M., & Chappell, R. (2021). Window mean survival time. *Statistics in
+Medicine*, 40(25), 5521-5533.
+ 
+Pepe, M. S., & Fleming, T. R. (1989). Weighted Kaplan-Meier statistics: a
+class of distance tests for censored survival data. *Biometrics*, 45(2),
+497-507.
+ 
+Pepe, M. S., & Fleming, T. R. (1991). Weighted Kaplan-Meier statistics: large
+sample and optimality considerations. *Journal of the Royal Statistical
+Society. Series B (Methodological)*, 53(2), 341-352.
+ 
+Tang, Y. (2021). Some new confidence intervals for Kaplan-Meier based
+estimators from one and two sample survival data. *Statistics in Medicine*,
+40(23), 4961-4976.
+ 
+Uno, H., Claggett, B., Tian, L., et al. (2014). Moving beyond the hazard
+ratio in quantifying the between-group difference in survival analysis.
+*Journal of Clinical Oncology*, 32(22), 2380-2385.
+ 
+Uno, H., & Horiguchi, M. (2023). Ratio and difference of average hazard with
+survival weight: new measures to quantify survival benefit of new therapy.
+*Statistics in Medicine*, 42(7), 936-952.
+ 
+Kalbfleisch, J. D., & Prentice, R. L. (1981). Estimation of the average
+hazard ratio. *Biometrika*, 68(1), 105-112.
+ 
+Dormuth, I., Pauly, M., Rauch, G., & Herrmann, C. (2024). Sample size
+calculation under nonproportional hazards using average hazard ratios.
+*Biometrical Journal*, 66(6), e202300271.
+ 
+Karrison, T. G. (2016). Versatile tests for comparing survival curves based
+on weighted log-rank statistics. *The Stata Journal*, 16(3), 678-690.
+ 
+Magirr, D., & Burman, C.-F. (2019). Modestly weighted logrank tests.
+*Statistics in Medicine*, 38(20), 3782-3790.
+ 
+Magirr, D., & Öhrn, F. (2026). Robust modestly weighted log-rank tests.
+*Pharmaceutical Statistics*, 25(1), e70066.

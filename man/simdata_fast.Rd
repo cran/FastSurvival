@@ -2,134 +2,206 @@
 % Please edit documentation in R/simdata_fast.R
 \name{simdata_fast}
 \alias{simdata_fast}
-\title{Fast Survival Data Simulation for Clinical Trials}
+\title{Fast Simulation of Two-Group Time-to-Event Trial Data}
 \usage{
 simdata_fast(
   nsim = 1000,
   n,
   alloc = c(1, 1),
   a.time,
-  a.rate,
+  a.rate = NULL,
+  a.prop = NULL,
   e.hazard = NULL,
   e.median = NULL,
   e.time = NULL,
   d.hazard = NULL,
   d.median = NULL,
   d.time = NULL,
-  seed = NULL
+  seed = NULL,
+  prevalence = NULL,
+  fixed.alloc = FALSE,
+  h01.hazard = NULL,
+  h01.median = NULL,
+  h01.time = NULL,
+  h02.hazard = NULL,
+  h02.median = NULL,
+  h02.time = NULL,
+  h12.hazard = NULL,
+  h12.median = NULL,
+  h12.time = NULL,
+  switch.prop = NULL,
+  h12.switch.hazard = NULL,
+  h12.switch.median = NULL,
+  h12.switch.time = NULL,
+  switch.clock = "reset"
 )
 }
 \arguments{
-\item{nsim}{A positive integer specifying the number of simulation
-iterations. Default is 1000.}
+\item{nsim}{Number of simulated trials.}
 
-\item{n}{A positive integer (one group) or a numeric vector of length 2
-(two groups: \code{c(n_control, n_treatment)}) specifying the per-group
-sample sizes per simulation. Alternatively, supply the total sample size
-as a scalar together with \code{alloc} to split automatically.}
+\item{n}{Either a single total sample size (split by \code{alloc}), a
+length-two vector of per-group sample sizes, or, for a multi-arm trial, a
+vector of length greater than two giving the per-arm sample sizes (which
+requires a per-arm \code{e.hazard} or \code{e.median} list). When \code{n}
+is a per-arm vector, \code{alloc} is ignored.}
 
-\item{alloc}{A numeric vector of length 2 specifying the allocation ratio
-\code{c(control, treatment)}. Used only when \code{n} is a scalar.
-Default is \code{c(1, 1)}.}
+\item{alloc}{A length-two allocation ratio, used when \code{n} is scalar.}
 
-\item{a.time}{A numeric vector of accrual interval boundaries
-\code{c(0, t1, ..., T)} with \code{a.time[1] = 0}. Must be strictly
-increasing. The last element is the end of the accrual window.}
+\item{a.time}{A numeric vector of accrual-interval breakpoints.}
 
-\item{a.rate}{A numeric vector of accrual rates (patients per time unit)
-for each interval. Length must equal \code{length(a.time) - 1}. All
-values must be positive.}
+\item{a.rate}{Absolute accrual rates (subjects per unit time), interpreted in
+one of two ways. With length \code{length(a.time) - 1} the accrual period is
+fully specified and the rates must accrue exactly \code{sum(n)} subjects (an
+inconsistent total is an error). With length \code{length(a.time)} the final
+rate applies to an open last interval whose end time is computed so the
+total is \code{sum(n)}. Supply exactly one of \code{a.rate} and \code{a.prop}.}
 
-\item{e.hazard}{Hazard rate(s) for the event time. For a simple exponential,
-supply a scalar (one group) or a list of two scalars (two groups). For a
-piecewise exponential, supply a numeric vector (one group) or a list of
-two numeric vectors (two groups); \code{e.time} must then also be
-supplied. Cannot be used together with \code{e.median}.}
+\item{a.prop}{Accrual proportions, one per accrual interval (length
+\code{length(a.time) - 1}), giving the fraction of subjects enrolled in each
+interval. Values are normalized to sum to one and distribute the fixed total
+\code{sum(n)}. Unlike \code{a.rate} this carries no rate, so the accrual
+period must be fully specified by \code{a.time}. Supply exactly one of
+\code{a.rate} and \code{a.prop}.}
 
-\item{e.median}{Median survival time(s) for the event time. Same structure
-as \code{e.hazard}. Converted internally via
-\code{hazard = log(2) / median}. Cannot be used together with
-\code{e.hazard}.}
+\item{e.hazard}{Survival hazard(s). A scalar or vector for one group, or a
+two-element list for two groups; per-cell lists are used with subgroups.}
 
-\item{e.time}{Interval boundaries for a piecewise exponential event time,
-of the form \code{c(0, t1, ..., Inf)}. Required when \code{e.hazard} or
-\code{e.median} is a vector of length > 1. For two groups, supply a list
-of two boundary vectors if the change points differ between groups, or a
-single vector if they are shared.}
+\item{e.median}{Survival median(s); an alternative to \code{e.hazard}.}
 
-\item{d.hazard}{Hazard rate(s) for the dropout time. Same structure as
-\code{e.hazard}. Set both \code{d.hazard} and \code{d.median} to
-\code{NULL} to suppress dropout. Cannot be used together with
-\code{d.median}.}
+\item{e.time}{Survival breakpoints for piecewise hazards (last element
+\code{Inf}).}
 
-\item{d.median}{Median dropout time(s). Same structure as \code{e.median}.
-Cannot be used together with \code{d.hazard}.}
+\item{d.hazard}{Dropout hazard(s), same structure as \code{e.hazard}.}
 
-\item{d.time}{Interval boundaries for a piecewise exponential dropout time.
-Same structure as \code{e.time}.}
+\item{d.median}{Dropout median(s); an alternative to \code{d.hazard}.}
 
-\item{seed}{A single integer for reproducibility. Passed to
-\code{dqrng::dqset.seed}. Default is \code{NULL} (no seed).}
+\item{d.time}{Dropout breakpoints for piecewise hazards.}
+
+\item{seed}{Optional integer seed for the \code{dqrng} generator.}
+
+\item{prevalence}{Optional subgroup prevalence specification (numeric
+vector, list of vectors, array, or a named \code{control}/\code{treatment}
+list for group-specific prevalence).}
+
+\item{fixed.alloc}{Logical; when \code{TRUE} subgroup sizes are
+deterministic rather than drawn.}
+
+\item{h01.hazard}{Transition hazard(s) for the non-terminal (intermediate)
+event (state 0 to state 1) in the illness-death model. A scalar or vector
+for one group, or a two-element list for two groups. Supplying any of
+\code{h01.*} or \code{h02.*} activates the illness-death model with two
+correlated endpoints, and is mutually exclusive with \code{e.hazard} /
+\code{e.median}.}
+
+\item{h01.median}{Median(s) for the intermediate event; an alternative to
+\code{h01.hazard}.}
+
+\item{h01.time}{Breakpoints for a piecewise \code{h01.hazard} (last element
+\code{Inf}).}
+
+\item{h02.hazard}{Transition hazard(s) for the terminal event without a prior
+intermediate event (state 0 to state 2). Same group and piecewise
+conventions as \code{h01.hazard}.}
+
+\item{h02.median}{Median(s) for the direct terminal event; an alternative to
+\code{h02.hazard}.}
+
+\item{h02.time}{Breakpoints for a piecewise \code{h02.hazard}.}
+
+\item{h12.hazard}{Transition hazard(s) for the terminal event after an
+intermediate event (state 1 to state 2) for subjects who do not switch.
+Defaults to \code{h02.hazard}, which gives the Fleischer
+maximal-independence model (Fleischer Theorem 1 when there is no switching).}
+
+\item{h12.median}{Median(s) for the post-event terminal event; an alternative
+to \code{h12.hazard}.}
+
+\item{h12.time}{Breakpoints for a piecewise \code{h12.hazard}, measured from
+the intermediate-event time (clock-reset).}
+
+\item{switch.prop}{Probability that a subject with an intermediate event
+switches treatment, a scalar or a two-element list (control, treatment).
+Defaults to zero (no switching); the treatment group is typically left at
+zero.}
+
+\item{h12.switch.hazard}{Transition hazard(s) from state 1 to state 2 for
+subjects who switch. Required when any \code{switch.prop} is positive.}
+
+\item{h12.switch.median}{Median(s) for the post-switch terminal event; an
+alternative to \code{h12.switch.hazard}.}
+
+\item{h12.switch.time}{Breakpoints for a piecewise \code{h12.switch.hazard},
+measured from the switch (intermediate-event) time (clock-reset).}
+
+\item{switch.clock}{Time origin for the post-event hazards. Currently only
+\code{"reset"} (measured from the intermediate event) is implemented.}
 }
 \value{
-A \code{data.frame} with \code{nsim * sum(n)} rows and the
-  following columns:
-\describe{
-  \item{\code{sim}}{Simulation ID (integer, 1 to \code{nsim}).}
-  \item{\code{group}}{Group label (integer: 1 for control, 2 for
-    treatment). Always 1 for one-group simulations.}
-  \item{\code{accrual_time}}{Patient accrual time from study start.}
-  \item{\code{surv_time}}{Survival time from patient entry.}
-  \item{\code{dropout_time}}{Dropout time from patient entry
-    (\code{Inf} when dropout is not modeled).}
-  \item{\code{tte}}{Observed time-to-event:
-    \code{pmin(surv_time, dropout_time)}.}
-  \item{\code{event}}{Event indicator: 1 if \code{surv_time <=
-    dropout_time}, 0 otherwise.}
-  \item{\code{calendar_time}}{Calendar time from study start:
-    \code{accrual_time + tte}.}
-}
+A \code{data.frame} with \code{nsim * sum(n)} rows. The columns are
+  \code{sim}, \code{group}, any subgroup columns, \code{accrual_time},
+  \code{surv_time}, \code{dropout_time}, \code{tte}, \code{event}, and
+  \code{calendar_time}.
+  In the illness-death model the columns are instead \code{sim},
+  \code{group}, \code{accrual_time}, \code{e1_surv_time},
+  \code{e2_surv_time}, \code{dropout_time}, \code{e1_tte}, \code{e1_event},
+  \code{e2_tte}, \code{e2_event}, \code{e1_calendar_time},
+  \code{e2_calendar_time}, \code{intermediate}, \code{switched}, and
+  \code{switch_time}, where \code{e1} is the first (state-0 exit) endpoint
+  and \code{e2} is the terminal endpoint. In oncology \code{e1} is
+  progression-free survival, \code{e2} is overall survival, and
+  \code{intermediate} flags progression.
 }
 \description{
-Simulates individual patient data for one- or two-group time-to-event
-trials. Patient accrual times are drawn from a piecewise uniform
-distribution. Survival and dropout times are drawn from either a simple
-exponential or a piecewise exponential distribution, depending on whether
-a scalar or vector hazard is supplied. Random number generation uses
-\code{dqrng} for speed. C++ backends handle piecewise sampling and
-two-group interleaving to minimize R-level overhead.
+Simulates time-to-event trial data for one or two groups across many
+simulated trials, with piecewise accrual, piecewise-exponential survival and
+dropout, and optional subgroups defined by a prevalence specification. The
+entire generation pipeline (accrual, survival, dropout, derived columns, and
+two-group interleaving) runs in a single C++ kernel that materializes the
+output data frame once, avoiding intermediate R-level vector operations and
+copies. The random-number stream is consumed in the same order as a per-group
+reference implementation, so results are reproducible from \code{seed}.
 }
 \details{
-For each patient, three times are generated independently:
+For each subject the observed time-to-event is
+\code{tte = pmin(surv_time, dropout_time)} and \code{event} is 1 when the
+survival time occurs first. The calendar time of the observed event is
+\code{accrual_time + tte}.
 
-\describe{
-  \item{Accrual time}{Drawn from a piecewise uniform distribution defined
-    by \code{a.time} and \code{a.rate}. The probability of falling in
-    interval j is proportional to \code{a.rate[j] * (a.time[j+1] - a.time[j])}.}
-  \item{Survival time}{Drawn from a simple exponential distribution when
-    \code{e.hazard} is a scalar (or \code{e.median} is a scalar), or from
-    a piecewise exponential distribution when \code{e.hazard} is a vector
-    (with \code{e.time} required). The inverse-CDF method is used for the
-    piecewise case.}
-  \item{Dropout time}{Drawn from the same family as survival time, governed
-    by \code{d.hazard} / \code{d.median} and \code{d.time}. Set to
-    \code{Inf} when \code{d.hazard} and \code{d.median} are both
-    \code{NULL} (no dropout).}
-}
+The total enrolled is fixed at \code{sum(n)}. With \code{a.rate} the rates are
+absolute (subjects per unit time): when the accrual period is fully specified
+the rates must accrue exactly \code{sum(n)}, and when one extra rate is given
+the end of the final interval is solved so the total is met. With \code{a.prop}
+the values are relative proportions that distribute \code{sum(n)} across the
+fully specified intervals. Each accrual interval receives a deterministic
+number of subjects (the rate or proportion times the group total, rounded to
+keep the per-group total exact), placed uniformly within the interval.
 
-The observed time-to-event is \code{tte = pmin(surv_time, dropout_time)}.
-The event indicator is \code{1} when \code{surv_time <= dropout_time} and
-\code{0} otherwise. The calendar time is
-\code{calendar_time = accrual_time + tte}.
+Survival and dropout are exponential when a single hazard (or median) is
+supplied and piecewise-exponential when a vector is supplied together with
+the corresponding \code{e.time} or \code{d.time} breakpoints, whose last
+element must be \code{Inf}. Group-specific parameters are supplied as a
+two-element list (control first, treatment second).
 
-Exactly one of \code{e.hazard} and \code{e.median} must be supplied.
-Exactly one of \code{d.hazard} and \code{d.median} must be supplied when
-dropout is modeled; both must be \code{NULL} to suppress dropout entirely.
+When \code{prevalence} is supplied the trial has subgroups. A numeric vector
+defines a single factor; a list of numeric vectors defines several
+independent factors; a multi-dimensional array defines the joint
+distribution of correlated factors. Per-cell hazards may be supplied as a
+list with one element per cell. With \code{fixed.alloc = TRUE} the subgroup
+sizes are deterministic; otherwise subgroup membership is drawn from the
+prevalence distribution.
 
-For a two-group trial, group-specific parameters are passed as a list of
-length 2, where element 1 corresponds to the control group and element 2
-to the treatment group. For a one-group trial, plain vectors or scalars
-are passed directly.
+When \code{n} is a vector of length greater than two together with a per-arm
+survival list, the simulation is a multi-arm trial. Each arm is generated in
+turn with the validated single-group kernel over a common accrual window, and
+the arms are stacked into one data frame with a \code{group} column labeled 1
+to \code{length(n)} in the order of \code{n}. Per-arm survival is supplied as
+an \code{e.hazard} or \code{e.median} list with one element per arm, and
+optional dropout as a shared value or a per-arm list through \code{d.hazard}
+or \code{d.median}. The arms share the master \code{seed}, so the result is
+reproducible. A multi-arm design is analyzed as a set of pairwise contrasts by
+subsetting the output to the control arm and one other arm and calling
+\code{\link{analysis_fast}} once per contrast. Multi-arm mode does not support
+subgroups or the illness-death model, which remain two-group.
 }
 \examples{
 # One-group simulation, simple exponential, no dropout
@@ -143,10 +215,33 @@ df1 <- simdata_fast(
 )
 head(df1)
 
+# Accrual rate with the final interval computed from the total: 20 per unit
+# time for the first 12 units, then 30 per unit time until 500 are enrolled
+df1b <- simdata_fast(
+  nsim     = 100,
+  n        = 500,
+  a.time   = c(0, 12),
+  a.rate   = c(20, 30),
+  e.median = 18,
+  seed     = 1
+)
+head(df1b)
+
+# Accrual by proportion: 30\% enrolled in [0, 6], 70\% in [6, 12]
+df1c <- simdata_fast(
+  nsim     = 100,
+  n        = 50,
+  a.time   = c(0, 6, 12),
+  a.prop   = c(0.3, 0.7),
+  e.median = 18,
+  seed     = 1
+)
+head(df1c)
+
 # Two-group simulation, simple exponential, with dropout
 df2 <- simdata_fast(
   nsim     = 100,
-  n        = c(100, 100),
+  n        = c(60, 60),
   a.time   = c(0, 6, 12),
   a.rate   = c(8, 12),
   e.median = list(18, 24),
@@ -155,28 +250,88 @@ df2 <- simdata_fast(
 )
 head(df2)
 
-# Two-group simulation, piecewise exponential (delayed treatment effect)
+# One factor with three levels: single subgroup column
 df3 <- simdata_fast(
-  nsim     = 100,
-  n        = c(100, 100),
-  a.time   = c(0, 12),
-  a.rate   = 200 / 12,
-  e.hazard = list(c(0.08, 0.08), c(0.08, 0.04)),
-  e.time   = c(0, 6, Inf),
-  seed     = 3
+  nsim       = 100,
+  n          = c(150, 150),
+  a.time     = c(0, 12),
+  a.rate     = 300 / 12,
+  e.hazard   = list(list(0.10, 0.08, 0.06), 0.05),
+  prevalence = c(0.5, 0.3, 0.2),
+  seed       = 3
 )
 head(df3)
 
-# Two-group via total n + allocation ratio
+# Two independent factors (2 x 2): columns subgroup1 and subgroup2.
+# Four cells in column-major order: (1,1), (2,1), (1,2), (2,2).
 df4 <- simdata_fast(
-  nsim     = 100,
-  n        = 200,
-  alloc    = c(1, 1),
-  a.time   = c(0, 12),
-  a.rate   = 200 / 12,
-  e.hazard = list(0.08, 0.05),
-  seed     = 4
+  nsim       = 100,
+  n          = 200,
+  a.time     = c(0, 12),
+  a.rate     = 200 / 12,
+  e.hazard   = list(0.10, 0.08, 0.07, 0.05),
+  prevalence = list(c(0.5, 0.5), c(0.6, 0.4)),
+  seed       = 4
 )
 head(df4)
 
+# Two correlated factors via a joint-distribution array (2 x 2)
+df5 <- simdata_fast(
+  nsim       = 100,
+  n          = 200,
+  a.time     = c(0, 12),
+  a.rate     = 200 / 12,
+  e.hazard   = 0.08,
+  prevalence = array(c(0.40, 0.10, 0.15, 0.35), dim = c(2, 2)),
+  seed       = 5
+)
+head(df5)
+
+# Two correlated endpoints, no switching (reduces to Fleischer Theorem 1
+# because h12 defaults to h02). In oncology e1 is PFS and e2 is OS; here the
+# control has faster intermediate events and faster direct terminal events.
+dfid <- simdata_fast(
+  nsim       = 100,
+  n          = c(150, 150),
+  a.time     = c(0, 12),
+  a.rate     = 300 / 12,
+  h01.median = list(8, 12),
+  h02.median = list(24, 30),
+  seed       = 6
+)
+head(dfid)
+
+# With treatment switching: 40 percent of control subjects who reach the
+# intermediate event switch and then follow a more favorable post-event hazard
+dfsw <- simdata_fast(
+  nsim              = 100,
+  n                 = c(150, 150),
+  a.time            = c(0, 12),
+  a.rate            = 300 / 12,
+  h01.median        = list(8, 12),
+  h02.median        = list(24, 30),
+  switch.prop       = list(0.4, 0),
+  h12.switch.median = list(36, 36),
+  seed              = 7
+)
+head(dfsw)
+
+# Three-arm trial (one control and two treatment arms) analyzed as pairwise
+# contrasts against the shared control.
+dfk <- simdata_fast(
+  nsim     = 100,
+  n        = c(120, 120, 120),
+  a.time   = c(0, 12),
+  a.rate   = 360 / 12,
+  e.median = list(12, 16, 20),
+  seed     = 8
+)
+# Control arm (group 1) versus treatment arm 2, one-sided log-rank at month 24.
+sub12 <- dfk[dfk$group \%in\% c(1, 2), ]
+res12 <- analysis_fast(sub12, control = 1, time.looks = 24, side = 1)
+head(res12)
+
+}
+\seealso{
+\code{\link{analysis_fast}}
 }

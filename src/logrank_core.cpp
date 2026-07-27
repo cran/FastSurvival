@@ -2,6 +2,9 @@
 #include <Rcpp.h>
 using namespace Rcpp;
 
+// Forward declaration of the pointer-based implementation (defined below).
+void logrank_core_impl(const double*, const int*, const int*, int, double*);
+
 //' Core log-rank computation on pooled sorted vectors (C++ backend)
 //'
 //' @description
@@ -30,7 +33,23 @@ NumericVector logrank_core(
     const IntegerVector& j_sorted
 ) {
   const int n = time_sorted.size();
+  double out[3];
+  logrank_core_impl(time_sorted.begin(), event_sorted.begin(),
+                    j_sorted.begin(), n, out);
+  return NumericVector::create(out[0], out[1], out[2]);
+}
 
+// Pointer-based implementation with external linkage. Writes O1, E1, V1 into
+// out[0..2]. The fused analysis loop calls this directly on its reusable
+// buffers to avoid allocating an Rcpp vector per (sim, look, population) cell.
+// The algorithm is identical to the exported wrapper above.
+void logrank_core_impl(
+    const double* time_sorted,
+    const int* event_sorted,
+    const int* j_sorted,
+    int n,
+    double* out
+) {
   // Initialize at-risk counters: count totals per group from j_sorted
   int n1 = 0, n0 = 0;
   for (int k = 0; k < n; ++k) {
@@ -77,5 +96,5 @@ NumericVector logrank_core(
     i   = j;
   }
 
-  return NumericVector::create(O1, E1, V1);
+  out[0] = O1; out[1] = E1; out[2] = V1;
 }
