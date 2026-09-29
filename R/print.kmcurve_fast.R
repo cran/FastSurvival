@@ -3,7 +3,8 @@
 #' @description
 #' Prints a compact per-group summary of a \code{kmcurve_fast} object: the group
 #' label and role, the sample size, the number of events, and the median
-#' survival read from the Kaplan-Meier curve. In the two-group case the constant
+#' survival read from the Kaplan-Meier curve with the convention of
+#' \code{survival::survfit}. In the two-group case the constant
 #' Cox proportional-hazards estimate of the hazard ratio is reported below the
 #' table.
 #'
@@ -18,11 +19,11 @@
 print.kmcurve_fast <- function(x, ...) {
   two   <- isTRUE(x$two_group)
   km_c  <- x$km$control
-  med_c <- curve_median(c(0, km_c$te), c(1, km_c$surv))
+  med_c <- km_step_median(km_c$te, km_c$surv, km_c$tmax)
 
   if (two) {
     km_t  <- x$km$treat
-    med_t <- curve_median(c(0, km_t$te), c(1, km_t$surv))
+    med_t <- km_step_median(km_t$te, km_t$surv, km_t$tmax)
     tab <- data.frame(
       Group  = c(as.character(x$labels[["control"]]),
                  as.character(x$labels[["treat"]])),

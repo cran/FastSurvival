@@ -46,6 +46,19 @@
 #' between I_0 and the information at the maximum likelihood estimate is
 #' negligible for the purpose of interval construction.
 #'
+#' With \code{strata}, the estimator targets the stratified Cox model, in which
+#' each stratum has its own baseline hazard and the hazard ratio is common to
+#' all strata. The at-risk sets are formed within each stratum, the observed
+#' and expected totals O_T, O_C, E_T, and E_C are summed over strata to give
+#' the stratified Pike anchor, and U_0, I_0, and J_0 are those of the
+#' stratified Breslow partial likelihood (sums of the per-stratum terms). The
+#' Halley correction and the Wald interval are then applied unchanged, so the
+#' result approximates \code{coxph(Surv(time, event) ~ group + strata(s),
+#' ties = "breslow")}. With a fixed number of strata the approximation error
+#' shrinks at the same rate as in the unstratified case; it is larger when the
+#' strata are small and the hazard ratio is far from 1, because the stratified
+#' anchor is then further from the maximum likelihood estimate.
+#'
 #' The C++ core (\code{pihe_core}) accepts the pooled sorted data together
 #' with an integer group indicator and performs group splitting, at-risk
 #' counting, and per-distinct-event-time accumulation in a single left-to-right
@@ -74,8 +87,15 @@
 #'   level for the Wald interval. Defaults to 0.95.
 #' @param presorted A logical value. If \code{TRUE}, \code{time},
 #'   \code{event}, and \code{group} are assumed to be already sorted in
-#'   ascending order of \code{time}, and the internal \code{order()} call is
-#'   skipped. If \code{FALSE} (default), sorting is handled internally.
+#'   ascending order of \code{time} (with \code{strata}, sorted by stratum
+#'   and by time within stratum, so that the rows of each stratum are
+#'   contiguous), and the internal \code{order()} call is skipped. If
+#'   \code{FALSE} (default), sorting is handled internally.
+#' @param strata An optional vector of stratum labels aligned with
+#'   \code{time}, without missing values. When supplied, the stratified
+#'   estimator described in Details is computed. Several stratification
+#'   factors can be combined with \code{interaction()}. \code{NULL} (default)
+#'   gives the unstratified estimator.
 #'
 #' @return An object of class \code{"coxph_fast"}, which is a named numeric
 #'   vector of length 5 with elements matching the column names of
@@ -91,6 +111,8 @@
 #'     \code{"lower .90"} when \code{conf.level = 0.90}).}
 #'   \item{\code{upper .95}}{Upper bound of the Wald confidence interval.}
 #' }
+#' With \code{strata}, the number of strata is stored in the attribute
+#' \code{strata}.
 #' Returns a vector of \code{NA_real_} values (still with class
 #' \code{"coxph_fast"}) when the estimate cannot be computed (e.g., no
 #' events, all events in one group, or \code{I_0 = 0}).
@@ -107,6 +129,12 @@
 #' fit_cox <- summary(coxph(Surv(futime, fustat) ~ rx, data = ovarian))
 #' cat("coxph_fast HR :", fit_fast["exp(coef)"], "\n")
 #' cat("coxph      HR :", fit_cox$coefficients[, "exp(coef)"], "\n")
+#'
+#' # Stratified by residual disease, compared with coxph(... + strata())
+#' coxph_fast(ovarian$futime, ovarian$fustat, ovarian$rx, control = 1,
+#'            strata = ovarian$resid.ds)
+#' coef(coxph(Surv(futime, fustat) ~ rx + strata(resid.ds), data = ovarian,
+#'            ties = "breslow"))
 #'
 #' # presorted = TRUE: sort once outside, reuse inside a loop
 #' ord <- order(ovarian$futime)
@@ -143,10 +171,14 @@
 #' @importFrom stats qnorm setNames
 #' @export
 coxph_fast <- function(time, event, group, control, side = 2,
-                       conf.level = 0.95, presorted = FALSE) {
+                       conf.level = 0.95, presorted = FALSE, strata = NULL) {
 
   if (!side %in% c(1L, 2L)) {
     stop("'side' must be either 1 (one-sided) or 2 (two-sided)")
+  }
+  if (length(conf.level) != 1L || !is.finite(conf.level) ||
+      conf.level <= 0 || conf.level >= 1) {
+    stop("'conf.level' must be in (0, 1)")
   }
 
   # Prepare NA output with coxph-compatible names
@@ -163,32 +195,64 @@ coxph_fast <- function(time, event, group, control, side = 2,
   if (length(event) != n || length(group) != n) {
     stop("'time', 'event', and 'group' must have the same length")
   }
-  if (n == 0L || sum(event) == 0L) {
-    return(structure(na_out, conf.level = conf.level, side = side,
-                     control = control, class = "coxph_fast"))
+  use_strata <- !is.null(strata)
+  if (use_strata) {
+    if (length(strata) != n) {
+      stop("'strata' must have the same length as 'time'")
+    }
+    if (anyNA(strata)) {
+      stop("'strata' must not contain missing values")
+    }
   }
 
-  # Treatment indicator: 1 = treatment, 0 = control
-  if (is.factor(group)) group <- as.character(group)
-  j <- as.integer(group != control)
+  # Attach the attributes of a result (the number of strata when stratified)
+  wrap <- function(v, n_strata = NULL) {
+    out <- structure(v, conf.level = conf.level, side = side,
+                     control = control, class = "coxph_fast")
+    if (use_strata) attr(out, "strata") <- n_strata
+    out
+  }
 
-  # Sort by time when not presorted
+  if (n == 0L) return(wrap(na_out, 0L))
+  check_time_event(time, event)
+
+  # Treatment indicator: 1 = treatment, 0 = control
+  j <- two_group_indicator(group, control)
+
+  # Stratum labels mapped to contiguous integers 1..S
+  if (use_strata) {
+    strata_int <- match(strata, sort(unique(strata)))
+    n_strata   <- max(strata_int)
+  } else {
+    n_strata <- NULL
+  }
+
+  if (sum(event) == 0L) return(wrap(na_out, n_strata))
+
+  # Sort by time (by stratum, then time, when stratified) when not presorted
   if (!presorted) {
-    ord   <- order(time)
+    ord   <- if (use_strata) order(strata_int, time) else order(time)
     time  <- time[ord]
     event <- as.integer(event[ord])
     j     <- j[ord]
+    if (use_strata) strata_int <- strata_int[ord]
   } else {
     event <- as.integer(event)
+    if (use_strata && anyDuplicated(rle(strata_int)$values) > 0L) {
+      stop("With presorted = TRUE the rows of each stratum must be ",
+           "contiguous; use presorted = FALSE")
+    }
   }
 
-  # C++ core: single scan over pooled sorted data -> c(theta_0, U_0, I_0, J_0)
-  res <- pihe_core(time, event, j)
-
-  if (anyNA(res)) {
-    return(structure(na_out, conf.level = conf.level, side = side,
-                     control = control, class = "coxph_fast"))
+  # C++ core: single scan over pooled sorted data (per stratum when
+  # stratified) -> c(theta_0, U_0, I_0, J_0)
+  res <- if (use_strata) {
+    pihe_core_strat(time, event, j, strata_int)
+  } else {
+    pihe_core(time, event, j)
   }
+
+  if (anyNA(res)) return(wrap(na_out, n_strata))
 
   theta_0 <- res[1L]
   U_0     <- res[2L]
@@ -211,6 +275,5 @@ coxph_fast <- function(time, event, group, control, side = 2,
     c("coef", "exp(coef)", "se(coef)", ci_lo, ci_hi)
   )
 
-  structure(out, conf.level = conf.level, side = side, control = control,
-            class = "coxph_fast")
+  wrap(out, n_strata)
 }

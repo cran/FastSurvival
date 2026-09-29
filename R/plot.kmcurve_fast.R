@@ -284,18 +284,28 @@ plot.kmcurve_fast <- function(x, hr = FALSE, rmst = FALSE, tau = NULL,
 #  Internal helpers for the plot method
 # ------------------------------------------------------------------ #
 
-# Step coordinates for a Kaplan-Meier curve, including the flat segment at 1.
+# Step coordinates for a Kaplan-Meier curve, including the flat segment at 1
+# and the flat tail from the last event time to the largest observed time.
 km_step <- function(km, col, lty, lwd) {
-  graphics::lines(c(0, km$te), c(1, km$surv), type = "s",
-                  col = col, lty = lty, lwd = lwd)
+  xs <- step_extend(km$te, km$tmax)
+  ys <- c(1, km$surv)
+  if (length(xs) > length(ys)) ys <- c(ys, ys[length(ys)])
+  graphics::lines(xs, ys, type = "s", col = col, lty = lty, lwd = lwd)
 }
 
 # Pointwise confidence limits drawn as dashed steps, of the requested type.
 km_ci_step <- function(km, conf.level, conf.type, col) {
   if (length(km$te) == 0L) return(invisible(NULL))
   ci <- km_ci(km$surv, km$se, conf.level, conf.type)
-  graphics::lines(c(0, km$te), c(1, ci$lower), type = "s", col = col, lty = 2)
-  graphics::lines(c(0, km$te), c(1, ci$upper), type = "s", col = col, lty = 2)
+  xs <- step_extend(km$te, km$tmax)
+  lo <- c(1, ci$lower)
+  up <- c(1, ci$upper)
+  if (length(xs) > length(lo)) {
+    lo <- c(lo, lo[length(lo)])
+    up <- c(up, up[length(up)])
+  }
+  graphics::lines(xs, lo, type = "s", col = col, lty = 2)
+  graphics::lines(xs, up, type = "s", col = col, lty = 2)
 }
 
 # Vectorized Kaplan-Meier confidence limits matching survfit_fast: "plain"

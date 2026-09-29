@@ -135,6 +135,10 @@ double combo_logrank_core_impl(
     const int d  = d1 + d0;
     const int nj = n1 + n0;
 
+    // Observed count includes event times with a single subject at risk (as
+    // in survival::survdiff); such times add nothing to U or V.
+    O1 += d1;
+
     if (d > 0 && nj > 1) {
       const double dn1 = (double)n1;
       const double dnj = (double)nj;
@@ -161,8 +165,6 @@ double combo_logrank_core_impl(
           if (b != a) v_out[b * nw + a] += inc;
         }
       }
-
-      O1 += d1;
     }
 
     // Update KM after using s_minus at this time: s_minus -> s -> next s_minus

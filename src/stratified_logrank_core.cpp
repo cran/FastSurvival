@@ -98,7 +98,10 @@ void stratified_logrank_core_impl(
       const int d  = d1 + d0;
       const int nj = n1 + n0;
 
-      if (d > 0 && nj > 1) {
+      // Observed and expected counts include event times with a single
+      // subject at risk (as in survival::survdiff); such times add nothing to
+      // O1 - E1 or to the variance.
+      if (d > 0 && nj > 0) {
         const double dn1 = (double)n1;
         const double dn0 = (double)n0;
         const double dnj = (double)nj;
@@ -106,7 +109,9 @@ void stratified_logrank_core_impl(
 
         O1 += d1;
         E1 += dd * dn1 / dnj;
-        V1 += dd * dn1 * dn0 * (dnj - dd) / (dnj * dnj * (dnj - 1.0));
+        if (nj > 1) {
+          V1 += dd * dn1 * dn0 * (dnj - dd) / (dnj * dnj * (dnj - 1.0));
+        }
       }
 
       // Decrement at-risk counts by this block's size

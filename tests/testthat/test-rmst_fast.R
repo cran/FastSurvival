@@ -113,3 +113,23 @@ test_that("rmst_fast single-group returns NA with class when n = 0", {
   expect_s3_class(res, "rmst_fast")
   expect_true(all(is.na(res)))
 })
+
+test_that("rmst_fast validates event coding and the control label", {
+  tt <- c(1, 2, 3, 4, 5, 6)
+  gg <- c(0, 0, 0, 1, 1, 1)
+  expect_error(rmst_fast(tt, c(1, 2, 1, 2, 1, 2), tau = 4), "coded as 0")
+  expect_error(rmst_fast(tt, rep(1, 6), group = gg, control = 7, tau = 4),
+               "control")
+})
+
+test_that("rmst_fast warns when tau exceeds the observed follow-up", {
+  set.seed(71)
+  tt <- c(rexp(50, 0.10), rexp(50, 0.07))
+  ee <- rep(1L, 100)
+  gg <- rep(0:1, each = 50)
+  lim <- min(max(tt[gg == 0]), max(tt[gg == 1]))
+  expect_warning(rmst_fast(tt, ee, group = gg, control = 0, tau = lim + 1),
+                 "exceeds")
+  expect_warning(rmst_fast(tt, ee, group = gg, control = 0, tau = lim), NA)
+  expect_warning(rmst_fast(tt, ee, tau = max(tt) + 1), "exceeds")
+})

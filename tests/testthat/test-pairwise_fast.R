@@ -95,3 +95,42 @@ test_that("pairwise_fast: input validation", {
   expect_error(pairwise_fast(df, control = 1, time.looks = 30, by.subgroup = TRUE),
                "does not support 'by.subgroup'")
 })
+
+test_that("pairwise_fast: event-driven dropout and pipeline counts match analysis_fast", {
+  df <- simdata_fast(nsim = 30, n = c(120, 120, 120), a.time = c(0, 12),
+                     a.rate = 360 / 12, e.median = list(12, 16, 20),
+                     d.hazard = 0.02, seed = 909)
+  pw <- pairwise_fast(df, control = 1, event.looks = 150, primary = 3,
+                      stat = "logrank")
+  direct <- analysis_fast(df[df$group %in% c(1, 3), ], control = 1,
+                          event.looks = 150)
+  p3 <- pw[pw$arm == 3, ]
+  p3 <- p3[order(p3$sim), ]
+  ok <- direct$reached
+  expect_true(all(ok))
+  expect_equal(p3$n.event[ok], direct$n.event[ok])
+  expect_equal(p3$n.dropout[ok], direct$n.dropout[ok])
+  expect_equal(p3$n.pipeline[ok], direct$n.pipeline[ok])
+  expect_true(any(p3$n.pipeline > 0))
+})
+
+test_that("pairwise_fast: event-driven mode keeps strata columns", {
+  df <- make_karm(20)
+  df$subgroup <- as.integer(df$accrual_time > 6) + 1L
+  expect_error(
+    pairwise_fast(df, control = 1, event.looks = 150, primary = 3,
+                  stat = "logrank", strata = "subgroup"),
+    NA)
+})
+
+test_that("pairwise_fast: the adjusted p-value column must be unambiguous", {
+  df <- make_karm(20)
+  expect_error(
+    pairwise_fast(df, control = 1, time.looks = 30, stat = c("logrank", "rmst"),
+                  tau = 12, adjust = "bonferroni"),
+    "p.col")
+  pw <- pairwise_fast(df, control = 1, time.looks = 30,
+                      stat = c("logrank", "rmst"), tau = 12,
+                      adjust = "bonferroni", p.col = "rmst.p")
+  expect_equal(pw$p.adj, pmin(1, 2 * pw$rmst.p))
+})

@@ -45,7 +45,11 @@ vector of length greater than two giving the per-arm sample sizes (which
 requires a per-arm \code{e.hazard} or \code{e.median} list). When \code{n}
 is a per-arm vector, \code{alloc} is ignored.}
 
-\item{alloc}{A length-two allocation ratio, used when \code{n} is scalar.}
+\item{alloc}{A length-two allocation ratio (control, treatment), used when
+\code{n} is scalar. Supplying it explicitly requests a two-group
+simulation (see Details). The total is split in proportion to \code{alloc} and any rounding
+remainder goes to the group with the larger fractional share, so the two
+group sizes always add up to \code{n}.}
 
 \item{a.time}{A numeric vector of accrual-interval breakpoints.}
 
@@ -63,8 +67,11 @@ interval. Values are normalized to sum to one and distribute the fixed total
 period must be fully specified by \code{a.time}. Supply exactly one of
 \code{a.rate} and \code{a.prop}.}
 
-\item{e.hazard}{Survival hazard(s). A scalar or vector for one group, or a
-two-element list for two groups; per-cell lists are used with subgroups.}
+\item{e.hazard}{Survival hazard(s). A scalar or vector (piecewise, with
+\code{e.time}) shared by all groups and cells, a two-element list for two
+groups, or, with subgroups, a per-cell list (for one group, or as an
+element of the two-element list). See Details for how the number of
+groups is determined.}
 
 \item{e.median}{Survival median(s); an alternative to \code{e.hazard}.}
 
@@ -111,7 +118,10 @@ conventions as \code{h01.hazard}.}
 \item{h12.hazard}{Transition hazard(s) for the terminal event after an
 intermediate event (state 1 to state 2) for subjects who do not switch.
 Defaults to \code{h02.hazard}, which gives the Fleischer
-maximal-independence model (Fleischer Theorem 1 when there is no switching).}
+maximal-independence model (Fleischer Theorem 1 when there is no switching
+and the hazards are constant; with a piecewise \code{h02.hazard} the
+clock-reset \code{h12} restarts the piecewise profile at the intermediate
+event).}
 
 \item{h12.median}{Median(s) for the post-event terminal event; an alternative
 to \code{h12.hazard}.}
@@ -186,9 +196,30 @@ When \code{prevalence} is supplied the trial has subgroups. A numeric vector
 defines a single factor; a list of numeric vectors defines several
 independent factors; a multi-dimensional array defines the joint
 distribution of correlated factors. Per-cell hazards may be supplied as a
-list with one element per cell. With \code{fixed.alloc = TRUE} the subgroup
-sizes are deterministic; otherwise subgroup membership is drawn from the
+list with one element per cell (cells in column-major order, the first
+factor varying fastest). With \code{fixed.alloc = TRUE} the subgroup
+sizes are deterministic and the fixed labels are assigned to subjects in a
+random order within each simulated trial, so subgroup membership does not
+depend on the accrual time; otherwise subgroup membership is drawn from the
 prevalence distribution.
+
+The number of groups is determined as follows. A length-two \code{n} always
+gives two groups. A scalar \code{n} gives two groups, with the total split
+by \code{alloc}, in any of these cases: \code{alloc} is supplied explicitly;
+the prevalence is group-specific; without subgroups, any of \code{e.hazard},
+\code{e.median}, \code{d.hazard}, and \code{d.median} is a list; with
+subgroups, one of them is a length-two list with a list element (per-cell
+values within a group, as in \code{list(list(0.10, 0.08, 0.06), 0.05)}).
+Otherwise a scalar \code{n} gives one group, and with subgroups a list is
+read as one element per cell of that group. So with subgroups and a scalar
+\code{n}, \code{e.hazard = list(0.10, 0.05)} means per-cell hazards of a
+single group unless \code{alloc} is supplied, in which case it means
+per-group hazards. In a two-group simulation each specification is either
+shared by both groups (not a list) or a list of length two (control first),
+and each group's element may be a per-cell list when there are subgroups.
+The breakpoints \code{e.time} and \code{d.time} follow the same structure
+(per group in a two-group simulation, per cell in a one-group simulation with
+subgroups).
 
 When \code{n} is a vector of length greater than two together with a per-arm
 survival list, the simulation is a multi-arm trial. Each arm is generated in
@@ -261,6 +292,19 @@ df3 <- simdata_fast(
   seed       = 3
 )
 head(df3)
+
+# The same trial specified by the total sample size and the allocation ratio
+df3b <- simdata_fast(
+  nsim       = 100,
+  n          = 300,
+  alloc      = c(1, 1),
+  a.time     = c(0, 12),
+  a.rate     = 300 / 12,
+  e.hazard   = list(list(0.10, 0.08, 0.06), 0.05),
+  prevalence = c(0.5, 0.3, 0.2),
+  seed       = 3
+)
+identical(df3, df3b)
 
 # Two independent factors (2 x 2): columns subgroup1 and subgroup2.
 # Four cells in column-major order: (1,1), (2,1), (1,2), (2,2).

@@ -25,7 +25,9 @@
 #'   two-sided interval at \code{conf.level}.
 #' @param conf.level The confidence level for the reported intervals.
 #' @param tau The milestone timepoint at which the survival probabilities are
-#'   compared. A single positive number.
+#'   compared. A single positive number. A warning is given when it exceeds the
+#'   largest observed time of either group, because the Kaplan-Meier curve is
+#'   not estimated beyond that time.
 #' @param method The inference method for the difference in milestone survival,
 #'   one of \code{"wald"}, \code{"loglog"}, or \code{"mover"}.
 #' @param presorted Logical. If \code{TRUE} the input is assumed to be sorted
@@ -65,6 +67,9 @@ milestone_fast <- function(time, event, group, control, side = 2,
   if (length(event) != length(time) || length(group) != length(time)) {
     stop("'time', 'event', and 'group' must have the same length.")
   }
+  if (anyNA(time) || anyNA(group)) {
+    stop("'time' and 'group' must not contain missing values.")
+  }
   event <- as.integer(event)
   if (any(is.na(event)) || any(!event %in% c(0L, 1L))) {
     stop("'event' must contain only 0 (censored) and 1 (event).")
@@ -91,6 +96,7 @@ milestone_fast <- function(time, event, group, control, side = 2,
   }
   trt <- lev[as.character(lev) != as.character(control)]
   grp01 <- as.integer(as.character(group) != as.character(control))
+  check_tau_follow_up(as.numeric(time), grp01, tau)
 
   core <- milestone_core(as.numeric(time), event, grp01,
                          as.numeric(tau), as.logical(presorted))

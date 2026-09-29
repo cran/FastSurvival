@@ -418,3 +418,41 @@ test_that("stratified weighted records both weight and strata attributes", {
   expect_equal(attr(fit, "weight"), "fh")
   expect_equal(attr(fit, "strata"), length(unique(ov$resid.ds)))
 })
+
+test_that("observed and expected counts include a last subject at risk alone", {
+  # Hand calculation: control times 1, 2 and treatment times 3, 4, all events.
+  # At t = 4 the only subject at risk is in the treatment group, so O1 = 2 and
+  # E1 = 1/2 + 2/3 + 1 + 1 = 19/6, as in survival::survdiff.
+  tt <- c(1, 2, 3, 4)
+  ee <- c(1, 1, 1, 1)
+  gg <- c(0, 0, 1, 1)
+  fit <- survdiff_fast(tt, ee, gg, control = 0)
+  expect_equal(attr(fit, "O1"), 2)
+  expect_equal(attr(fit, "O0"), 2)
+  expect_equal(attr(fit, "E1"), 19 / 6, tolerance = 1e-12)
+  fw <- survdiff_fast(tt, ee, gg, control = 0, weight = "fh")
+  expect_equal(attr(fw, "O1"), 2)
+  fs <- survdiff_fast(rep(tt, 2), rep(ee, 2), rep(gg, 2), control = 0,
+                      strata = rep(1:2, each = 4))
+  expect_equal(attr(fs, "O1"), 4)
+  expect_equal(attr(fs, "E1"), 2 * 19 / 6, tolerance = 1e-12)
+})
+
+test_that("survdiff_fast validates event coding, group levels, and control", {
+  tt <- c(1, 2, 3, 4, 5, 6)
+  gg <- c(0, 0, 0, 1, 1, 1)
+  expect_error(survdiff_fast(tt, c(1, 2, 1, 2, 1, 2), gg, control = 0),
+               "coded as 0")
+  expect_error(survdiff_fast(tt, rep(1, 6), c(0, 0, 1, 1, 2, 2), control = 0),
+               "two distinct")
+  expect_error(survdiff_fast(tt, rep(1, 6), gg, control = 5), "control")
+  expect_error(survdiff_fast(tt, rep(1, 6), c(0, NA, 0, 1, 1, 1),
+                             control = 0), "missing")
+})
+
+test_that("print labels the unweighted stratified log-rank test", {
+  skip_if_not_installed("survival")
+  ov  <- survival::ovarian
+  fit <- survdiff_fast(ov$futime, ov$fustat, ov$rx, 1, strata = ov$resid.ds)
+  expect_output(print(fit), "Stratified log-rank test")
+})

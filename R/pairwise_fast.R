@@ -28,7 +28,10 @@
 #' caps it at one, controlling the family-wise error rate across the
 #' control-versus-arm comparisons at each look. Multiplicity across looks is a
 #' separate matter handled by group-sequential boundaries in
-#' \code{\link{simsummary_fast}}, not by this adjustment.
+#' \code{\link{simsummary_fast}}, not by this adjustment; given the output of
+#' this function, \code{simsummary_fast} summarizes each arm separately (the
+#' Bonferroni-adjusted p-values can be used there through
+#' \code{p.col = "p.adj"}).
 #'
 #' This is a single-endpoint helper: it reads the \code{tte} and \code{event}
 #' columns and does not support subgroups. Comparisons for a second endpoint are
@@ -141,10 +144,15 @@ pairwise_fast <- function(data, control,
       }
       return(p.col)
     }
-    cand <- grep("\\.p$", nms, value = TRUE)
-    pref <- paste0(stat, ".p")
-    if (pref %in% cand) return(pref)
-    if (length(cand) == 1L) return(cand)
+    cand <- grep("\\.p(\\.rah)?$", nms, value = TRUE)
+    # Primary p-value column of each statistic
+    p_map <- c(logrank = "logrank.p", coxph = "cox.p", rmst = "rmst.p",
+               maxcombo = "maxcombo.p", ahsw = "ahsw.p.rah",
+               milestone = "milestone.p", rmw = "rmw.p", ahr = "ahr.p",
+               medsurv = "medsurv.p", wkm = "wkm.p", wmst = "wmst.p")
+    pref <- intersect(unname(p_map[intersect(stat, names(p_map))]), cand)
+    if (length(pref) == 1L) return(pref)
+    if (length(pref) == 0L && length(cand) == 1L) return(cand)
     stop("Could not determine the p-value column automatically; supply 'p.col'. ",
          "Candidates: ", paste(cand, collapse = ", "))
   }
@@ -210,20 +218,25 @@ pairwise_fast <- function(data, control,
       A_row <- A_use[row_sim]
 
       enrolled <- sub$accrual_time <= A_row
-      obs_t    <- pmin(sub$tte, A_row - sub$accrual_time)
-      obs_e    <- sub$event * as.integer(sub$accrual_time + sub$tte <= A_row)
-      cut_dat  <- data.frame(
-        sim          = sub$sim,
-        group        = sub$group,
-        accrual_time = sub$accrual_time,
-        tte          = obs_t,
-        event        = obs_e
-      )[enrolled, , drop = FALSE]
+      ended    <- sub$accrual_time + sub$tte <= A_row
+      # Data cut at the per-simulation cutoff; the other columns (for example
+      # subgroup columns used as 'strata') are carried along unchanged.
+      cut_dat       <- sub
+      cut_dat$tte   <- pmin(sub$tte, A_row - sub$accrual_time)
+      cut_dat$event <- sub$event * as.integer(ended)
+      cut_dat       <- cut_dat[enrolled, , drop = FALSE]
+      # Dropouts before the cutoff, counted on the uncut data: after the cut
+      # every administratively censored subject would look like a dropout.
+      n_drop <- tabulate(match(sub$sim[enrolled & ended & sub$event == 0],
+                               sims_all), nbins = nsim)
 
       res <- analysis_fast(cut_dat, control = control, time.looks = big,
                            stat = stat, ...)
       # Align the one-row-per-simulation result to the full simulation set.
       res <- res[match(sims_all, res$sim), , drop = FALSE]
+      res$sim        <- sims_all
+      res$n.dropout  <- ifelse(is.na(res$n.enrolled), NA_integer_, n_drop)
+      res$n.pipeline <- res$n.enrolled - res$n.event - res$n.dropout
 
       res$look       <- l
       res$look.value <- event.looks[l]

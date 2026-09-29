@@ -119,23 +119,22 @@ test_that("method changes the standard error but not the median", {
 
 test_that("method = 'nph' reproduces nph::nphparams median inference", {
   skip_if_not_installed("nph")
-  out <- tryCatch({
-    set.seed(101)
-    n_per <- 300
-    grp <- rep(0:1, each = n_per)
-    tt <- c(rexp(n_per, log(2) / 12), rexp(n_per, log(2) / 16))
-    cc <- rexp(2 * n_per, 0.01)
-    time <- pmin(tt, cc)
-    event <- as.integer(tt <= cc)
-    fast <- medsurv_fast(time, event, group = grp, control = 0, side = 2,
-                         method = "nph")
-    np <- nph::nphparams(time = time, event = event, group = grp,
-                         param_type = "Q", param_par = 0.5)
-    list(fast = fast, np = np)
-  }, error = function(e) NULL)
-  skip_if(is.null(out), "nph comparison unavailable")
-  fast <- out$fast
-  np <- out$np
+  set.seed(101)
+  n_per <- 300
+  grp <- rep(0:1, each = n_per)
+  tt <- c(rexp(n_per, log(2) / 12), rexp(n_per, log(2) / 16))
+  cc <- rexp(2 * n_per, 0.01)
+  time <- pmin(tt, cc)
+  event <- as.integer(tt <= cc)
+  # Only the reference computation is protected; an error in medsurv_fast
+  # fails the test instead of skipping it.
+  fast <- medsurv_fast(time, event, group = grp, control = 0, side = 2,
+                       method = "nph")
+  np <- tryCatch(
+    nph::nphparams(time = time, event = event, group = grp,
+                   param_type = "Q", param_par = 0.5),
+    error = function(e) NULL)
+  skip_if(is.null(np), "nph::nphparams failed")
   # An exact comparison requires the Kaplan-Meier and Nelson-Aalen medians to
   # coincide, since medsurv_fast keeps the Kaplan-Meier point estimate.
   skip_if(!isTRUE(all.equal(unname(fast["diff"]),
@@ -179,4 +178,15 @@ test_that("type I error is approximately controlled under the null", {
     if (is.finite(res["p"]) && res["p"] < 0.05) reject <- reject + 1L
   }
   expect_lt(reject / nsim, 0.12)
+})
+
+test_that("the median follows the survfit convention on a flat stretch at 0.5", {
+  # Hand calculation: uncensored times 1..10 give S = 0.5 on [5, 6), so the
+  # median is the midpoint 5.5.
+  expect_equal(unname(medsurv_fast(1:10, rep(1L, 10))["median"]), 5.5)
+  # Times 1..24: S(12) = 0.5 up to floating-point rounding, so the median is
+  # 12.5 rather than 13.
+  expect_equal(unname(medsurv_fast(1:24, rep(1L, 24))["median"]), 12.5)
+  # Times 1..5: S drops from 0.6 to 0.4 at t = 3, so the median is 3.
+  expect_equal(unname(medsurv_fast(1:5, rep(1L, 5))["median"]), 3)
 })

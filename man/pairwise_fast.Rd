@@ -89,7 +89,10 @@ The Bonferroni option multiplies each p-value by the number of contrasts and
 caps it at one, controlling the family-wise error rate across the
 control-versus-arm comparisons at each look. Multiplicity across looks is a
 separate matter handled by group-sequential boundaries in
-\code{\link{simsummary_fast}}, not by this adjustment.
+\code{\link{simsummary_fast}}, not by this adjustment; given the output of
+this function, \code{simsummary_fast} summarizes each arm separately (the
+Bonferroni-adjusted p-values can be used there through
+\code{p.col = "p.adj"}).
 
 This is a single-endpoint helper: it reads the \code{tte} and \code{event}
 columns and does not support subgroups. Comparisons for a second endpoint are

@@ -66,6 +66,15 @@ ref_cox <- coxph(Surv(rfstime, status) ~ hormon, data = gbsg)
 
 c(fast = unclass(fast_hr)["coef"], cox = unname(coef(ref_cox)))
 
+## ----cox-strata, eval = have_survival-----------------------------------------
+fast_hr_s <- coxph_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
+                        control = 0, strata = gbsg$grade)
+
+ref_cox_s <- coxph(Surv(rfstime, status) ~ hormon + strata(grade),
+                   data = gbsg, ties = "breslow")
+
+c(fast = unclass(fast_hr_s)["coef"], cox = unname(coef(ref_cox_s)))
+
 ## ----rmst, eval = have_survival && have_survRM2-------------------------------
 library(survRM2)
 
@@ -115,8 +124,12 @@ tmax <- max(gbsg$rfstime)
 fast_wk <- wkm_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
                     control = 0, side = 1, weight = "constant")
 
-ref_rm  <- rmst_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
-                     control = 0, tau = tmax, side = 1)
+# tau = tmax extends past the shorter group's follow-up on purpose, to cover
+# the whole observed range as the constant-weight test does; rmst_fast()
+# warns about this, so the warning is suppressed here.
+ref_rm  <- suppressWarnings(
+  rmst_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
+            control = 0, tau = tmax, side = 1))
 
 c(wkm.constant = unclass(fast_wk)["wdiff"], rmst = unclass(ref_rm)["diff"])
 

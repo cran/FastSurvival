@@ -22,6 +22,8 @@ void stratified_weighted_logrank_core_impl(const double*, const int*,
                                            int, double, double, double,
                                            double*);
 struct PiheEvSummary { double n1k; double n0k; double OTk; double Ok; };
+void pihe_core_strat_impl(const double*, const int*, const int*, const int*,
+                          int, std::vector<PiheEvSummary>&, double*);
 void pihe_core_impl(const double*, const int*, const int*, int,
                     std::vector<PiheEvSummary>&, double*);
 struct RmstEvSummary { double cum_area; double g; };
@@ -354,6 +356,29 @@ List analysis_loop_core(
         nev_out[pos]     = n_ev;
         nd_out[pos]      = n_drop;
 
+        // ---- Stratum ordering shared by log-rank and Cox -------------------
+        // Reorder the population subset by (stratum, time). order_ptr is
+        // already time-sorted; build per-row stratum labels, then sort the
+        // index buffer so[] by (stratum, time) with a stable comparator so
+        // ties keep time order. The result is held in ts/es/js/ss.
+        const bool strat_ready = use_strata && n_ev > 0 && both &&
+                                 (do_logrank || do_coxph);
+        if (strat_ready) {
+          for (int k = 0; k < sz; ++k) {
+            st_sel[k] = strata[g0 + orig_cut[order_ptr[k]]];
+            so[k] = k;
+          }
+          std::stable_sort(so.begin(), so.begin() + sz, [&](int p, int q) {
+            if (st_sel[p] != st_sel[q]) return st_sel[p] < st_sel[q];
+            return t_sel[p] < t_sel[q];
+          });
+          for (int k = 0; k < sz; ++k) {
+            const int kk = so[k];
+            ts[k] = t_sel[kk]; es[k] = ei_sel[kk];
+            js[k] = j_sel[kk]; ss[k] = st_sel[kk];
+          }
+        }
+
         // ---- log-rank (plain / weighted, optionally stratified) ----------
         if (do_logrank && n_ev > 0 && both) {
           double num = NA_REAL, var = NA_REAL;
@@ -372,23 +397,7 @@ List analysis_loop_core(
               var = r[2];
             }
           } else {
-            // Reorder the population subset by (stratum, time). order_ptr is
-            // already time-sorted; build per-row stratum labels, then sort the
-            // index buffer so[] by (stratum, time) with a stable comparator so
-            // ties keep time order. Reuse so/ts/es/js/ss as scratch.
-            for (int k = 0; k < sz; ++k) {
-              st_sel[k] = strata[g0 + orig_cut[order_ptr[k]]];
-              so[k] = k;
-            }
-            std::stable_sort(so.begin(), so.begin() + sz, [&](int p, int q) {
-              if (st_sel[p] != st_sel[q]) return st_sel[p] < st_sel[q];
-              return t_sel[p] < t_sel[q];
-            });
-            for (int k = 0; k < sz; ++k) {
-              const int kk = so[k];
-              ts[k] = t_sel[kk]; es[k] = ei_sel[kk];
-              js[k] = j_sel[kk]; ss[k] = st_sel[kk];
-            }
+            // Stratum-ordered buffers ts/es/js/ss were filled above.
             if (weight_scheme < 0) {
               double r[3];
               stratified_logrank_core_impl(ts.data(), es.data(), js.data(),
@@ -411,8 +420,13 @@ List analysis_loop_core(
         // ---- Cox (PiHE) ---------------------------------------------------
         if (do_coxph && n_ev > 0 && both) {
           double r[4];
-          pihe_core_impl(t_sel.data(), ei_sel.data(), j_sel.data(), sz,
-                         pihe_ev, r);
+          if (use_strata) {
+            pihe_core_strat_impl(ts.data(), es.data(), js.data(), ss.data(),
+                                 sz, pihe_ev, r);
+          } else {
+            pihe_core_impl(t_sel.data(), ei_sel.data(), j_sel.data(), sz,
+                           pihe_ev, r);
+          }
           cox_mat(pos, 0) = r[0]; cox_mat(pos, 1) = r[1];
           cox_mat(pos, 2) = r[2]; cox_mat(pos, 3) = r[3];
         }

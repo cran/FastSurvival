@@ -268,3 +268,38 @@ test_that("input validation catches bad arguments", {
   # control not one of the two group values
   expect_error(ahr_fast(obs, status, group, control = 9), "must be one of")
 })
+
+test_that("tied event times across groups follow the AHR package convention", {
+  # Hand calculation (right-continuous S2 at each jump of S1, theta2 =
+  # 1 - theta1, as in the AHR package) with all events and tau = 5:
+  # A = 1..6 as reference gives ahr = 1 for B = (1, 2, 3, 5, 7, 8), whereas
+  # B as reference gives 21/13, not 1. The asymmetry comes from the ties at
+  # times 1, 2, 3, and 5.
+  tt <- c(1, 2, 3, 4, 5, 6, 1, 2, 3, 5, 7, 8)
+  ee <- rep(1L, 12)
+  gg <- rep(c("A", "B"), each = 6)
+  expect_equal(ahr_fast(tt, ee, gg, control = "A", tau = 5)$ahr, 1,
+               tolerance = 1e-12)
+  expect_equal(ahr_fast(tt, ee, gg, control = "B", tau = 5)$ahr, 21 / 13,
+               tolerance = 1e-12)
+})
+
+test_that("without ties, exchanging the reference gives the reciprocal", {
+  set.seed(515)
+  tt <- c(rexp(80, 0.10), rexp(80, 0.07))
+  ee <- rbinom(160, 1, 0.8)
+  gg <- rep(0:1, each = 80)
+  a1 <- ahr_fast(tt, ee, gg, control = 0, tau = 10)$ahr
+  a2 <- ahr_fast(tt, ee, gg, control = 1, tau = 10)$ahr
+  expect_equal(a1 * a2, 1, tolerance = 1e-10)
+})
+
+test_that("ahr_fast warns when a supplied tau exceeds the observed follow-up", {
+  set.seed(74)
+  tt <- c(rexp(50, 0.10), rexp(50, 0.07))
+  ee <- rep(1L, 100)
+  gg <- rep(0:1, each = 50)
+  lim <- min(max(tt[gg == 0]), max(tt[gg == 1]))
+  expect_warning(ahr_fast(tt, ee, gg, control = 0, tau = lim + 1), "exceeds")
+  expect_warning(ahr_fast(tt, ee, gg, control = 0), NA)
+})

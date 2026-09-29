@@ -120,6 +120,7 @@ rmw_fast <- function(time, event, group, control, side = 2,
   if (!side %in% c(1L, 2L)) {
     stop("'side' must be either 1 (one-sided) or 2 (two-sided)")
   }
+  check_time_event(time, event)
   if (sum(event) == 0L) {
     stop("No events observed in the data")
   }
@@ -130,7 +131,7 @@ rmw_fast <- function(time, event, group, control, side = 2,
   n_total <- length(time)
 
   # Treatment indicator: 1 = treatment, 0 = control
-  j <- as.integer(group != control)
+  j <- two_group_indicator(group, control)
 
   # Sort pooled data by time when not presorted
   if (!presorted) {

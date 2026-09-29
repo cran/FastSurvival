@@ -199,7 +199,7 @@ test_that("simdata_fast: input validation", {
   expect_error(
     simdata_fast(nsim = 5, n = c(1, 2, 3), a.time = c(0, 1), a.prop = 1,
                  e.hazard = log(2) / 12),
-    "scalar .total N. or a vector of length 2")
+    "scalar .total N., a vector of length 2")
   expect_error(
     simdata_fast(nsim = 5, n = 50, a.time = c(0, 1), a.rate = 1),
     "One of 'e.hazard' or 'e.median'")
@@ -288,4 +288,134 @@ test_that("simdata_fast: accrual specification validation", {
     simdata_fast(nsim = 2, n = 50, a.time = c(0, 6, 12), a.prop = 1,
                  e.median = 18),
     "a.prop")
+})
+
+test_that("simdata_fast: a scalar n is split without losing subjects", {
+  df <- simdata_fast(nsim = 2, n = 7, a.time = c(0, 7), a.rate = 1,
+                     e.hazard = list(0.1, 0.08), seed = 1)
+  expect_equal(nrow(df), 14)
+  expect_equal(as.vector(table(df$group[df$sim == 1])), c(4, 3))
+  df2 <- simdata_fast(nsim = 2, n = 301, a.time = c(0, 12), a.prop = 1,
+                      e.hazard = list(0.1, 0.08), seed = 1)
+  expect_equal(nrow(df2), 602)
+  expect_error(simdata_fast(nsim = 2, n = 100, alloc = c(1, 1, 1),
+                            a.time = c(0, 12), a.prop = 1,
+                            e.hazard = list(0.1, 0.08)), "alloc")
+  expect_error(simdata_fast(nsim = 2, n = 100, alloc = c(1, -1),
+                            a.time = c(0, 12), a.prop = 1,
+                            e.hazard = list(0.1, 0.08)), "alloc")
+})
+
+test_that("simdata_fast: hazards and piecewise breakpoints are validated", {
+  expect_error(simdata_fast(nsim = 2, n = 50, a.time = c(0, 1), a.prop = 1,
+                            e.hazard = c(0.05, 0.2), e.time = c(3, 6, Inf)),
+               "start at 0")
+  expect_error(simdata_fast(nsim = 2, n = 50, a.time = c(0, 1), a.prop = 1,
+                            e.hazard = c(0.05, 0.2, 0.1),
+                            e.time = c(0, 12, 6, Inf)),
+               "strictly increasing")
+  expect_error(simdata_fast(nsim = 2, n = 50, a.time = c(0, 1), a.prop = 1,
+                            e.hazard = -0.1), "non-negative")
+  expect_error(simdata_fast(nsim = 2, n = 50, a.time = c(0, 1), a.prop = 1,
+                            e.median = -5), "non-negative")
+})
+
+test_that("simdata_fast: fixed.alloc subgroups are not tied to the accrual order", {
+  df <- simdata_fast(nsim = 200, n = 150, a.time = c(0, 6, 12),
+                     a.rate = c(5, 20), e.hazard = 0.05,
+                     prevalence = c(0.2, 0.8), fixed.alloc = TRUE, seed = 11)
+  # Fixed counts: 30 and 120 subjects in every simulation.
+  cnt <- tapply(df$subgroup == 1L, df$sim, sum)
+  expect_true(all(cnt == 30))
+  # The 30 subjects enrolled in [0, 6] are a random draw from the 150, so on
+  # average 20% of them are in subgroup 1 (it was 100% before the fix).
+  early <- df$accrual_time < 6
+  expect_lt(abs(mean(df$subgroup[early] == 1L) - 0.2), 0.03)
+})
+
+test_that("simdata_fast: fixed.alloc counts are robust to floating-point shares", {
+  # Hand calculation: 100 * 0.29 is 28.999... in floating point but the
+  # intended count is 29.
+  df <- simdata_fast(nsim = 1, n = 100, a.time = c(0, 12), a.prop = 1,
+                     e.hazard = 0.05, prevalence = c(0.71, 0.29),
+                     fixed.alloc = TRUE, seed = 12)
+  expect_equal(as.vector(table(df$subgroup)), c(71, 29))
+})
+
+test_that("simdata_fast: scalar n with alloc equals per-group n (issue #2)", {
+  # A scalar total split by 'alloc' must reproduce the per-group
+  # specification exactly, including subgroups with per-cell hazards.
+  args <- list(nsim = 20, a.time = c(0, 12), a.rate = 300 / 12,
+               e.hazard = list(list(0.10, 0.08, 0.06), 0.05),
+               prevalence = c(0.5, 0.3, 0.2), seed = 3)
+  ref <- do.call(simdata_fast, c(list(n = c(150, 150)), args))
+  expect_identical(do.call(simdata_fast,
+                           c(list(n = 300, alloc = c(1, 1)), args)), ref)
+  # A nested (per-group, per-cell) list also signals two groups without alloc.
+  expect_identical(do.call(simdata_fast, c(list(n = 300), args)), ref)
+  # Unequal allocation.
+  ref2 <- do.call(simdata_fast, c(list(n = c(100, 200)), args))
+  expect_identical(do.call(simdata_fast,
+                           c(list(n = 300, alloc = c(1, 2)), args)), ref2)
+})
+
+test_that("simdata_fast: with subgroups, alloc decides per-group versus per-cell lists", {
+  base <- list(nsim = 5, a.time = c(0, 12), a.prop = 1,
+               e.hazard = list(0.10, 0.05), prevalence = c(0.5, 0.5),
+               seed = 21)
+  # Scalar n without alloc: one group, per-cell hazards (unchanged behavior).
+  one <- do.call(simdata_fast, c(list(n = 200), base))
+  expect_equal(unique(one$group), 1L)
+  # Scalar n with alloc: two groups, per-group hazards, as with n = c(100, 100).
+  two <- do.call(simdata_fast, c(list(n = 200, alloc = c(1, 1)), base))
+  ref <- do.call(simdata_fast, c(list(n = c(100, 100)), base))
+  expect_identical(two, ref)
+})
+
+test_that("simdata_fast: a shared (non-list) dropout works with two groups and subgroups", {
+  base <- list(nsim = 5, n = c(100, 100), a.time = c(0, 12), a.prop = 1,
+               e.hazard = list(0.10, 0.05), prevalence = c(0.5, 0.5),
+               seed = 22)
+  shared <- do.call(simdata_fast, c(base, list(d.hazard = 0.01)))
+  per_group <- do.call(simdata_fast, c(base, list(d.hazard = list(0.01, 0.01))))
+  expect_identical(shared, per_group)
+})
+
+test_that("simdata_fast: list lengths are checked instead of silently truncated", {
+  expect_error(
+    simdata_fast(nsim = 2, n = c(50, 50), a.time = c(0, 12), a.prop = 1,
+                 e.hazard = list(0.10, 0.08, 0.05)),
+    "list of length 2")
+  expect_error(
+    simdata_fast(nsim = 2, n = 100, a.time = c(0, 12), a.prop = 1,
+                 e.hazard = list(0.10, 0.08, 0.05), prevalence = c(0.5, 0.5)),
+    "one element per subgroup cell")
+  expect_error(
+    simdata_fast(nsim = 2, n = c(50, 50), a.time = c(0, 12), a.prop = 1,
+                 e.hazard = list(list(0.10, 0.08), 0.05),
+                 prevalence = c(0.3, 0.3, 0.4)),
+    "one element per subgroup cell")
+})
+
+test_that("simdata_fast: per-cell breakpoints are used in a one-group simulation", {
+  # Cell 2 has hazard 0.2 on [0, 3) and 0.1 afterwards, so
+  # P(T > 6) = exp(-0.2 * 3 - 0.1 * 3) = exp(-0.9), about 0.407 (hand
+  # calculation). Using cell 1's breakpoint 6 instead would give exp(-1.2),
+  # about 0.301.
+  df <- simdata_fast(nsim = 1, n = 40000, a.time = c(0, 1), a.prop = 1,
+                     e.hazard = list(c(0.1, 0.05), c(0.2, 0.1)),
+                     e.time = list(c(0, 6, Inf), c(0, 3, Inf)),
+                     prevalence = c(0.5, 0.5), seed = 23)
+  expect_equal(unique(df$group), 1L)
+  p2 <- mean(df$surv_time[df$subgroup == 2L] > 6)
+  expect_lt(abs(p2 - exp(-0.9)), 0.02)
+})
+
+test_that("simdata_fast: group-specific prevalence must have matching factor levels", {
+  expect_error(
+    simdata_fast(nsim = 2, n = c(50, 50), a.time = c(0, 12), a.prop = 1,
+                 e.hazard = 0.1,
+                 prevalence = list(control   = list(c(0.5, 0.5), c(0.3, 0.3, 0.4)),
+                                   treatment = list(c(0.3, 0.3, 0.4), c(0.5, 0.5)))),
+    "levels per factor")
 })

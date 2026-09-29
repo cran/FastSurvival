@@ -78,22 +78,18 @@ test_that("wkm_fast returns the expected structure", {
 
 test_that("wkm_fast matches the survfit-based reference (PF weight)", {
   skip_if_not_installed("survival")
-  out <- tryCatch({
-    set.seed(11)
-    n_per <- 200
-    g <- rep(0:1, each = n_per)
-    tt <- c(rexp(n_per, log(2) / 12), rexp(n_per, log(2) / 16))
-    cc <- rexp(2 * n_per, rate = 0.02)
-    time <- pmin(tt, cc)
-    event <- as.integer(tt <= cc)
-    ref <- wkm_reference(time, event, g)
-    fast <- wkm_fast(time, event, group = g, control = 0, side = 1,
-                     weight = "PF")
-    list(ref = ref, fast = fast)
-  }, error = function(e) NULL)
-  skip_if(is.null(out), "survival reference unavailable")
-  expect_equal(unname(out$fast["z"]), out$ref$z, tolerance = 1e-6)
-  expect_equal(unname(out$fast["p"]), out$ref$p, tolerance = 1e-6)
+  set.seed(11)
+  n_per <- 200
+  g <- rep(0:1, each = n_per)
+  tt <- c(rexp(n_per, log(2) / 12), rexp(n_per, log(2) / 16))
+  cc <- rexp(2 * n_per, rate = 0.02)
+  time <- pmin(tt, cc)
+  event <- as.integer(tt <= cc)
+  fast <- wkm_fast(time, event, group = g, control = 0, side = 1,
+                   weight = "PF")
+  ref <- wkm_reference(time, event, g)
+  expect_equal(unname(fast["z"]), ref$z, tolerance = 1e-6)
+  expect_equal(unname(fast["p"]), ref$p, tolerance = 1e-6)
 })
 
 test_that("a treatment benefit gives a positive weighted difference and z", {

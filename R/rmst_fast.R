@@ -55,7 +55,9 @@
 #' @param conf.level A single numeric value in (0, 1) specifying the confidence
 #'   level. Defaults to 0.95.
 #' @param tau A single positive numeric value specifying the restriction
-#'   horizon.
+#'   horizon. A warning is given when it exceeds the largest observed time
+#'   (of either group in the two-group case), because the Kaplan-Meier curve
+#'   is not estimated beyond that time.
 #' @param presorted A logical value. If \code{TRUE}, the inputs are assumed to
 #'   be sorted in ascending order of \code{time}. If \code{FALSE} (default),
 #'   sorting is handled internally.
@@ -132,6 +134,7 @@ rmst_fast <- function(time, event, group = NULL, control = NULL, side = 2,
   if (conf.level <= 0 || conf.level >= 1) {
     stop("'conf.level' must be in (0, 1)")
   }
+  check_time_event(time, event)
 
   z <- qnorm(1 - (1 - conf.level) / 2)
 
@@ -144,6 +147,7 @@ rmst_fast <- function(time, event, group = NULL, control = NULL, side = 2,
                 class = "rmst_fast")
     }
     if (n == 0L) return(wrap1(na_out))
+    check_tau_follow_up(time, NULL, tau)
 
     if (!presorted) {
       ord   <- order(time)
@@ -172,8 +176,8 @@ rmst_fast <- function(time, event, group = NULL, control = NULL, side = 2,
   }
 
   # Treatment indicator: 1 = treatment, 0 = control
-  if (is.factor(group)) group <- as.character(group)
-  j <- as.integer(group != control)
+  j <- two_group_indicator(group, control)
+  check_tau_follow_up(time, j, tau)
 
   # Sort pooled data by time when not presorted (group split preserves order)
   if (!presorted) {

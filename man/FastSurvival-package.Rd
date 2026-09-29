@@ -15,10 +15,12 @@ regional consistency evaluation in multi-regional clinical trials. Core
 computations are implemented in C++ via \pkg{Rcpp}.
 }
 \details{
-The estimation and testing functions return S3-class objects that are
+Most estimation and testing functions return S3-class objects that are
 internally named numeric vectors, so a result can be used directly in
 arithmetic, subsetting, and aggregation after stripping the class with
-\code{\link[base]{unclass}}. Each class has a \code{print()} method that
+\code{\link[base]{unclass}}. The exceptions are \code{\link{milestone_fast}}
+and \code{\link{ahr_fast}}, which return named lists whose elements are
+extracted with \code{$}. Each class has a \code{print()} method that
 formats the result similarly to the corresponding \pkg{survival} package
 output.
 
@@ -37,7 +39,8 @@ Estimation and testing:
   \item{\code{\link{coxph_fast}}}{Closed-form hazard ratio estimator via
     the Pike-Halley Estimator method, with Wald confidence interval. The
     estimator anchors at the Pike estimate and applies a single analytic
-    Halley correction to the Cox partial likelihood score.}
+    Halley correction to the Cox partial likelihood score. A stratified
+    version approximates the stratified Cox model.}
   \item{\code{\link{rmst_fast}}}{Restricted mean survival time for a single
     group or a two-group comparison, with difference and ratio contrasts.}
   \item{\code{\link{wmst_fast}}}{Window mean survival time over an

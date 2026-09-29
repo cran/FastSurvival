@@ -45,7 +45,12 @@ print.survdiff_fast <- function(x, digits = max(1L, getOption("digits") - 3L), .
   # Header. All variants carry the (two-group) scope tag for consistency with
   # the other test summaries in the package.
   if (is.null(wt)) {
-    cat("Log-rank test (two-group)\n\n")
+    if (!is.null(n_str)) {
+      cat(sprintf("Stratified log-rank test (two-group, %d strata)\n\n",
+                  n_str))
+    } else {
+      cat("Log-rank test (two-group)\n\n")
+    }
   } else {
     scheme_label <- switch(
       wt,

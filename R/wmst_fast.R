@@ -28,7 +28,9 @@
 #' @param tau1 Lower limit of the window. Defaults to 0.
 #' @param tau2 Upper limit of the window. If omitted, the largest time common
 #'   to both groups is used (the minimum over groups of the maximum observed
-#'   time), or the maximum observed time for a single group.
+#'   time), or the maximum observed time for a single group. A supplied value
+#'   larger than that gives a warning, because the Kaplan-Meier curve is not
+#'   estimated beyond it.
 #' @param side Either 2 for a two-sided test or 1 for a one-sided test of
 #'   treatment superiority (difference greater than 0).
 #' @param conf.level Confidence level for the intervals.
@@ -92,6 +94,9 @@ wmst_fast <- function(time, event, group = NULL, control = NULL,
     if (length(group) != n_obs) {
       stop("group must have the same length as time.")
     }
+    if (anyNA(group)) {
+      stop("group must not contain NA.")
+    }
     levels_g <- sort(unique(group))
     if (length(levels_g) != 2L) {
       stop("group must have exactly two distinct levels for a comparison.")
@@ -117,6 +122,9 @@ wmst_fast <- function(time, event, group = NULL, control = NULL,
     } else {
       tau2 <- max(time)
     }
+  } else {
+    check_tau_follow_up(time, if (two_group) gcode else NULL, tau2,
+                        arg = "tau2")
   }
   if (tau2 <= tau1) {
     stop("tau2 must be greater than tau1.")

@@ -39,7 +39,9 @@ from \code{look.value} when no event count is available). Probabilities are
 printed to \code{digits} decimal places and counts and times to fewer. Because
 the summary is a Monte Carlo estimate under a single data-generating truth, it
 does not carry the separate null and alternative columns or the alpha and beta
-spending of an analytic design report. The underlying object is an ordinary
+spending of an analytic design report. When the summary has several blocks
+(arms of \code{\link{pairwise_fast}} output or subgroup populations), each
+block is printed under its own heading. The underlying object is an ordinary
 data frame, so the unrounded values remain available by subsetting it directly.
 }
 \seealso{

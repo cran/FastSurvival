@@ -47,49 +47,46 @@ test_that("wmst_fast returns the expected structure for two groups", {
 
 test_that("wmst_fast with tau1 = 0 matches survRM2::rmst2", {
   skip_if_not_installed("survRM2")
-  out <- tryCatch({
-    set.seed(21)
-    n_per <- 250
-    g <- rep(0:1, each = n_per)
-    tt <- c(rexp(n_per, log(2) / 12), rexp(n_per, log(2) / 16))
-    cc <- rexp(2 * n_per, rate = 0.02)
-    time <- pmin(tt, cc)
-    event <- as.integer(tt <= cc)
-    tau <- min(max(time[g == 0]), max(time[g == 1]))
-    rm2 <- survRM2::rmst2(time = time, status = event, arm = g, tau = tau)
-    diff_ref <- as.numeric(rm2$RMST.arm1$rmst["Est."] - rm2$RMST.arm0$rmst["Est."])
-    se_ref <- sqrt(rm2$RMST.arm1$rmst.var + rm2$RMST.arm0$rmst.var)
-    fast <- wmst_fast(time, event, group = g, control = 0, tau1 = 0, tau2 = tau)
-    list(diff_ref = diff_ref, se_ref = se_ref, fast = fast)
-  }, error = function(e) NULL)
-  skip_if(is.null(out), "survRM2 comparison unavailable")
-  expect_equal(unname(out$fast["diff"]), out$diff_ref, tolerance = 1e-6)
-  expect_equal(unname(out$fast["se.diff"]), out$se_ref, tolerance = 1e-6)
+  set.seed(21)
+  n_per <- 250
+  g <- rep(0:1, each = n_per)
+  tt <- c(rexp(n_per, log(2) / 12), rexp(n_per, log(2) / 16))
+  cc <- rexp(2 * n_per, rate = 0.02)
+  time <- pmin(tt, cc)
+  event <- as.integer(tt <= cc)
+  tau <- min(max(time[g == 0]), max(time[g == 1]))
+  # Only the reference computation is protected; an error in wmst_fast fails
+  # the test instead of skipping it.
+  fast <- wmst_fast(time, event, group = g, control = 0, tau1 = 0, tau2 = tau)
+  rm2 <- tryCatch(
+    survRM2::rmst2(time = time, status = event, arm = g, tau = tau),
+    error = function(e) NULL)
+  skip_if(is.null(rm2), "survRM2::rmst2 failed")
+  diff_ref <- as.numeric(rm2$RMST.arm1$rmst["Est."] - rm2$RMST.arm0$rmst["Est."])
+  se_ref <- sqrt(rm2$RMST.arm1$rmst.var + rm2$RMST.arm0$rmst.var)
+  expect_equal(unname(fast["diff"]), diff_ref, tolerance = 1e-6)
+  expect_equal(unname(fast["se.diff"]), se_ref, tolerance = 1e-6)
 })
 
 test_that("wmst_fast matches the survfit-based reference over a window", {
   skip_if_not_installed("survival")
-  out <- tryCatch({
-    set.seed(31)
-    n_per <- 250
-    g <- rep(0:1, each = n_per)
-    tt <- c(rexp(n_per, log(2) / 12), rexp(n_per, log(2) / 16))
-    cc <- rexp(2 * n_per, rate = 0.02)
-    time <- pmin(tt, cc)
-    event <- as.integer(tt <= cc)
-    tau1 <- 3
-    tau2 <- min(max(time[g == 0]), max(time[g == 1]))
-    r0 <- wmst_reference(time[g == 0], event[g == 0], tau1, tau2)
-    r1 <- wmst_reference(time[g == 1], event[g == 1], tau1, tau2)
-    fast <- wmst_fast(time, event, group = g, control = 0,
-                      tau1 = tau1, tau2 = tau2)
-    list(r0 = r0, r1 = r1, fast = fast)
-  }, error = function(e) NULL)
-  skip_if(is.null(out), "survival reference unavailable")
-  expect_equal(unname(out$fast["wmst.control"]), out$r0$wmst, tolerance = 1e-8)
-  expect_equal(unname(out$fast["wmst.treatment"]), out$r1$wmst, tolerance = 1e-8)
-  expect_equal(unname(out$fast["se.diff"]),
-               sqrt(out$r0$variance + out$r1$variance), tolerance = 1e-8)
+  set.seed(31)
+  n_per <- 250
+  g <- rep(0:1, each = n_per)
+  tt <- c(rexp(n_per, log(2) / 12), rexp(n_per, log(2) / 16))
+  cc <- rexp(2 * n_per, rate = 0.02)
+  time <- pmin(tt, cc)
+  event <- as.integer(tt <= cc)
+  tau1 <- 3
+  tau2 <- min(max(time[g == 0]), max(time[g == 1]))
+  fast <- wmst_fast(time, event, group = g, control = 0,
+                    tau1 = tau1, tau2 = tau2)
+  r0 <- wmst_reference(time[g == 0], event[g == 0], tau1, tau2)
+  r1 <- wmst_reference(time[g == 1], event[g == 1], tau1, tau2)
+  expect_equal(unname(fast["wmst.control"]), r0$wmst, tolerance = 1e-8)
+  expect_equal(unname(fast["wmst.treatment"]), r1$wmst, tolerance = 1e-8)
+  expect_equal(unname(fast["se.diff"]),
+               sqrt(r0$variance + r1$variance), tolerance = 1e-8)
 })
 
 test_that("a treatment benefit gives a positive difference and z", {
@@ -173,4 +170,15 @@ test_that("type I error is approximately controlled under the null", {
     if (is.finite(res["p"]) && res["p"] < 0.05) reject <- reject + 1L
   }
   expect_lt(reject / nsim, 0.12)
+})
+
+test_that("wmst_fast warns when a supplied tau2 exceeds the observed follow-up", {
+  set.seed(73)
+  tt <- c(rexp(50, 0.10), rexp(50, 0.07))
+  ee <- rep(1L, 100)
+  gg <- rep(0:1, each = 50)
+  lim <- min(max(tt[gg == 0]), max(tt[gg == 1]))
+  expect_warning(wmst_fast(tt, ee, group = gg, control = 0, tau2 = lim + 1),
+                 "exceeds")
+  expect_warning(wmst_fast(tt, ee, group = gg, control = 0), NA)
 })

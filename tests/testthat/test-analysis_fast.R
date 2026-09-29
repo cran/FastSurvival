@@ -324,3 +324,86 @@ test_that("analysis_fast: new statistic arguments are validated", {
   expect_error(analysis_fast(dat, control = 1, event.looks = 50,
                              stat = "wkm", wkm.weight = "bogus"))
 })
+
+test_that("analysis_fast milestone and ahsw p-values follow side as the wrappers do", {
+  dat <- simdata_fast(nsim = 3, n = c(150, 150), a.time = c(0, 12),
+                      a.prop = 1,
+                      e.hazard = list(log(2) / 10, log(2) / 16), seed = 404)
+  # A very late calendar look leaves the data uncut, so each row can be
+  # compared with the stand-alone wrappers on the full simulated trial.
+  for (mm in c("loglog", "wald", "mover")) {
+    res <- analysis_fast(dat, control = 1, time.looks = 1e6,
+                         stat = c("milestone", "ahsw"), tau = 12,
+                         ms.method = mm, side = 1)
+    for (s in 1:3) {
+      d  <- dat[dat$sim == s, ]
+      ms <- milestone_fast(d$tte, d$event, d$group, control = 1, side = 1,
+                           tau = 12, method = mm)
+      expect_equal(res$milestone.z[s], ms$statistic, tolerance = 1e-10)
+      expect_equal(res$milestone.p[s], ms$p.value, tolerance = 1e-10)
+      ah <- ahsw_fast(d$tte, d$event, d$group, control = 1, side = 1,
+                      tau = 12)
+      expect_equal(res$ahsw.p.rah[s], unname(ah["p.rah"]), tolerance = 1e-10)
+      expect_equal(res$ahsw.p.dah[s], unname(ah["p.dah"]), tolerance = 1e-10)
+    }
+  }
+})
+
+test_that("analysis_fast validates group, control, event coding, and looks", {
+  dat <- simdata_fast(nsim = 3, n = c(40, 40), a.time = c(0, 6), a.prop = 1,
+                      e.hazard = list(log(2) / 10, log(2) / 12), seed = 90)
+  expect_error(analysis_fast(dat, control = 3, time.looks = 10), "control")
+  dat3 <- dat
+  dat3$group[1] <- 3L
+  expect_error(analysis_fast(dat3, control = 1, time.looks = 10),
+               "two distinct")
+  dat_na <- dat
+  dat_na$tte[2] <- NA
+  expect_error(analysis_fast(dat_na, control = 1, time.looks = 10), "missing")
+  dat_ev <- dat
+  dat_ev$event[3] <- 2L
+  expect_error(analysis_fast(dat_ev, control = 1, time.looks = 10), "coded")
+  expect_error(analysis_fast(dat, control = 1, event.looks = 10.5), "whole")
+})
+
+test_that("analysis_fast handles factor and character subgroup columns", {
+  dat <- simdata_fast(nsim = 4, n = c(100, 100), a.time = c(0, 12),
+                      a.prop = 1, e.hazard = list(list(0.10, 0.07), 0.05),
+                      prevalence = c(0.5, 0.5), seed = 505)
+  ref <- analysis_fast(dat, control = 1, time.looks = 24, by.subgroup = TRUE)
+  lab <- c("A", "B")
+  dat_f <- dat
+  dat_f$subgroup <- factor(lab[dat$subgroup])
+  res_f <- analysis_fast(dat_f, control = 1, time.looks = 24,
+                         by.subgroup = TRUE)
+  expect_equal(res_f$population,
+               sub("_2$", "_B", sub("_1$", "_A", ref$population)))
+  expect_equal(res_f$n.enrolled, ref$n.enrolled)
+  expect_equal(res_f$logrank.z, ref$logrank.z)
+  dat_c <- dat
+  dat_c$subgroup <- lab[dat$subgroup]
+  res_c <- analysis_fast(dat_c, control = 1, time.looks = 24,
+                         by.subgroup = TRUE)
+  expect_equal(res_c$n.enrolled, ref$n.enrolled)
+  expect_equal(res_c$logrank.z, ref$logrank.z)
+})
+
+test_that("analysis_fast stratified coxph matches coxph_fast with strata", {
+  dat <- simdata_fast(nsim = 4, n = c(150, 150), a.time = c(0, 12),
+                      a.prop = 1,
+                      e.hazard = list(list(0.10, 0.05), list(0.07, 0.035)),
+                      prevalence = c(0.5, 0.5), seed = 707)
+  # A very late calendar look leaves the data uncut.
+  res <- analysis_fast(dat, control = 1, time.looks = 1e6,
+                       stat = c("logrank", "coxph"), strata = "subgroup")
+  for (s in 1:4) {
+    d  <- dat[dat$sim == s, ]
+    cx <- coxph_fast(d$tte, d$event, d$group, control = 1,
+                     strata = d$subgroup)
+    expect_equal(res$cox.coef[s], unname(cx["coef"]), tolerance = 1e-10)
+    expect_equal(res$cox.se[s], unname(cx["se(coef)"]), tolerance = 1e-10)
+    lr <- survdiff_fast(d$tte, d$event, d$group, control = 1, side = 1,
+                        strata = d$subgroup)
+    expect_equal(res$logrank.z[s], as.numeric(lr), tolerance = 1e-10)
+  }
+})

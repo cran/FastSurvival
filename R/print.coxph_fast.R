@@ -29,8 +29,16 @@
 print.coxph_fast <- function(x, digits = max(1L, getOption("digits") - 3L), ...) {
 
   # Detect whether the estimate is available.
+  n_str  <- attr(x, "strata")
+  header <- if (is.null(n_str)) {
+    "Pike-Halley estimator for the hazard ratio (two-group)\n\n"
+  } else {
+    sprintf(paste0("Stratified Pike-Halley estimator for the hazard ratio ",
+                   "(two-group, %d strata)\n\n"), as.integer(n_str))
+  }
+
   if (anyNA(x)) {
-    cat("Pike-Halley estimator for the hazard ratio (two-group)\n\n")
+    cat(header)
     cat("  Estimate not available (insufficient data).\n")
     return(invisible(x))
   }
@@ -75,7 +83,7 @@ print.coxph_fast <- function(x, digits = max(1L, getOption("digits") - 3L), ...)
     )
   )
 
-  cat("Pike-Halley estimator for the hazard ratio (two-group)\n\n")
+  cat(header)
   if (!is.null(control)) {
     cat(sprintf("  control = %s\n", format(control)))
   }

@@ -263,17 +263,17 @@ of magnitude of the speedup is stable.
 | Function | Replaces | Approximate speed gain |
 |----------|----------|------------------------|
 | `survfit_fast()` | `survfit()` + `summary()` at one time point | ~40x |
-| `survdiff_fast()` | `survdiff()` | ~40x |
-| `coxph_fast()` | `coxph()` (point estimate + Wald CI) | ~30x |
-| `rmst_fast()` | `survRM2::rmst2()` | ~40x |
-| `survdiff_fast(weight = "fh")` | `nph::logrank.test()` | ~350x |
-| `wmst_fast()` | `survWMST::wmst()` | ~560x |
+| `survdiff_fast()` | `survdiff()` | ~25x |
+| `coxph_fast()` | `coxph()` (point estimate + Wald CI) | ~35x |
+| `rmst_fast()` | `survRM2::rmst2()` | ~35x |
+| `survdiff_fast(weight = "fh")` | `nph::logrank.test()` | ~300x |
+| `wmst_fast()` | `survWMST::wmst()` | ~900x |
 | `milestone_fast()` | `survfit()` + `summary()` at a milestone | ~20x |
-| `medsurv_fast()` | `nph::nphparams()` | ~30x |
-| `maxcombo_fast()` | `nph::logrank.maxtest()` | ~320x |
-| `rmw_fast()` | `nphRCT::wlrt()` (two components) | ~80x |
-| `ahsw_fast()` | `survAH::ah2()` | ~410x |
-| `ahr_fast()` | `AHR::ahrKM()` | ~130x |
+| `medsurv_fast()` | `nph::nphparams()` | ~35x |
+| `maxcombo_fast()` | `nph::logrank.maxtest()` | ~350x |
+| `rmw_fast()` | `nphRCT::wlrt()` (two components) | ~75x |
+| `ahsw_fast()` | `survAH::ah2()` | ~450x |
+| `ahr_fast()` | `AHR::ahrKM()` | ~200x |
 
 # Why it is faster
 

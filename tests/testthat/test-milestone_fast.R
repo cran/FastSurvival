@@ -172,5 +172,29 @@ test_that("print returns the object invisibly and produces output", {
   res <- milestone_fast(obs, status, group, control = 0L, tau = 8)
   expect_s3_class(res, "milestone_fast")
   expect_output(print(res), "Milestone survival")
-  expect_invisible(print(res))
+  # capture.output keeps the printed report out of the test log
+  utils::capture.output(vis <- withVisible(print(res)))
+  expect_false(vis$visible)
+  expect_identical(vis$value, res)
+})
+
+test_that("milestone_fast gives a zero standard error when a curve reaches zero", {
+  # Control times 1, 2, 3 are all events, so S0(5) = 0; treatment has one
+  # event at 4 with three at risk, so S1(5) = 2/3.
+  # tau = 5 is beyond the control follow-up (largest time 3), so a warning
+  # is expected as well.
+  expect_warning(
+    res <- milestone_fast(c(1, 2, 3, 4, 5, 6), c(1, 1, 1, 1, 0, 0),
+                          c(0, 0, 0, 1, 1, 1), control = 0, tau = 5),
+    "exceeds")
+  expect_equal(unname(res$surv["control"]), 0)
+  expect_equal(unname(res$std.err["control"]), 0)
+  expect_equal(unname(res$surv["treatment"]), 2 / 3, tolerance = 1e-12)
+})
+
+test_that("milestone_fast rejects missing times and groups", {
+  expect_error(milestone_fast(c(1, NA, 3, 4), c(1, 1, 0, 1), c(0, 0, 1, 1),
+                              control = 0, tau = 2), "missing")
+  expect_error(milestone_fast(c(1, 2, 3, 4), c(1, 1, 0, 1), c(0, NA, 1, 1),
+                              control = 0, tau = 2), "missing")
 })

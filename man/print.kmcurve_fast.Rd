@@ -17,7 +17,8 @@ The input \code{x}, invisibly.
 \description{
 Prints a compact per-group summary of a \code{kmcurve_fast} object: the group
 label and role, the sample size, the number of events, and the median
-survival read from the Kaplan-Meier curve. In the two-group case the constant
+survival read from the Kaplan-Meier curve with the convention of
+\code{survival::survfit}. In the two-group case the constant
 Cox proportional-hazards estimate of the hazard ratio is reported below the
 table.
 }

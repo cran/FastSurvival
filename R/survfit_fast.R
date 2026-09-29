@@ -30,9 +30,11 @@
 #' collapses to \code{[0, 0]}, consistent with \code{\link[survival]{survfit}}.
 #'
 #' When \code{presorted = TRUE} (default), \code{t_sorted} and \code{e_sorted}
-#' are assumed to be sorted in ascending order of time. When
+#' are expected to be sorted in ascending order of time; the order is checked
+#' (a linear-time test) and an error is raised for unsorted input. When
 #' \code{presorted = FALSE}, the vectors are sorted internally before
-#' computation.
+#' computation. When the standard error is zero (for example \code{S(t) = 1}
+#' before the first event), the confidence interval collapses to the estimate.
 #'
 #' Three confidence interval types are supported via \code{conf.type}:
 #'
@@ -41,7 +43,8 @@
 #'     S(t) +/- z * SE. The bounds are clipped to [0, 1].
 #'   \item \code{"log"}: Interval on the log scale (default in
 #'     \code{\link[survival]{survfit}}),
-#'     S(t) * exp(+/- z * SE / S(t)).
+#'     S(t) * exp(+/- z * SE / S(t)). The upper bound is capped at 1, as in
+#'     \code{\link[survival]{survfit}}.
 #'   \item \code{"log-log"}: Interval on the complementary log-log scale,
 #'     S(t)^exp(+/- z * SE / (S(t) * log(S(t)))).
 #' }
@@ -123,10 +126,26 @@ survfit_fast <- function(t_sorted, e_sorted, t_eval,
               class     = "survfit_fast")
   }
 
+  if (length(conf.level) != 1L || !is.finite(conf.level) ||
+      conf.level <= 0 || conf.level >= 1) {
+    stop("'conf.level' must be in (0, 1)")
+  }
+  if (length(t_eval) != 1L || is.na(t_eval)) {
+    stop("'t_eval' must be a single non-missing value")
+  }
   n <- length(t_sorted)
+  if (length(e_sorted) != n) {
+    stop("'t_sorted' and 'e_sorted' must have the same length")
+  }
   if (n == 0L) return(wrap(na_out))
+  check_time_event(t_sorted, e_sorted)
 
-  # Sort internally when presorted = FALSE
+  # Sort internally when presorted = FALSE; otherwise confirm the order, since
+  # the binary search in the core assumes ascending times
+  if (presorted && is.unsorted(t_sorted)) {
+    stop("'t_sorted' is not sorted in ascending order; ",
+         "use presorted = FALSE")
+  }
   if (!presorted) {
     ord      <- order(t_sorted)
     t_sorted <- t_sorted[ord]
@@ -146,12 +165,19 @@ survfit_fast <- function(t_sorted, e_sorted, t_eval,
   std.err <- surv * sqrt(gw_sum)
   z       <- qnorm(1 - (1 - conf.level) / 2)
 
+  # A zero standard error (for example S(t) = 1 before the first event) gives a
+  # degenerate interval at the estimate, as in survival::survfit
+  if (std.err == 0) {
+    return(wrap(c(surv = surv, std.err = 0, lower = surv, upper = surv)))
+  }
+
   ci <- if (conf.type == "plain") {
     c(lower = max(0, surv - z * std.err),
       upper = min(1, surv + z * std.err))
   } else if (conf.type == "log") {
+    # The upper limit is capped at 1, as in survival::survfit
     c(lower = surv * exp(-z * std.err / surv),
-      upper = surv * exp( z * std.err / surv))
+      upper = min(1, surv * exp(z * std.err / surv)))
   } else {
     if (surv >= 1) {
       return(wrap(c(surv = surv, std.err = std.err,

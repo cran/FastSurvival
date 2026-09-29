@@ -1,6 +1,7 @@
 #include <Rcpp.h>
 #include <vector>
 #include <cmath>
+#include <cfloat>
 using namespace Rcpp;
 
 // Reusable scratch for the median survival core. Defined at file scope so the
@@ -25,9 +26,13 @@ void medsurv_core_impl(const double*, const int*, int, double,
 // time-sorted data once, recording every distinct event time together with its
 // event count and at-risk count, and the running Kaplan-Meier product. It
 // returns, per group:
-//   column 0: median survival time, inf{t : S(t) <= 0.5} on the Kaplan-Meier
-//             estimate (NA if undefined). This is the point estimate for both
-//             variance methods.
+//   column 0: median survival time on the Kaplan-Meier estimate, following
+//             the survival::survfit convention: the first event time at which
+//             S(t) <= 0.5 (within a tolerance of sqrt(machine epsilon)), and,
+//             when S(t) equals 0.5 on a flat stretch, the midpoint between that
+//             event time and the next event time (or the last observed time if
+//             no later event exists). NA if undefined. This is the point
+//             estimate for both variance methods.
 //   column 1: Kaplan-Meier estimate S at the median
 //   column 2: Greenwood sum up to and including the median,
 //             sum_{s <= median} d(s) / (Y(s) (Y(s) - d(s)))   [method "km"]
@@ -94,6 +99,9 @@ void medsurv_core_impl(const double* time, const int* event, int n, double bw,
   at_risk.clear();
   hazard_incr.clear();
 
+  // Tolerance used by survival::survfit when locating quantiles.
+  const double tol = std::sqrt(DBL_EPSILON);
+
   int atrisk = n;
   double surv = 1.0;
   double median = NA_REAL;
@@ -119,7 +127,7 @@ void medsurv_core_impl(const double* time, const int* event, int n, double bw,
       at_risk.push_back((double) at_risk_here);
       hazard_incr.push_back((double) n_event / (double) at_risk_here);
       surv *= (1.0 - (double) n_event / (double) at_risk_here);
-      if (!found && surv <= 0.5) {
+      if (!found && surv <= 0.5 + tol) {
         found = true;
         median = t0;
         surv_med = surv;
@@ -128,6 +136,16 @@ void medsurv_core_impl(const double* time, const int* event, int n, double bw,
     }
     atrisk -= n_record;
     i = j;
+  }
+
+  // Flat stretch exactly at 0.5: survfit reports the midpoint between the
+  // event time where S reaches 0.5 and the next event time, or the last
+  // observed time when the curve stays at 0.5 to the end.
+  if (found && std::fabs(surv_med - 0.5) < tol) {
+    const int n_ev = (int) event_time.size();
+    const double t_next = (pos_med + 1 < n_ev) ? event_time[pos_med + 1]
+                                               : time[n - 1];
+    median = 0.5 * (event_time[pos_med] + t_next);
   }
 
   double greenwood = NA_REAL;

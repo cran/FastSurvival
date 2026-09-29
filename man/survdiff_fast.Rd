@@ -56,7 +56,7 @@ behavior of earlier versions of this function exactly. \code{"fh"} is the
 Fleming-Harrington G(rho, gamma) test with weight
 \code{S(t-)^rho (1 - S(t-))^gamma}. \code{"mwlrt"} is the modestly-weighted
 log-rank test of Magirr and Burman with weight
-\code{1 / max(S(t-), S(t_star))}. \code{"gehan"} is the Gehan-Breslow test
+\code{1 / max(S(t-), S(t_star-))}. \code{"gehan"} is the Gehan-Breslow test
 with weight equal to the at-risk count, and \code{"tarone-ware"} uses the
 square root of the at-risk count. Here \code{S(t-)} is the left-continuous
 pooled Kaplan-Meier estimate just prior to each event time.}
@@ -71,8 +71,10 @@ Fleming-Harrington G(0, 1) test for delayed effects.}
 
 \item{t_star}{A single non-negative numeric value, the timepoint of the
 modestly-weighted log-rank test. Required only when \code{weight =
-"mwlrt"}. The weight is capped at \code{1 / S(t_star)}, where
-\code{S(t_star)} is the pooled Kaplan-Meier value at \code{t_star}.
+"mwlrt"}. The weight is capped at \code{1 / S(t_star-)}, where
+\code{S(t_star-)} is the pooled Kaplan-Meier value just before
+\code{t_star} (the product over event times strictly less than
+\code{t_star}, as in nphRCT).
 A value of 0 yields the ordinary log-rank test.}
 }
 \value{

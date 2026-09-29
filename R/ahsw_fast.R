@@ -53,8 +53,9 @@
 #' @param conf.level A single numeric value in (0, 1) specifying the confidence
 #'   level. Defaults to 0.95.
 #' @param tau A single positive numeric value, the truncation time point for the
-#'   average hazard. Both groups must have positive Kaplan-Meier survival at
-#'   \code{tau}.
+#'   average hazard. A warning is given when it exceeds the largest observed
+#'   time of either group, because the Kaplan-Meier curve is not estimated
+#'   beyond that time.
 #' @param presorted A logical value. If \code{TRUE}, \code{time}, \code{event},
 #'   and \code{group} are assumed to be sorted in ascending order of
 #'   \code{time}, and the internal \code{order()} call is skipped. If
@@ -67,8 +68,8 @@
 #'   \code{dah.upper}, \code{p.dah}). The truncation time and confidence level
 #'   are stored as attributes \code{tau} and \code{conf.level}, and the
 #'   \code{control} label is also stored. Returns \code{NA} values (still with
-#'   class \code{"ahsw_fast"}) when either group has zero survival at \code{tau}
-#'   or a non-finite variance.
+#'   class \code{"ahsw_fast"}) when either group has no events up to \code{tau}
+#'   (a zero average hazard) or a non-finite variance.
 #'
 #' @examples
 #' library(survival)
@@ -117,12 +118,13 @@ ahsw_fast <- function(time, event, group, control, side = 2,
   if (conf.level <= 0 || conf.level >= 1) {
     stop("'conf.level' must be in (0, 1)")
   }
+  check_time_event(time, event)
 
   z <- qnorm(1 - (1 - conf.level) / 2)
 
   # Treatment indicator: 1 = treatment, 0 = control
-  if (is.factor(group)) group <- as.character(group)
-  j <- as.integer(group != control)
+  j <- two_group_indicator(group, control)
+  check_tau_follow_up(time, j, tau)
 
   # Sort pooled data by time when not presorted (group split preserves order)
   if (!presorted) {
@@ -162,7 +164,8 @@ ahsw_fast <- function(time, event, group, control, side = 2,
               control = control, class = "ahsw_fast")
   }
 
-  # Bail out if either group has zero survival at tau or a non-finite variance
+  # Bail out if either group has no events up to tau (zero average hazard) or
+  # a non-finite variance
   if (!is.finite(a0) || !is.finite(a1) || a0 <= 0 || a1 <= 0 ||
       !is.finite(vQ0) || !is.finite(vQ1) ||
       !is.finite(vU0) || !is.finite(vU1)) {

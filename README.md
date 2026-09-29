@@ -32,7 +32,7 @@ available at <https://gosukehommaEX.github.io/FastSurvival/>.
 |----------|-------------|
 | `survfit_fast()` | Single-time-point Kaplan-Meier estimate with Greenwood standard error and plain / log / log-log confidence intervals. |
 | `survdiff_fast()` | Log-rank test, including weighted (Fleming-Harrington, modestly-weighted, Gehan-Breslow, Tarone-Ware) and stratified variants. |
-| `coxph_fast()` | Closed-form hazard ratio via the Pike-Halley Estimator with a Wald confidence interval. |
+| `coxph_fast()` | Closed-form hazard ratio via the Pike-Halley Estimator with a Wald confidence interval, optionally stratified. |
 | `rmst_fast()` | Restricted mean survival time for a single group or a two-group comparison (difference and ratio). |
 | `wmst_fast()` | Window mean survival time over an interval, generalizing the restricted mean survival time, for a single group or a two-group comparison. |
 | `milestone_fast()` | Two-group comparison of Kaplan-Meier survival at a milestone timepoint (Wald, log-log, and MOVER methods). |
@@ -193,6 +193,9 @@ reproduces the Breslow-based Cox estimate to within on the order of 1e-08.
 The Wald confidence interval uses the observed information at the Pike
 anchor as the variance estimate. The C++ backend performs group splitting,
 at-risk counting, and per-distinct-event-time accumulation in a single pass.
+With `strata`, the risk sets are formed within each stratum and the Pike
+anchor, score, and information are summed over strata, which approximates the
+stratified Cox model `coxph(... + strata(s), ties = "breslow")`.
 
 **rmst_fast** integrates the Kaplan-Meier survival step function up to a
 horizon in a single C++ scan, reused once per group. With a single group it

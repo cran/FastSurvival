@@ -676,11 +676,11 @@ overall row is the power of that endpoint considered on its own.</p>
 <span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt;       0.1098      0.0000</span></span>
 <span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt; Overall</span></span>
-<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt;   Rejection rate (efficacy):    0.9766</span></span>
-<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt;   Futility-stop rate:           0.0030</span></span>
-<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="co">#&gt;   Expected events at stop:      312.7</span></span>
-<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="co">#&gt;   Expected sample size at stop: 599.6</span></span>
-<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="co">#&gt;   Expected analysis time at stop:19.60</span></span></code></pre></div>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt;   Rejection rate (efficacy):      0.9766</span></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt;   Futility-stop rate:             0.0030</span></span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="co">#&gt;   Expected events at stop:        312.7</span></span>
+<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="co">#&gt;   Expected sample size at stop:   599.6</span></span>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="co">#&gt;   Expected analysis time at stop: 19.60</span></span></code></pre></div>
 <div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>oc_OS <span class="ot">&lt;-</span> <span class="fu">simsummary_fast</span>(</span>
 <span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  os_res,</span>
 <span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="at">eff.col =</span> <span class="st">&quot;logrank.z&quot;</span>, <span class="at">efficacy =</span> eff_OS,</span>
@@ -704,9 +704,9 @@ overall row is the power of that endpoint considered on its own.</p>
 <span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt;     3        1.00      250.4         24.01      0.1228</span></span>
 <span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt; Overall</span></span>
-<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt;   Rejection rate (efficacy):    0.4604</span></span>
-<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt;   Expected events at stop:      224.7</span></span>
-<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt;   Expected analysis time at stop:22.29</span></span></code></pre></div>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt;   Rejection rate (efficacy):      0.4604</span></span>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt;   Expected events at stop:        224.7</span></span>
+<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt;   Expected analysis time at stop: 22.29</span></span></code></pre></div>
 <p>Under the alternative the PFS futility rule rarely stops the trial,
 which is the intended behavior: a futility look is meant to protect
 against continuing an ineffective treatment, not to interrupt a

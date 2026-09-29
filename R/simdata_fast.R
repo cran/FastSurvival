@@ -35,9 +35,30 @@
 #' defines a single factor; a list of numeric vectors defines several
 #' independent factors; a multi-dimensional array defines the joint
 #' distribution of correlated factors. Per-cell hazards may be supplied as a
-#' list with one element per cell. With \code{fixed.alloc = TRUE} the subgroup
-#' sizes are deterministic; otherwise subgroup membership is drawn from the
+#' list with one element per cell (cells in column-major order, the first
+#' factor varying fastest). With \code{fixed.alloc = TRUE} the subgroup
+#' sizes are deterministic and the fixed labels are assigned to subjects in a
+#' random order within each simulated trial, so subgroup membership does not
+#' depend on the accrual time; otherwise subgroup membership is drawn from the
 #' prevalence distribution.
+#'
+#' The number of groups is determined as follows. A length-two \code{n} always
+#' gives two groups. A scalar \code{n} gives two groups, with the total split
+#' by \code{alloc}, in any of these cases: \code{alloc} is supplied explicitly;
+#' the prevalence is group-specific; without subgroups, any of \code{e.hazard},
+#' \code{e.median}, \code{d.hazard}, and \code{d.median} is a list; with
+#' subgroups, one of them is a length-two list with a list element (per-cell
+#' values within a group, as in \code{list(list(0.10, 0.08, 0.06), 0.05)}).
+#' Otherwise a scalar \code{n} gives one group, and with subgroups a list is
+#' read as one element per cell of that group. So with subgroups and a scalar
+#' \code{n}, \code{e.hazard = list(0.10, 0.05)} means per-cell hazards of a
+#' single group unless \code{alloc} is supplied, in which case it means
+#' per-group hazards. In a two-group simulation each specification is either
+#' shared by both groups (not a list) or a list of length two (control first),
+#' and each group's element may be a per-cell list when there are subgroups.
+#' The breakpoints \code{e.time} and \code{d.time} follow the same structure
+#' (per group in a two-group simulation, per cell in a one-group simulation with
+#' subgroups).
 #'
 #' When \code{n} is a vector of length greater than two together with a per-arm
 #' survival list, the simulation is a multi-arm trial. Each arm is generated in
@@ -58,7 +79,11 @@
 #'   vector of length greater than two giving the per-arm sample sizes (which
 #'   requires a per-arm \code{e.hazard} or \code{e.median} list). When \code{n}
 #'   is a per-arm vector, \code{alloc} is ignored.
-#' @param alloc A length-two allocation ratio, used when \code{n} is scalar.
+#' @param alloc A length-two allocation ratio (control, treatment), used when
+#'   \code{n} is scalar. Supplying it explicitly requests a two-group
+#'   simulation (see Details). The total is split in proportion to \code{alloc} and any rounding
+#'   remainder goes to the group with the larger fractional share, so the two
+#'   group sizes always add up to \code{n}.
 #' @param a.time A numeric vector of accrual-interval breakpoints.
 #' @param a.rate Absolute accrual rates (subjects per unit time), interpreted in
 #'   one of two ways. With length \code{length(a.time) - 1} the accrual period is
@@ -72,8 +97,11 @@
 #'   \code{sum(n)}. Unlike \code{a.rate} this carries no rate, so the accrual
 #'   period must be fully specified by \code{a.time}. Supply exactly one of
 #'   \code{a.rate} and \code{a.prop}.
-#' @param e.hazard Survival hazard(s). A scalar or vector for one group, or a
-#'   two-element list for two groups; per-cell lists are used with subgroups.
+#' @param e.hazard Survival hazard(s). A scalar or vector (piecewise, with
+#'   \code{e.time}) shared by all groups and cells, a two-element list for two
+#'   groups, or, with subgroups, a per-cell list (for one group, or as an
+#'   element of the two-element list). See Details for how the number of
+#'   groups is determined.
 #' @param e.median Survival median(s); an alternative to \code{e.hazard}.
 #' @param e.time Survival breakpoints for piecewise hazards (last element
 #'   \code{Inf}).
@@ -105,7 +133,10 @@
 #' @param h12.hazard Transition hazard(s) for the terminal event after an
 #'   intermediate event (state 1 to state 2) for subjects who do not switch.
 #'   Defaults to \code{h02.hazard}, which gives the Fleischer
-#'   maximal-independence model (Fleischer Theorem 1 when there is no switching).
+#'   maximal-independence model (Fleischer Theorem 1 when there is no switching
+#'   and the hazards are constant; with a piecewise \code{h02.hazard} the
+#'   clock-reset \code{h12} restarts the piecewise profile at the intermediate
+#'   event).
 #' @param h12.median Median(s) for the post-event terminal event; an alternative
 #'   to \code{h12.hazard}.
 #' @param h12.time Breakpoints for a piecewise \code{h12.hazard}, measured from
@@ -195,6 +226,19 @@
 #'   seed       = 3
 #' )
 #' head(df3)
+#'
+#' # The same trial specified by the total sample size and the allocation ratio
+#' df3b <- simdata_fast(
+#'   nsim       = 100,
+#'   n          = 300,
+#'   alloc      = c(1, 1),
+#'   a.time     = c(0, 12),
+#'   a.rate     = 300 / 12,
+#'   e.hazard   = list(list(0.10, 0.08, 0.06), 0.05),
+#'   prevalence = c(0.5, 0.3, 0.2),
+#'   seed       = 3
+#' )
+#' identical(df3, df3b)
 #'
 #' # Two independent factors (2 x 2): columns subgroup1 and subgroup2.
 #' # Four cells in column-major order: (1,1), (2,1), (1,2), (2,2).
@@ -322,7 +366,7 @@ simdata_fast <- function(nsim       = 1000,
       h12.switch.time = h12.switch.time,
       switch.clock = switch.clock,
       d.hazard = d.hazard, d.median = d.median, d.time = d.time,
-      prevalence = prevalence))
+      prevalence = prevalence, alloc_given = !missing(alloc)))
   }
 
   # Multi-arm (K > 2) mode dispatches to a separate assembler that generates each
@@ -356,10 +400,12 @@ simdata_fast <- function(nsim       = 1000,
     if (group_specific_prev) {
       spec_ctrl <- build_prevalence_spec(prevalence[["control"]])
       spec_trt  <- build_prevalence_spec(prevalence[["treatment"]])
-      if (spec_ctrl$n_cell != spec_trt$n_cell ||
-          !identical(dim(spec_ctrl$level_table), dim(spec_trt$level_table))) {
+      lev_c <- apply(spec_ctrl$level_table, 2L, max)
+      lev_t <- apply(spec_trt$level_table, 2L, max)
+      if (spec_ctrl$n_cell != spec_trt$n_cell || length(lev_c) != length(lev_t) ||
+          any(lev_c != lev_t)) {
         stop("'control' and 'treatment' prevalence must use the same ",
-             "number of factors and levels")
+             "number of factors and the same number of levels per factor")
       }
     } else {
       spec_ctrl <- build_prevalence_spec(prevalence)
@@ -368,44 +414,55 @@ simdata_fast <- function(nsim       = 1000,
   }
 
   if (length(n) == 1L) {
-    n_grp    <- round(n * alloc / sum(alloc))
-    n_groups <- 2L
+    n_grp <- split_total(n, alloc)
   } else if (length(n) == 2L) {
-    n_grp    <- n
-    n_groups <- 2L
+    n_grp <- n
   } else {
-    stop("'n' must be a scalar (total N) or a vector of length 2 (per-group)")
+    stop("'n' must be a scalar (total N), a vector of length 2 (per-group), ",
+         "or, for a multi-arm trial, a vector of length greater than 2 ",
+         "together with an 'e.hazard' or 'e.median' list with one element per ",
+         "arm")
   }
 
-  if (use_subgroup) {
-    is_two_group <- (length(n) == 2L) || group_specific_prev
-  } else {
-    is_two_group <- n_groups == 2L && (
-      is.list(e.hazard) || is.list(e.median) ||
-        is.list(d.hazard) || is.list(d.median)
-    )
-    if (!is_two_group && length(n) == 2L) {
+  # Number of groups. A length-two 'n' always gives two groups. A scalar 'n'
+  # gives two groups (split by 'alloc') when 'alloc' is supplied explicitly,
+  # when the prevalence is group-specific, or when a survival or dropout
+  # specification is per group: without subgroups any list is per group, and
+  # with subgroups a length-two list with a list element (per-cell values
+  # within a group) is per group. Otherwise, with subgroups, a list is per cell
+  # of a single group.
+  alloc_given <- !missing(alloc)
+  spec_args   <- list(e.hazard = e.hazard, e.median = e.median,
+                      d.hazard = d.hazard, d.median = d.median)
+  any_list    <- any(vapply(spec_args, is.list, logical(1L)))
+  any_nested  <- any(vapply(spec_args, function(x) {
+    is.list(x) && length(x) == 2L && any(vapply(x, is.list, logical(1L)))
+  }, logical(1L)))
+  if (length(n) == 2L) {
+    is_two_group <- TRUE
+    if (!use_subgroup && !any_list) {
       stop("Two-group sample sizes supplied but hazard/median parameters are not lists.\n",
            "Wrap group-specific parameters in list().")
     }
+  } else if (use_subgroup) {
+    is_two_group <- group_specific_prev || alloc_given || any_nested
+  } else {
+    is_two_group <- any_list || alloc_given
   }
+  n_groups <- if (is_two_group) 2L else 1L
+  if (!is_two_group) n_grp <- n
 
-  if (!is_two_group) {
-    n_grp    <- if (length(n) == 1L) n else n[1L]
-    n_groups <- 1L
-  }
-
-  if (use_subgroup && is_two_group) {
-    chk_two <- function(x, nm) {
-      if (!is.null(x) && !(is.list(x) && length(x) == 2L)) {
-        stop("For a two-group simulation, '", nm,
-             "' must be a list of length 2 (one element per group).")
+  # In a two-group simulation every survival and dropout specification is
+  # either shared (not a list) or a list with one element per group.
+  if (is_two_group) {
+    for (nm in names(spec_args)) {
+      x <- spec_args[[nm]]
+      if (is.list(x) && length(x) != 2L) {
+        stop("For a two-group simulation, '", nm, "' must be a single ",
+             "(shared) specification or a list of length 2 (one element per ",
+             "group); it is a list of length ", length(x), ".")
       }
     }
-    chk_two(e.hazard, "e.hazard")
-    chk_two(e.median, "e.median")
-    chk_two(d.hazard, "d.hazard")
-    chk_two(d.median, "d.median")
   }
 
   if (!is.null(e.hazard) && !is.null(e.median)) {
@@ -486,6 +543,16 @@ simdata_fast <- function(nsim       = 1000,
   # breakpoints, and the cumulative hazard at those breakpoints. For a single
   # hazard the breakpoint / cumulative entries are empty (unused by the kernel).
   build_exp_specs <- function(hazard_grp, time_grp, n_cell) {
+    if (is.list(hazard_grp) && length(hazard_grp) != n_cell) {
+      stop("A per-cell list of hazards or medians must have one element per ",
+           "subgroup cell (", n_cell, " here) but has ", length(hazard_grp),
+           if (n_cell == 1L) "; per-cell values require 'prevalence'" else "",
+           ".")
+    }
+    if (n_cell > 1L && is.list(time_grp) && length(time_grp) != n_cell) {
+      stop("A per-cell list of breakpoints must have one element per ",
+           "subgroup cell (", n_cell, " here) but has ", length(time_grp), ".")
+    }
     haz <- vector("list", n_cell)
     fin <- vector("list", n_cell)
     cum <- vector("list", n_cell)
@@ -500,36 +567,29 @@ simdata_fast <- function(nsim       = 1000,
     list(haz = haz, fin = fin, cum = cum)
   }
 
-  # Resolve group-level survival hazard specs for control and treatment.
-  if (use_subgroup && is_two_group) {
-    e_haz_c <- if (is.list(e.hazard)) e.hazard[[1L]] else e.hazard
-    e_haz_t <- if (is.list(e.hazard)) e.hazard[[2L]] else e.hazard
-  } else if (n_groups == 2L && !use_subgroup) {
-    e_haz_c <- if (is.list(e.hazard)) e.hazard[[1L]] else e.hazard
-    e_haz_t <- if (is.list(e.hazard)) e.hazard[[2L]] else e.hazard
+  # Resolve group-level survival and dropout specs for control and
+  # treatment. In a two-group simulation a list holds one element per group
+  # (each of which may itself be a per-cell list); in a one-group simulation a
+  # list holds one element per subgroup cell and is passed on unchanged.
+  pick_group <- function(x, g) if (is_two_group && is.list(x)) x[[g]] else x
+  e_haz_c <- pick_group(e.hazard, 1L)
+  e_haz_t <- pick_group(e.hazard, 2L)
+  d_haz_c <- if (has_dropout) pick_group(d.hazard, 1L) else NULL
+  d_haz_t <- if (has_dropout) pick_group(d.hazard, 2L) else NULL
+
+  # Breakpoints follow the same structure: per group in a two-group
+  # simulation, per cell in a one-group simulation with subgroups.
+  if (!is_two_group && use_subgroup && n_cell_ctrl > 1L) {
+    e.time_c <- e.time
+    e.time_t <- e.time
+    d.time_c <- if (has_dropout) d.time else NULL
+    d.time_t <- d.time_c
   } else {
-    e_haz_c <- e.hazard
-    e_haz_t <- e.hazard
+    e.time_c <- resolve_time_arg(e.time, 1L)
+    e.time_t <- resolve_time_arg(e.time, 2L)
+    d.time_c <- if (has_dropout) resolve_time_arg(d.time, 1L) else NULL
+    d.time_t <- if (has_dropout) resolve_time_arg(d.time, 2L) else NULL
   }
-
-  d_haz_c <- NULL; d_haz_t <- NULL
-  if (has_dropout) {
-    if (use_subgroup && is_two_group) {
-      d_haz_c <- if (is.list(d.hazard)) d.hazard[[1L]] else d.hazard
-      d_haz_t <- if (is.list(d.hazard)) d.hazard[[2L]] else d.hazard
-    } else if (n_groups == 2L && !use_subgroup) {
-      d_haz_c <- if (is.list(d.hazard)) d.hazard[[1L]] else d.hazard
-      d_haz_t <- if (is.list(d.hazard)) d.hazard[[2L]] else d.hazard
-    } else {
-      d_haz_c <- if (use_subgroup) d.hazard else if (is.list(d.hazard)) d.hazard[[1L]] else d.hazard
-      d_haz_t <- d_haz_c
-    }
-  }
-
-  e.time_c <- resolve_time_arg(e.time, 1L)
-  e.time_t <- resolve_time_arg(e.time, 2L)
-  d.time_c <- if (has_dropout) resolve_time_arg(d.time, 1L) else NULL
-  d.time_t <- if (has_dropout) resolve_time_arg(d.time, 2L) else NULL
 
   e_c <- build_exp_specs(e_haz_c, e.time_c, n_cell_ctrl)
   e_t <- build_exp_specs(e_haz_t, e.time_t, n_cell_trt)
@@ -558,6 +618,7 @@ simdata_fast <- function(nsim       = 1000,
   }
 
   n_grp_int <- if (n_groups == 1L) as.integer(n_grp[1L]) else as.integer(n_grp[1:2])
+  check_output_size(nsim, n_grp_int)
 
   # Deterministic per-interval accrual counts for each group. Each group's
   # counts sum to its size exactly (largest-remainder rounding), and the kernel
@@ -591,6 +652,11 @@ simdata_fast <- function(nsim       = 1000,
 # cumulative hazard at those breakpoints, matching rpiece_exp_r. For a single
 # hazard the breakpoint / cumulative entries are empty.
 piecewise_precompute <- function(hazard, e.time) {
+  if (!is.numeric(hazard) || length(hazard) < 1L || anyNA(hazard) ||
+      any(hazard < 0) || any(is.infinite(hazard))) {
+    stop("Hazards must be finite and non-negative, and medians must be ",
+         "positive")
+  }
   if (length(hazard) == 1L) {
     return(list(hazard = as.numeric(hazard),
                 fin_time = numeric(0), cum_haz = numeric(0)))
@@ -603,6 +669,10 @@ piecewise_precompute <- function(hazard, e.time) {
   }
   if (!is.infinite(e.time[length(e.time)])) {
     stop("Last element of 'e.time' must be Inf")
+  }
+  if (anyNA(e.time) || e.time[1L] != 0 || any(diff(e.time) <= 0)) {
+    stop("Piecewise breakpoints ('e.time', 'd.time', and so on) must start ",
+         "at 0 and be strictly increasing")
   }
   n_int    <- length(hazard)
   fin_time <- e.time[seq_len(n_int)]
@@ -677,9 +747,10 @@ build_prevalence_spec <- function(prev) {
 # ------------------------------------------------------------------ #
 # Each cell receives floor(n * p) patients; the remaining patients (n minus
 # the sum of the floors) are added one at a time starting from the first
-# cell, so the last cells absorb the rounding shortfall.
+# cell, so the last cells absorb the rounding shortfall. A small tolerance in
+# the floor keeps an exact share such as 100 * 0.29 = 28.999... at 29.
 fixed_cell_counts <- function(n, p) {
-  base <- floor(n * p)
+  base <- floor(n * p + 1e-8)
   rem  <- n - sum(base)
   if (rem > 0L) base[seq_len(rem)] <- base[seq_len(rem)] + 1L
   as.integer(base)
@@ -800,7 +871,7 @@ simdata_fast_id <- function(nsim, n, alloc, a.time, a.rate, a.prop,
                             h12.switch.hazard, h12.switch.median, h12.switch.time,
                             switch.clock,
                             d.hazard, d.median, d.time,
-                            prevalence) {
+                            prevalence, alloc_given = FALSE) {
 
   if (!is.null(prevalence)) {
     stop("Subgroups ('prevalence') are not supported with the illness-death ",
@@ -847,15 +918,16 @@ simdata_fast_id <- function(nsim, n, alloc, a.time, a.rate, a.prop,
   }
   if (!is.null(d.median)) d.hazard <- convert_median_to_hazard(d.median)
 
-  # A two-group simulation is signalled by a length-two 'n' or any group-specific
-  # (length-two list) hazard / switch argument.
-  is_two_group <- (length(n) == 2L) ||
+  # A two-group simulation is signalled by a length-two 'n', an explicitly
+  # supplied 'alloc', or any group-specific (length-two list) hazard, switch, or
+  # dropout argument.
+  is_two_group <- (length(n) == 2L) || alloc_given ||
     is.list(h01.hazard) || is.list(h02.hazard) ||
     is.list(h12.hazard) || is.list(h12.switch.hazard) ||
-    is.list(switch.prop)
+    is.list(switch.prop) || is.list(d.hazard)
 
   if (length(n) == 1L) {
-    n_grp <- if (is_two_group) round(n * alloc / sum(alloc)) else n
+    n_grp <- if (is_two_group) split_total(n, alloc) else n
   } else if (length(n) == 2L) {
     n_grp <- n
   } else {
@@ -863,6 +935,7 @@ simdata_fast_id <- function(nsim, n, alloc, a.time, a.rate, a.prop,
   }
   n_groups  <- if (is_two_group) 2L else 1L
   n_grp_int <- if (n_groups == 1L) as.integer(n_grp[1L]) else as.integer(n_grp[1:2])
+  check_output_size(nsim, n_grp_int)
   g2        <- (n_groups == 2L)
 
   # Resolve a possibly group-specific argument for group g (1 = control,

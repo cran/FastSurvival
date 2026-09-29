@@ -578,27 +578,27 @@ point</td>
 <tr class="even">
 <td><code>survdiff_fast()</code></td>
 <td><code>survdiff()</code></td>
-<td>~40x</td>
+<td>~25x</td>
 </tr>
 <tr class="odd">
 <td><code>coxph_fast()</code></td>
 <td><code>coxph()</code> (point estimate + Wald CI)</td>
-<td>~30x</td>
+<td>~35x</td>
 </tr>
 <tr class="even">
 <td><code>rmst_fast()</code></td>
 <td><code>survRM2::rmst2()</code></td>
-<td>~40x</td>
+<td>~35x</td>
 </tr>
 <tr class="odd">
 <td><code>survdiff_fast(weight = &quot;fh&quot;)</code></td>
 <td><code>nph::logrank.test()</code></td>
-<td>~350x</td>
+<td>~300x</td>
 </tr>
 <tr class="even">
 <td><code>wmst_fast()</code></td>
 <td><code>survWMST::wmst()</code></td>
-<td>~560x</td>
+<td>~900x</td>
 </tr>
 <tr class="odd">
 <td><code>milestone_fast()</code></td>
@@ -608,27 +608,27 @@ point</td>
 <tr class="even">
 <td><code>medsurv_fast()</code></td>
 <td><code>nph::nphparams()</code></td>
-<td>~30x</td>
+<td>~35x</td>
 </tr>
 <tr class="odd">
 <td><code>maxcombo_fast()</code></td>
 <td><code>nph::logrank.maxtest()</code></td>
-<td>~320x</td>
+<td>~350x</td>
 </tr>
 <tr class="even">
 <td><code>rmw_fast()</code></td>
 <td><code>nphRCT::wlrt()</code> (two components)</td>
-<td>~80x</td>
+<td>~75x</td>
 </tr>
 <tr class="odd">
 <td><code>ahsw_fast()</code></td>
 <td><code>survAH::ah2()</code></td>
-<td>~410x</td>
+<td>~450x</td>
 </tr>
 <tr class="even">
 <td><code>ahr_fast()</code></td>
 <td><code>AHR::ahrKM()</code></td>
-<td>~130x</td>
+<td>~200x</td>
 </tr>
 </tbody>
 </table>

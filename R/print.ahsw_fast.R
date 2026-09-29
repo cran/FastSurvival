@@ -43,8 +43,8 @@ print.ahsw_fast <- function(x, digits = max(1L, getOption("digits") - 3L),
               if (side == 1L) "one.sided" else "two.sided"))
 
   if (is.na(x[["ah.ctrl"]]) || is.na(x[["ah.trt"]])) {
-    cat("  Estimate not available (zero survival at tau or non-finite",
-        "variance).\n")
+    cat("  Estimate not available (no events up to tau in a group or",
+        "non-finite variance).\n")
     return(invisible(x))
   }
 

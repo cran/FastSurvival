@@ -36,8 +36,9 @@ at \code{conf.level}.}
 level. Defaults to 0.95.}
 
 \item{tau}{A single positive numeric value, the truncation time point for the
-average hazard. Both groups must have positive Kaplan-Meier survival at
-\code{tau}.}
+average hazard. A warning is given when it exceeds the largest observed
+time of either group, because the Kaplan-Meier curve is not estimated
+beyond that time.}
 
 \item{presorted}{A logical value. If \code{TRUE}, \code{time}, \code{event},
 and \code{group} are assumed to be sorted in ascending order of
@@ -52,8 +53,8 @@ An object of class \code{"ahsw_fast"}, a named numeric vector
   \code{dah.upper}, \code{p.dah}). The truncation time and confidence level
   are stored as attributes \code{tau} and \code{conf.level}, and the
   \code{control} label is also stored. Returns \code{NA} values (still with
-  class \code{"ahsw_fast"}) when either group has zero survival at \code{tau}
-  or a non-finite variance.
+  class \code{"ahsw_fast"}) when either group has no events up to \code{tau}
+  (a zero average hazard) or a non-finite variance.
 }
 \description{
 Computes the average hazard with survival weight (AHSW) of Uno and Horiguchi

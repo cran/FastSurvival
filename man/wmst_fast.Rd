@@ -31,7 +31,9 @@ Required when \code{group} is supplied.}
 
 \item{tau2}{Upper limit of the window. If omitted, the largest time common
 to both groups is used (the minimum over groups of the maximum observed
-time), or the maximum observed time for a single group.}
+time), or the maximum observed time for a single group. A supplied value
+larger than that gives a warning, because the Kaplan-Meier curve is not
+estimated beyond it.}
 
 \item{side}{Either 2 for a two-sided test or 1 for a one-sided test of
 treatment superiority (difference greater than 0).}

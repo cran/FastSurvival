@@ -103,7 +103,7 @@
 #'   Fleming-Harrington G(rho, gamma) test with weight
 #'   \code{S(t-)^rho (1 - S(t-))^gamma}. \code{"mwlrt"} is the modestly-weighted
 #'   log-rank test of Magirr and Burman with weight
-#'   \code{1 / max(S(t-), S(t_star))}. \code{"gehan"} is the Gehan-Breslow test
+#'   \code{1 / max(S(t-), S(t_star-))}. \code{"gehan"} is the Gehan-Breslow test
 #'   with weight equal to the at-risk count, and \code{"tarone-ware"} uses the
 #'   square root of the at-risk count. Here \code{S(t-)} is the left-continuous
 #'   pooled Kaplan-Meier estimate just prior to each event time.
@@ -115,8 +115,10 @@
 #'   Fleming-Harrington G(0, 1) test for delayed effects.
 #' @param t_star A single non-negative numeric value, the timepoint of the
 #'   modestly-weighted log-rank test. Required only when \code{weight =
-#'   "mwlrt"}. The weight is capped at \code{1 / S(t_star)}, where
-#'   \code{S(t_star)} is the pooled Kaplan-Meier value at \code{t_star}.
+#'   "mwlrt"}. The weight is capped at \code{1 / S(t_star-)}, where
+#'   \code{S(t_star-)} is the pooled Kaplan-Meier value just before
+#'   \code{t_star} (the product over event times strictly less than
+#'   \code{t_star}, as in nphRCT).
 #'   A value of 0 yields the ordinary log-rank test.
 #'
 #' @return An object of class \code{"survdiff_fast"}, which is a length-one
@@ -220,6 +222,12 @@ survdiff_fast <- function(time, event, group, control, side = 2,
   if (!side %in% c(1L, 2L)) {
     stop("'side' must be either 1 (one-sided) or 2 (two-sided)")
   }
+  check_time_event(time, event)
+  # Treatment indicator (1 = treatment, 0 = control), validated once
+  j_all <- two_group_indicator(group, control)
+  if (!is.null(strata) && anyNA(strata)) {
+    stop("'strata' must not contain missing values")
+  }
   if (sum(event) == 0L) {
     stop("No events observed in the data")
   }
@@ -244,7 +252,7 @@ survdiff_fast <- function(time, event, group, control, side = 2,
     t_star_v <- if (weight == "mwlrt") t_star else 0
 
     # Treatment indicator: 1 = treatment, 0 = control
-    j <- as.integer(group != control)
+    j <- j_all
 
     use_strata <- !is.null(strata)
     if (use_strata) {
@@ -317,7 +325,7 @@ survdiff_fast <- function(time, event, group, control, side = 2,
     }
 
     # Treatment indicator: 1 = treatment, 0 = control
-    j <- as.integer(group != control)
+    j <- j_all
 
     # Map stratum labels to contiguous integers 1..S
     strata_int <- match(strata, sort(unique(strata)))
@@ -369,7 +377,7 @@ survdiff_fast <- function(time, event, group, control, side = 2,
   # ------------------------------------------------------------------ #
 
   # Treatment indicator: 1 = treatment, 0 = control
-  j <- as.integer(group != control)
+  j <- j_all
 
   # Sort pooled data by time when not presorted
   if (!presorted) {

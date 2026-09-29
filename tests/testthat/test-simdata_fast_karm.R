@@ -128,11 +128,11 @@ test_that("simdata_fast: multi-arm rejects unsupported combinations", {
   expect_error(do.call(simdata_fast, bad_id))
 })
 
-test_that("simdata_fast: length(n) > 2 without a per-arm list keeps the old error", {
+test_that("simdata_fast: length(n) > 2 without a per-arm list gives the length error", {
   # A scalar hazard with a length-3 'n' is not multi-arm mode; the historical
-  # validation error is preserved, so existing behavior is unchanged.
+  # validation error is kept (its message now also names the multi-arm form).
   expect_error(
     simdata_fast(nsim = 5, n = c(1, 2, 3), a.time = c(0, 1), a.prop = 1,
                  e.hazard = log(2) / 12),
-    "scalar .total N. or a vector of length 2")
+    "scalar .total N., a vector of length 2")
 })

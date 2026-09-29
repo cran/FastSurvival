@@ -21,7 +21,9 @@
 #' printed to \code{digits} decimal places and counts and times to fewer. Because
 #' the summary is a Monte Carlo estimate under a single data-generating truth, it
 #' does not carry the separate null and alternative columns or the alpha and beta
-#' spending of an analytic design report. The underlying object is an ordinary
+#' spending of an analytic design report. When the summary has several blocks
+#' (arms of \code{\link{pairwise_fast}} output or subgroup populations), each
+#' block is printed under its own heading. The underlying object is an ordinary
 #' data frame, so the unrounded values remain available by subsetting it directly.
 #'
 #' @param x An object of class \code{"simsummary_fast"} from
@@ -55,7 +57,7 @@ print.simsummary_fast <- function(x, digits = 4, ...) {
     lab <- if (length(nsim) == 1L) {
       as.character(nsim)
     } else {
-      paste0(paste(nsim, collapse = ", "), " (per population)")
+      paste0(paste(nsim, collapse = ", "), " (per block)")
     }
     cat("  Simulations: ", lab, "\n", sep = "")
   }
@@ -69,8 +71,11 @@ print.simsummary_fast <- function(x, digits = 4, ...) {
   }
   cat("\n")
 
+  has_arm    <- has_col("arm")
   pops       <- unique(dat$population)
-  single_pop <- length(pops) == 1L
+  multi_pop  <- length(pops) > 1L
+  keys       <- unique(dat[, c(if (has_arm) "arm", "population"), drop = FALSE])
+  single_blk <- nrow(keys) == 1L
 
   print_block <- function(block) {
     lk    <- block[block$look != "overall", , drop = FALSE]
@@ -128,7 +133,7 @@ print.simsummary_fast <- function(x, digits = 4, ...) {
     # Overall summary
     if (nrow(ov) == 1L) {
       kv <- function(label, value) {
-        cat("  ", formatC(label, width = -30L), value, "\n", sep = "")
+        cat("  ", formatC(label, width = -32L), value, "\n", sep = "")
       }
       cat("Overall\n")
       kv("Rejection rate (efficacy):", fmt(ov$cum.reject, digits))
@@ -147,10 +152,17 @@ print.simsummary_fast <- function(x, digits = 4, ...) {
     }
   }
 
-  for (p in pops) {
-    if (!single_pop) cat("Population: ", p, "\n", sep = "")
-    print_block(dat[dat$population == p, , drop = FALSE])
-    if (!single_pop) cat("\n")
+  for (b in seq_len(nrow(keys))) {
+    p   <- keys$population[b]
+    sel <- dat$population == p
+    if (has_arm) sel <- sel & dat$arm == keys$arm[b]
+    if (!single_blk) {
+      hdr <- c(if (has_arm) paste0("Arm: ", keys$arm[b]),
+               if (multi_pop) paste0("Population: ", p))
+      cat(paste(hdr, collapse = ", "), "\n", sep = "")
+    }
+    print_block(dat[sel, , drop = FALSE])
+    if (!single_blk) cat("\n")
   }
 
   invisible(x)

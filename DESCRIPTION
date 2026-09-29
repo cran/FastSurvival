@@ -1,7 +1,7 @@
 Package: FastSurvival
 Type: Package
 Title: Fast Survival Analysis and Simulation for Clinical Trials
-Version: 0.2.0
+Version: 1.0.0
 Authors@R: person(
     given  = "Gosuke",
     family = "Homma",
@@ -47,8 +47,8 @@ Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
 VignetteBuilder: knitr
 NeedsCompilation: yes
-Packaged: 2026-07-27 03:48:43 UTC; i_lik
+Packaged: 2026-09-29 03:13:43 UTC; i_lik
 Author: Gosuke Homma [aut, cre]
 Maintainer: Gosuke Homma <my.name.is.gosuke@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-07-27 11:50:02 UTC
+Date/Publication: 2026-09-29 13:40:27 UTC

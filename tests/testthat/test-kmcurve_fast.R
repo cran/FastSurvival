@@ -118,7 +118,7 @@ test_that("median read from the curve matches survival::survfit", {
 
   fit <- kmcurve_fast(time, event)
   km  <- fit$km$control
-  med <- curve_median(c(0, km$te), c(1, km$surv))
+  med <- km_step_median(km$te, km$surv, km$tmax)
 
   ref <- tryCatch(
     survival::survfit(survival::Surv(time, event) ~ 1),
@@ -127,7 +127,25 @@ test_that("median read from the curve matches survival::survfit", {
   ref_med <- unname(summary(ref)$table["median"])
   skip_if(is.na(ref_med), "median not reached")
 
-  expect_equal(med, ref_med, tolerance = 0.5)
+  expect_equal(med, ref_med, tolerance = 1e-10)
+})
+
+test_that("the printed median follows the survfit step convention", {
+  # Uncensored times 1..10: S(5) = 0.5 exactly on [5, 6), so survfit reports
+  # the midpoint 5.5 (hand calculation).
+  fit <- kmcurve_fast(1:10, rep(1L, 10))
+  km  <- fit$km$control
+  expect_equal(km_step_median(km$te, km$surv, km$tmax), 5.5)
+  # Uncensored times 1..24: the product of the Kaplan-Meier factors at t = 12
+  # is 0.5 up to rounding error, so the midpoint 12.5 is expected.
+  fit24 <- kmcurve_fast(1:24, rep(1L, 24))
+  km24  <- fit24$km$control
+  expect_equal(km_step_median(km24$te, km24$surv, km24$tmax), 12.5)
+  # S drops from 0.6 at t = 2 to 0.4 at t = 3 (n = 5, no ties): the median is
+  # the event time 3, not an interpolated value.
+  fit5 <- kmcurve_fast(1:5, rep(1L, 5))
+  km5  <- fit5$km$control
+  expect_equal(km_step_median(km5$te, km5$surv, km5$tmax), 3)
 })
 
 test_that("plot and print methods run for both single and two-group objects", {
@@ -146,8 +164,8 @@ test_that("plot and print methods run for both single and two-group objects", {
   grDevices::pdf(tempfile(fileext = ".pdf"))
   on.exit(grDevices::dev.off(), add = TRUE)
 
-  expect_error(print(fit2), NA)
-  expect_error(print(fit1), NA)
+  expect_output(print(fit2), "two groups")
+  expect_output(print(fit1), "one group")
   expect_error(plot(fit2), NA)
   expect_error(
     plot(fit2, hr = TRUE, rmst = TRUE, tau = 18,

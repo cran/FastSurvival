@@ -209,3 +209,13 @@ test_that("estimates and p-values match survAH::ah2 when available", {
   expect_equal(as.numeric(fit["p.rah"]),   as.numeric(prah_ext), tolerance = 1e-6)
   expect_equal(as.numeric(fit["p.dah"]),   as.numeric(pdah_ext), tolerance = 1e-6)
 })
+
+test_that("ahsw_fast warns when tau exceeds the observed follow-up", {
+  set.seed(72)
+  tt <- c(rexp(50, 0.10), rexp(50, 0.07))
+  ee <- rep(1L, 100)
+  gg <- rep(0:1, each = 50)
+  lim <- min(max(tt[gg == 0]), max(tt[gg == 1]))
+  expect_warning(ahsw_fast(tt, ee, gg, control = 0, tau = lim + 1), "exceeds")
+  expect_warning(ahsw_fast(tt, ee, gg, control = 0, tau = lim / 2), NA)
+})

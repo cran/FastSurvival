@@ -35,7 +35,8 @@ it.}
 
 \item{tau}{upper limit of the interval over which the average hazard ratio is
 computed. If \code{NULL} (default) the largest time observed in both groups
-is used.}
+is used. A supplied value larger than that gives a warning, because the
+Kaplan-Meier curves are not estimated beyond it.}
 
 \item{null.ahr}{value of the average hazard ratio under the null hypothesis
 used for the Z statistic and p-value (default 1)}
@@ -78,6 +79,17 @@ scale, as in Kalbfleisch and Prentice (1981) and Dormuth et al. (2024,
 eq. 5): the comparison-group share is compared with its null value (0.5 when
 \code{null.ahr = 1}). An equivalent test and a confidence interval on the
 \code{log(ahr)} scale are also reported.
+
+The integral uses the right-continuous Kaplan-Meier estimate \code{S2} at
+each jump of \code{S1}, exactly as the \code{AHR} package does, and
+\code{theta2} is obtained as \code{1 - theta1} rather than by a separate
+integral. When both groups have events at the same time (tied event times,
+as with data recorded in whole days or months), the two shares computed this
+way are not symmetric in the groups, so exchanging \code{control} does not
+give exactly the reciprocal average hazard ratio. With continuous times
+there are no such ties and the estimate is symmetric. Specify
+\code{control} as the actual reference group so that the result matches the
+\code{AHR} package with that group as the reference.
 
 This is distinct from \code{\link{ahsw_fast}}, which estimates the
 Uno-Horiguchi average hazard with survival weight.

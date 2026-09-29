@@ -106,7 +106,8 @@ static std::vector<std::vector<double>> to_vv(const List& x) {
 // ------------------------------------------------------------------ //
 // Fills the group's block of every output column, starting at row 'base'.
 // The dqrng consumption order is: accrual, then (no subgroup) survival,
-// dropout; or (subgroup) cell labels, then for each cell in ascending order
+// dropout; or (subgroup) cell labels (drawn, or fixed counts followed by a
+// within-simulation random permutation), then for each cell in ascending order
 // the survival and dropout draws for that cell's subjects in their original
 // order. This reproduces the R reference exactly.
 //
@@ -168,12 +169,28 @@ static void simulate_group_into(
   // subjects' original order, matching the R which(cell == s) loop.
   std::vector<int> cell(total_n);
   if (fixed_alloc) {
-    // Deterministic per-cell counts, repeated each simulation; consumes no RNG.
+    // Deterministic per-cell counts, repeated each simulation. The labels are
+    // then randomly permuted within each simulation (Fisher-Yates, one dqrunif
+    // draw per subject), because subjects are ordered by accrual interval and
+    // contiguous blocks of cell labels would tie subgroup membership to the
+    // enrollment period.
     int pos = 0;
     for (int s = 0; s < nsim; ++s) {
       for (int c = 0; c < n_cell; ++c)
         for (int r = 0; r < fixed_counts[c]; ++r)
           cell[pos++] = c + 1;
+    }
+    NumericVector u_perm = dqrng::dqrunif(total_n);
+    for (int s = 0; s < nsim; ++s) {
+      int* blk = cell.data() + (std::size_t) s * n;
+      const double* us = REAL(u_perm) + (std::size_t) s * n;
+      for (int i = n - 1; i > 0; --i) {
+        int k = (int) (us[i] * (double) (i + 1));
+        if (k > i) k = i;
+        const int tmp = blk[i];
+        blk[i] = blk[k];
+        blk[k] = tmp;
+      }
     }
   } else {
     draw_cells(cell.data(), total_n, cum_prev);

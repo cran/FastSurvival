@@ -37,7 +37,9 @@ two-sided interval at \code{conf.level}.}
 \item{conf.level}{The confidence level for the reported intervals.}
 
 \item{tau}{The milestone timepoint at which the survival probabilities are
-compared. A single positive number.}
+compared. A single positive number. A warning is given when it exceeds the
+largest observed time of either group, because the Kaplan-Meier curve is
+not estimated beyond that time.}
 
 \item{method}{The inference method for the difference in milestone survival,
 one of \code{"wald"}, \code{"loglog"}, or \code{"mover"}.}

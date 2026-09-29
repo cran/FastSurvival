@@ -107,3 +107,16 @@ test_that("survfit_fast agrees with survival::survfit (log CI)", {
   expect_equal(unname(res["lower"]), ref$lower, tolerance = 1e-6)
   expect_equal(unname(res["upper"]), ref$upper, tolerance = 1e-6)
 })
+
+test_that("survfit_fast caps the log interval at 1 and validates its input", {
+  # Hand calculation: S(1) = 0.99 with SE 0.99 * sqrt(1 / (100 * 99)), so the
+  # unrestricted upper limit 0.99 * exp(1.96 * 0.01005) is about 1.0097.
+  res <- survfit_fast(1:100, rep(1L, 100), t_eval = 1, conf.type = "log")
+  expect_equal(unname(res["surv"]), 0.99)
+  expect_equal(unname(res["upper"]), 1)
+  expect_error(survfit_fast(c(3, 1, 2), c(1, 1, 1), t_eval = 2), "not sorted")
+  expect_error(survfit_fast(1:3, c(1, 1), t_eval = 2), "same length")
+  expect_error(survfit_fast(1:3, c(1, 2, 1), t_eval = 2), "coded as 0")
+  expect_error(survfit_fast(1:3, c(1, 1, 1), t_eval = 2, conf.level = 95),
+               "conf.level")
+})

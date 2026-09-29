@@ -25,8 +25,9 @@ void weighted_logrank_core_impl(const double*, const int*, const int*, int,
 //' The scheme codes are: 0 = Fleming-Harrington G(rho, gamma) with weight
 //' \code{S_minus^rho * (1 - S_minus)^gamma}; 1 = modestly-weighted log-rank
 //' with weight \code{min(1 / S_minus, max_weight)}, where \code{max_weight}
-//' is the reciprocal of the pooled Kaplan-Meier value at \code{t_star}
-//' (and is 1 when \code{t_star = 0});
+//' is the reciprocal of the pooled Kaplan-Meier value just before
+//' \code{t_star}, i.e. the product over event times strictly less than
+//' \code{t_star} as in nphRCT (and is 1 when \code{t_star = 0});
 //' 2 = Gehan-Breslow with weight \code{n_j}; 3 = Tarone-Ware with weight
 //' \code{sqrt(n_j)}. Here \code{S_minus} is the left-continuous pooled
 //' Kaplan-Meier estimate just prior to each event time, initialized at 1.
@@ -93,14 +94,15 @@ void weighted_logrank_core_impl(
 
   // ---------------------------------------------------------------- //
   //  First pass for the modestly-weighted scheme: determine max_weight
-  //  as the reciprocal of the pooled Kaplan-Meier value at t_star
-  //  (Magirr-Burman 2019). When t_star = 0, max_weight is 1.
+  //  as the reciprocal of the pooled Kaplan-Meier value just before t_star
+  //  (Magirr-Burman 2019, as implemented in nphRCT). When t_star = 0,
+  //  max_weight is 1.
   // ---------------------------------------------------------------- //
   double max_weight = 1.0;
   if (scheme == 1 && t_star > 0.0) {
     int nrisk = n1_init + n0_init;   // pooled at-risk count
     double s = 1.0;                  // right-continuous pooled KM
-    double s_star = 1.0;             // pooled KM at t_star: product over event times <= t_star
+    double s_star = 1.0;             // pooled KM just before t_star: product over event times < t_star
     int i = 0;
     while (i < n) {
       const double t = time_sorted[i];
@@ -153,6 +155,10 @@ void weighted_logrank_core_impl(
     const int d  = d1 + d0;
     const int nj = n1 + n0;
 
+    // Observed count includes event times with a single subject at risk (as
+    // in survival::survdiff); such times add nothing to U or V.
+    O1 += d1;
+
     if (d > 0 && nj > 1) {
       const double dn1 = (double)n1;
       const double dnj = (double)nj;
@@ -175,7 +181,6 @@ void weighted_logrank_core_impl(
       const double v1  = dd * dn1 * (dnj - dn1) * (dnj - dd) /
                          (dnj * dnj * (dnj - 1.0));
 
-      O1 += d1;
       U  += w * ((double)d1 - e1);
       V  += w * w * v1;
     }

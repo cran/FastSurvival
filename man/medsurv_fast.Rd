@@ -66,8 +66,12 @@ C++.
 }
 \details{
 The median in each group is the first event time at which the Kaplan-Meier
-estimate drops to 0.5 or below, matching the convention used by
-\code{survfit}. The point estimate is the same for both variance methods.
+estimate drops to 0.5 or below. When the estimate equals 0.5 exactly over an
+interval, the midpoint of that interval is returned (the next event time, or
+the last observed time when no later event exists, closes the interval). This
+is the convention used by \code{survfit}, including its tolerance of
+\code{sqrt(.Machine$double.eps)} when comparing the estimate with 0.5. The
+point estimate is the same for both variance methods.
 
 Two variance methods are available through the \code{method} argument. With
 \code{method = "km"} the variance of the estimated median follows the

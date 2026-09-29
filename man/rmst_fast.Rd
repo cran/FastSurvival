@@ -37,7 +37,9 @@ confidence intervals are always two-sided at \code{conf.level}.}
 level. Defaults to 0.95.}
 
 \item{tau}{A single positive numeric value specifying the restriction
-horizon.}
+horizon. A warning is given when it exceeds the largest observed time
+(of either group in the two-group case), because the Kaplan-Meier curve
+is not estimated beyond that time.}
 
 \item{presorted}{A logical value. If \code{TRUE}, the inputs are assumed to
 be sorted in ascending order of \code{time}. If \code{FALSE} (default),

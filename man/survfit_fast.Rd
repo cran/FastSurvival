@@ -75,9 +75,11 @@ When \code{S(t_eval) = 0} (all subjects have experienced the event by
 collapses to \code{[0, 0]}, consistent with \code{\link[survival]{survfit}}.
 
 When \code{presorted = TRUE} (default), \code{t_sorted} and \code{e_sorted}
-are assumed to be sorted in ascending order of time. When
+are expected to be sorted in ascending order of time; the order is checked
+(a linear-time test) and an error is raised for unsorted input. When
 \code{presorted = FALSE}, the vectors are sorted internally before
-computation.
+computation. When the standard error is zero (for example \code{S(t) = 1}
+before the first event), the confidence interval collapses to the estimate.
 
 Three confidence interval types are supported via \code{conf.type}:
 
@@ -86,7 +88,8 @@ Three confidence interval types are supported via \code{conf.type}:
     S(t) +/- z * SE. The bounds are clipped to [0, 1].
   \item \code{"log"}: Interval on the log scale (default in
     \code{\link[survival]{survfit}}),
-    S(t) * exp(+/- z * SE / S(t)).
+    S(t) * exp(+/- z * SE / S(t)). The upper bound is capped at 1, as in
+    \code{\link[survival]{survfit}}.
   \item \code{"log-log"}: Interval on the complementary log-log scale,
     S(t)^exp(+/- z * SE / (S(t) * log(S(t)))).
 }

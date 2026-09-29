@@ -25,8 +25,9 @@ void stratified_weighted_logrank_core_impl(const double*, const int*,
 //'
 //' @details
 //' The scheme codes match \code{weighted_logrank_core}: 0 = Fleming-Harrington
-//' G(rho, gamma); 1 = modestly-weighted with cap \code{1 / S(t_star)} computed
-//' within each stratum; 2 = Gehan-Breslow; 3 = Tarone-Ware. The left-continuous
+//' G(rho, gamma); 1 = modestly-weighted with cap \code{1 / S(t_star-)}, the
+//' pooled Kaplan-Meier value just before \code{t_star}, computed within each
+//' stratum; 2 = Gehan-Breslow; 3 = Tarone-Ware. The left-continuous
 //' pooled Kaplan-Meier estimate is restarted at 1 at the beginning of every
 //' stratum, so the weights of each stratum depend only on that stratum's
 //' pooled data. For the modestly-weighted scheme the weight cap is determined
@@ -107,7 +108,7 @@ void stratified_weighted_logrank_core_impl(
     if (scheme == 1 && t_star > 0.0) {
       int nrisk = n1_init + n0_init;
       double s_km = 1.0;
-      double s_star = 1.0;   // within-stratum pooled KM at t_star: product over events <= t_star
+      double s_star = 1.0;   // within-stratum pooled KM just before t_star: product over events < t_star
       int i = b;
       while (i < e) {
         const double t = time_sorted[i];
@@ -155,6 +156,10 @@ void stratified_weighted_logrank_core_impl(
       const int d  = d1 + d0;
       const int nj = n1 + n0;
 
+      // Observed count includes event times with a single subject at risk (as
+      // in survival::survdiff); such times add nothing to U or V.
+      O1_tot += d1;
+
       if (d > 0 && nj > 1) {
         const double dn1 = (double)n1;
         const double dnj = (double)nj;
@@ -176,7 +181,6 @@ void stratified_weighted_logrank_core_impl(
         const double v1 = dd * dn1 * (dnj - dn1) * (dnj - dd) /
                           (dnj * dnj * (dnj - 1.0));
 
-        O1_tot += d1;
         U_tot  += w * ((double)d1 - e1);
         V_tot  += w * w * v1;
       }

@@ -121,6 +121,10 @@ void rmw_core_impl(
     const int d  = d1 + d0;
     const int nj = n1 + n0;
 
+    // Observed count includes event times with a single subject at risk (as
+    // in survival::survdiff); such times add nothing to the scores.
+    O1 += d1;
+
     if (d > 0 && nj > 1) {
       const double dn1 = (double)n1;
       const double dn0 = (double)n0;
@@ -136,7 +140,6 @@ void rmw_core_impl(
       double w = 1.0 / s_minus;
       if (w > cap) w = cap;
 
-      O1   += d1;
       U_lr += dev;
       V_lr += var_d;
       U_mw += w * dev;

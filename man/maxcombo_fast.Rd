@@ -119,7 +119,8 @@ useful inside simulation loops where the data are generated in sorted order.
 library(survival)
 
 # Standard four-weight max-combo, one-sided
-fit <- maxcombo_fast(ovarian$futime, ovarian$fustat, ovarian$rx, control = 1)
+fit <- maxcombo_fast(ovarian$futime, ovarian$fustat, ovarian$rx, control = 1,
+                     side = 1)
 fit["statistic"]
 fit["p.value"]
 

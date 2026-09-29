@@ -272,7 +272,10 @@ test_that("print.simsummary_fast returns its input invisibly", {
                    n.event = c(50, 52, 48, 55), cutoff = rep(24, 4))
   res <- simsummary_fast(df, eff.col = "logrank.z", efficacy = -1.96)
   expect_output(print(res), "Group-Sequential Operating Characteristics")
-  expect_invisible(print(res))
+  # capture.output keeps the printed report out of the test log
+  utils::capture.output(vis <- withVisible(print(res)))
+  expect_false(vis$visible)
+  expect_identical(vis$value, res)
 })
 
 # ------------------------------------------------------------------ #
@@ -361,4 +364,31 @@ test_that("simsummary_fast consumes gsDesign boundaries with correct logic", {
   # The overall rejection rate equals the final cumulative power.
   expect_equal(cell(ss, "overall", "prob.stop.efficacy"), ref_cum[2L],
                tolerance = 1e-12)
+})
+
+test_that("simsummary_fast summarizes pairwise_fast output arm by arm", {
+  dfk <- simdata_fast(nsim = 20, n = c(100, 100, 100), a.time = c(0, 12),
+                      a.rate = 300 / 12, e.median = list(12, 16, 20),
+                      seed = 606)
+  pw <- pairwise_fast(dfk, control = 1, time.looks = 30, stat = "logrank",
+                      side = 1)
+  ss <- simsummary_fast(pw, p.col = "logrank.p", alpha = 0.025)
+  expect_equal(unique(ss$arm), c(2, 3))
+  # Each arm's block equals the summary of that arm's rows alone.
+  for (a in c(2, 3)) {
+    ref <- simsummary_fast(pw[pw$arm == a, setdiff(names(pw), "arm")],
+                           p.col = "logrank.p", alpha = 0.025)
+    blk <- ss[ss$arm == a, setdiff(names(ss), "arm")]
+    rownames(blk) <- NULL
+    expect_equal(as.data.frame(blk), as.data.frame(ref),
+                 ignore_attr = TRUE)
+  }
+  expect_output(print(ss), "Arm: 3")
+})
+
+test_that("simsummary_fast rejects duplicate (sim, look) rows", {
+  df <- data.frame(sim = c(1, 1, 2, 2), look = 1L,
+                   logrank.p = c(0.01, 0.20, 0.03, 0.40))
+  expect_error(simsummary_fast(df, p.col = "logrank.p", alpha = 0.025),
+               "more than one row")
 })

@@ -116,8 +116,10 @@ void milestone_core_impl(const double* time, const int* status, const int* grp,
     i = j;
   }
 
-  double v0 = surv0 * surv0 * vsum0;
-  double v1 = surv1 * surv1 * vsum1;
+  // Greenwood variance; a curve that has dropped to zero has variance zero,
+  // matching km_core (the Greenwood sum is infinite there and 0 * Inf is NaN).
+  double v0 = (surv0 > 0.0) ? surv0 * surv0 * vsum0 : 0.0;
+  double v1 = (surv1 > 0.0) ? surv1 * surv1 * vsum1 : 0.0;
 
   out[0] = surv0; out[1] = surv1;
   out[2] = v0;    out[3] = v1;

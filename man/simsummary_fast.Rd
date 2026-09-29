@@ -53,7 +53,8 @@ look. Entries may be \code{NA} to omit the test at a look. Required with
 \value{
 An object of class \code{"simsummary_fast"}: a data frame with one row
   per population and look plus an \code{overall} summary row appended after each
-  population's looks. The columns are \code{population}, \code{look} (the look
+  population's looks. The columns are \code{arm} (only when \code{data} has
+  an \code{arm} column), \code{population}, \code{look} (the look
   index, or \code{"overall"} on the summary row), optionally \code{look.value},
   \code{n.enrolled.mean} and \code{n.event.mean} (the mean enrolled and event
   counts at that look, or at the stopping look on the summary row),
@@ -66,8 +67,9 @@ An object of class \code{"simsummary_fast"}: a data frame with one row
   \code{prob.stop.futility} the total futility rate, \code{prob.stop.any} their
   sum, and \code{cum.reject} again the total rejection rate; its timing columns
   are the expected counts and calendar time at the stopping look. The number of
-  simulations is stored in the attribute \code{nsim} and the boundary settings
-  in the attribute \code{boundary}.
+  simulations is stored in the attribute \code{nsim} (one value per block when
+  the blocks differ) and the boundary settings in the attribute
+  \code{boundary}.
 }
 \description{
 Aggregates the per-simulation, per-look output of \code{\link{analysis_fast}}
@@ -125,6 +127,13 @@ cumulative sum \code{cum.reject} is the cumulative power up to and including
 that look, and the total over all looks is \code{rejection.rate}. These are the
 same quantities that gsDesign and rpact report, estimated here by simulation.
 
+A simulation whose event target was not reached at a look (\code{reached =
+FALSE} in \code{\link{analysis_fast}} output) carries the statistics of its
+final data and an \code{NA} cutoff at that look. Its statistics are compared
+with the boundary like any other, and it is left out of \code{cutoff.mean}
+(the mean over the simulations with a finite cutoff) but not out of the
+count means.
+
 The rejection rate is the type I error under a null data-generating truth and
 the power under an alternative truth, but because the function does not know the
 truth used to generate \code{data} it is reported neutrally as the rejection
@@ -133,7 +142,11 @@ rate and its interpretation is left to the user.
 When \code{data} carries a \code{population} column (the long form produced by
 \code{\link{analysis_fast}} with \code{by.subgroup = TRUE}), the same
 boundaries are applied within each population and the output has one block of
-rows per population.
+rows per population. Likewise, when \code{data} carries an \code{arm} column
+(the output of \code{\link{pairwise_fast}}), each experimental arm's
+contrast against the control is summarized separately, and the output gains
+an \code{arm} column with one block of rows per arm (and population). Within
+a block, \code{data} must have at most one row per simulation and look.
 }
 \examples{
 df <- simdata_fast(

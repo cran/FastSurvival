@@ -169,6 +169,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// pihe_core_strat
+NumericVector pihe_core_strat(const NumericVector& time_sorted, const IntegerVector& event_sorted, const IntegerVector& j_sorted, const IntegerVector& strata_sorted);
+RcppExport SEXP _FastSurvival_pihe_core_strat(SEXP time_sortedSEXP, SEXP event_sortedSEXP, SEXP j_sortedSEXP, SEXP strata_sortedSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type time_sorted(time_sortedSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type event_sorted(event_sortedSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type j_sorted(j_sortedSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type strata_sorted(strata_sortedSEXP);
+    rcpp_result_gen = Rcpp::wrap(pihe_core_strat(time_sorted, event_sorted, j_sorted, strata_sorted));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rmst_core
 NumericVector rmst_core(const NumericVector& t_sorted, const NumericVector& e_sorted, double tau);
 RcppExport SEXP _FastSurvival_rmst_core(SEXP t_sortedSEXP, SEXP e_sortedSEXP, SEXP tauSEXP) {
@@ -371,6 +385,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_FastSurvival_medsurv_core", (DL_FUNC) &_FastSurvival_medsurv_core, 5},
     {"_FastSurvival_milestone_core", (DL_FUNC) &_FastSurvival_milestone_core, 5},
     {"_FastSurvival_pihe_core", (DL_FUNC) &_FastSurvival_pihe_core, 3},
+    {"_FastSurvival_pihe_core_strat", (DL_FUNC) &_FastSurvival_pihe_core_strat, 4},
     {"_FastSurvival_rmst_core", (DL_FUNC) &_FastSurvival_rmst_core, 3},
     {"_FastSurvival_rmw_core", (DL_FUNC) &_FastSurvival_rmw_core, 4},
     {"_FastSurvival_simdata_core_full", (DL_FUNC) &_FastSurvival_simdata_core_full, 27},

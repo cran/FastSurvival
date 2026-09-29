@@ -91,7 +91,8 @@
 #' library(survival)
 #'
 #' # Standard four-weight max-combo, one-sided
-#' fit <- maxcombo_fast(ovarian$futime, ovarian$fustat, ovarian$rx, control = 1)
+#' fit <- maxcombo_fast(ovarian$futime, ovarian$fustat, ovarian$rx, control = 1,
+#'                      side = 1)
 #' fit["statistic"]
 #' fit["p.value"]
 #'
@@ -154,6 +155,7 @@ maxcombo_fast <- function(time, event, group, control, side = 2,
   if (length(rho) < 1L) {
     stop("at least one Fleming-Harrington weight must be supplied")
   }
+  check_time_event(time, event)
   if (sum(event) == 0L) {
     stop("No events observed in the data")
   }
@@ -162,8 +164,7 @@ maxcombo_fast <- function(time, event, group, control, side = 2,
   side <- as.integer(side)
 
   # Treatment indicator: 1 = treatment, 0 = control
-  if (is.factor(group)) group <- as.character(group)
-  j <- as.integer(group != control)
+  j <- two_group_indicator(group, control)
 
   # Sort pooled data by time when not presorted
   if (!presorted) {
