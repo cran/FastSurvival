@@ -146,19 +146,27 @@ df0 <- simdata_fast(
   seed     = seed + 1
 )
 
-P0 <- matrix(NA_real_, nrow = nsim, ncol = n_contrast)
-for (k in seq_along(exp_arms)) {
-  sub0 <- df0[df0$group %in% c(control_arm, exp_arms[k]), ]
-  res0 <- analysis_fast(sub0, control = control_arm,
-                        time.looks = analysis_month, stat = "logrank", side = 1)
-  P0[, k] <- res0$logrank.p
-}
+pw0 <- pairwise_fast(df0, control = control_arm,
+                     time.looks = analysis_month, stat = "logrank", side = 1)
+# One column per contrast; the rows of each arm are ordered by simulation.
+P0 <- sapply(exp_arms, function(k) pw0$logrank.p[pw0$arm == k])
+
+pce_hat  <- mean(P0 <= alpha_total)
+fwer_hat <- mean(rowSums(P0 <= thr_bonferroni) > 0)
+# Normal approximation with the shared-control correlation of one half.
+fwer_nrm <- 1 - mvtnorm::pmvnorm(
+  upper = rep(stats::qnorm(1 - thr_bonferroni), n_contrast),
+  corr = matrix(0.5, n_contrast, n_contrast) + diag(0.5, n_contrast),
+  algorithm = mvtnorm::TVPACK()
+)[1]
 
 data.frame(
-  quantity = c("Per-contrast type I error (nominal)",
-               "Family-wise error, Bonferroni"),
-  value = c(round(mean(P0 <= alpha_total), 3),
-            round(mean(rowSums(P0 <= thr_bonferroni) > 0), 3)),
+  quantity = c("Per-contrast type I error (nominal 0.025)",
+               "Family-wise error, Bonferroni",
+               "Family-wise error, Bonferroni (normal approximation)"),
+  estimate = round(c(pce_hat, fwer_hat, fwer_nrm), 4),
+  mc.se    = round(c(sqrt(pce_hat * (1 - pce_hat) / nsim),
+                     sqrt(fwer_hat * (1 - fwer_hat) / nsim), NA), 4),
   row.names = NULL
 )
 

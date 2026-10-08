@@ -31,7 +31,7 @@ evaluated conditional on the overall test being significant.
 
 Closed-form formulas for these probabilities exist for continuous endpoints and
 have been extended to other endpoint types under a normal approximation of the
-treatment effect. Those formulas are convenient but they assume a fixed design,
+treatment effect (Teng et al., 2018; see Homma, 2024, for binary outcomes). Those formulas are convenient but they assume a fixed design,
 a single final analysis, and balanced, simultaneous accrual across regions. Real
 oncology MRCTs routinely break those assumptions: the design is group-sequential
 with interim looks, and one region (here, Japan) starts enrolling later than the
@@ -40,8 +40,7 @@ behind the closed-form formulas no longer hold, simulation is the natural way to
 obtain the consistency probabilities.
 
 FastSurvival does not provide a regional-consistency function, and it is not
-meant to: three-or-more-region designs and consistency criteria are outside its
-scope. What it does provide are fast, validated building blocks. This vignette
+meant to: consistency criteria are outside its scope. What it does provide are fast, validated building blocks. This vignette
 shows that the existing simulation trio, `simdata_fast()`, `analysis_fast()`,
 and `simsummary_fast()`, can be composed to evaluate the conditional regional
 consistency probabilities of Method 1 and Method 2 at every interim and final
@@ -53,8 +52,7 @@ consistency criteria to the per-region estimates the trio returns.
 
 Write the estimated treatment effect on the hazard-reduction scale, that is
 `1 - HR` for the entire trial population and `1 - HR_s` for region `s`, where a
-positive value indicates benefit (this is the survival-endpoint formulation of
-Teng et al., 2018). The region of interest is region 1, and `pi` is the
+positive value indicates benefit. The region of interest is region 1, and `pi` is the
 effect-retention fraction, conventionally `0.5`.
 
 Method 1 asks that region 1 retain at least a fraction `pi` of the overall
@@ -107,8 +105,8 @@ fut.bound <- c(0.381, NA, -2)    # upper (non-binding) futility boundary
 The accrual specification in `simdata_fast()` applies to the whole call, so a
 region-specific delay is expressed by generating each region with its own accrual
 window and stacking the results. Region 1 accrues uniformly over `[a_delay, a]`;
-the other regions over `[0, a]`. Each region is generated from an independent stream
-(`seed + k`), which is the right model for independent regional subpopulations. A
+the other regions over `[0, a]`. Each region is generated from its own `dqrng` stream
+(`seed = SEED, stream = k`), which is the right model for independent regional subpopulations. A
 `subgroup` column tags the region, and the shared `sim` index links the regional
 blocks into one trial per simulation.
 
@@ -122,7 +120,8 @@ blocks <- lapply(seq_len(K), function(k) {
     a.time   = a.time_k,
     a.prop   = 1,
     e.median = list(mst.C, mst.T),
-    seed     = SEED + k
+    seed     = SEED,
+    stream   = k
   )
   dat$subgroup <- k
   dat
@@ -258,8 +257,9 @@ conditional probabilities `CON_M1` and `CON_M2` are undefined (`NA`, a
 zero-over-zero ratio). `Analysis_time` is the mean calendar time of the look
 itself, taken over all trials, and so is reported at every look. At the later
 looks the table gives, per analysis, the conditional regional consistency
-probability for each method. Method 2 is the looser criterion and so its
-conditional probability runs higher than Method 1's at both efficacy looks. For
+probability for each method. Neither criterion implies the other; in this
+design the conditional probability of Method 2 is higher than that of Method 1
+at both efficacy looks. For
 each method the conditional consistency is comparable at the two efficacy looks,
 if anything slightly higher at the interim, because the trials that cross the
 stringent interim efficacy boundary are enriched for a strong overall effect,
@@ -291,7 +291,7 @@ expected information and calendar time at stopping.
 ## Notes and extensions
 
 The hazard ratio used for the consistency criteria is the Cox estimate from
-`coxph_fast()`. To use the log-scale criterion of Teng et al. (2018) instead,
+`coxph_fast()`. To use a criterion on the log hazard ratio scale instead,
 replace `cox.hr` with `cox.coef` and test `cox.coef_1 < PI * cox.coef_overall`
 for Method 1 and `cox.coef_s < 0` for all regions for Method 2. The conditional
 probability here is defined on the first efficacy-stopping look, which is the

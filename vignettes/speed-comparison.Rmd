@@ -23,12 +23,19 @@ function against an established reference and reports representative results.
 The benchmark code is shown but not executed when the vignette is built,
 because timing many microbenchmark replicates would exceed the build-time
 limits. To reproduce the numbers, run the code blocks interactively. The same
-code is collected in the `tools/benchmark_speed.R` script shipped in the
-package sources.
+code is collected in the `tools/benchmark_speed.R` script of the package's
+GitHub repository.
 
-The reported figures are median times from microbenchmark replicates on a
-single desktop machine. Absolute timings depend on hardware, sample size, and
-event rate, so the ratios matter more than the raw values.
+The reported figures are median times of 1,000 microbenchmark replicates,
+measured on 2026-09-29 with R 4.6.0 on Windows 11 (x86_64) for the data set of
+500 subjects below, all of whom have an event. The FastSurvival functions are
+timed on presorted input, so the single sort of the data is excluded from
+their times, whereas the reference functions sort internally; in a simulation
+loop the sort is paid once per data set. `coxph_fast()` computes a closed-form
+approximation of the Cox estimate (the Pike-Halley Estimator) rather than the
+iterative maximum partial likelihood estimate, so its row compares two
+estimators of the same quantity. Absolute timings depend on hardware, sample
+size, and event rate, so the ratios matter more than the raw values.
 
 ```{r load}
 library(FastSurvival)
@@ -239,8 +246,8 @@ microbenchmark(
 # ahr_fast vs AHR::ahrKM
 
 The Kalbfleisch-Prentice average hazard ratio is benchmarked against `ahrKM()`
-from the AHR package, the reference implementation used by Dormuth et al.
-(2024). Because AHR has been archived on CRAN, this benchmark is shown as a
+from the AHR package, which Dormuth et al. (2024) used to compute the average
+hazard ratio. Because AHR has been archived on CRAN, this benchmark is shown as a
 static block rather than a live chunk. Install AHR with
 `remotes::install_github("cran/AHR")` and run the block to reproduce it.
 
@@ -258,7 +265,8 @@ microbenchmark(
 The table below summarizes representative median timings on the n = 500
 two-group dataset generated above, with `presorted = TRUE` and one-sided tests
 where applicable. The exact values will differ on your machine, but the order
-of magnitude of the speedup is stable.
+of magnitude of the speedup is stable. The `wkm_fast()` row is missing because
+nphsim was not installed when the table was produced.
 
 | Function | Replaces | Approximate speed gain |
 |----------|----------|------------------------|
@@ -286,3 +294,27 @@ do the core computation in a single C++ pass over the data, and return a
 lightweight numeric vector. When the input is already sorted the sort cost is
 avoided entirely. In a simulation loop these savings accumulate across every
 iteration.
+
+# Whole simulation studies
+
+The per-call gains carry over to complete simulation studies. The scripts in
+`tools/paper/` of the package's GitHub repository run the same designs with
+FastSurvival and with other simulation packages and record the operating
+characteristics and the elapsed time. For a two-arm group-sequential design
+with 600 subjects and two event-driven log-rank analyses, the time per
+simulated trial was about 200 times longer with simtrial and about 80 times
+longer with TrialSimulator than with FastSurvival, and for a crossover after a
+positive progression-free survival analysis in an illness-death model it was
+about 50 times longer with TrialSimulator. The power and the analysis times
+agreed within Monte Carlo error. With FastSurvival, generating 10,000 such
+trials and computing the log-rank and RMST statistics at the two looks each
+took about one second. The max-combo p-values, one multivariate normal integral
+per trial and look, take most of the computing time; when only the decisions at
+given nominal levels are needed, the `mc.alpha` argument of `analysis_fast()`
+restricts the integration to the p-values near those levels.
+
+# References
+
+Dormuth, I., Pauly, M., Rauch, G., & Herrmann, C. (2024). Sample size
+calculation under nonproportional hazards using average hazard ratios.
+*Biometrical Journal*, 66(6), e202300271.

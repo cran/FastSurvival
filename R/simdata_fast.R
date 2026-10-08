@@ -16,6 +16,13 @@
 #' survival time occurs first. The calendar time of the observed event is
 #' \code{accrual_time + tte}.
 #'
+#' A hazard of zero in the last piece (for example a cure fraction, as in
+#' \code{e.hazard = c(0.1, 0)} with \code{e.time = c(0, 24, Inf)}) gives an
+#' infinite latent time to some subjects. A subject with neither a finite
+#' survival time nor a finite dropout time has \code{tte = Inf} and
+#' \code{event = 0}, and an analysis at a finite cutoff censors the subject at
+#' the cutoff.
+#'
 #' The total enrolled is fixed at \code{sum(n)}. With \code{a.rate} the rates are
 #' absolute (subjects per unit time): when the accrual period is fully specified
 #' the rates must accrue exactly \code{sum(n)}, and when one extra rate is given
@@ -56,6 +63,8 @@
 #' per-group hazards. In a two-group simulation each specification is either
 #' shared by both groups (not a list) or a list of length two (control first),
 #' and each group's element may be a per-cell list when there are subgroups.
+#' Without subgroups, a length-two \code{n} requires at least one of the
+#' survival and dropout specifications to be such a list.
 #' The breakpoints \code{e.time} and \code{d.time} follow the same structure
 #' (per group in a two-group simulation, per cell in a one-group simulation with
 #' subgroups).
@@ -70,8 +79,26 @@
 #' or \code{d.median}. The arms share the master \code{seed}, so the result is
 #' reproducible. A multi-arm design is analyzed as a set of pairwise contrasts by
 #' subsetting the output to the control arm and one other arm and calling
-#' \code{\link{analysis_fast}} once per contrast. Multi-arm mode does not support
+#' \code{\link{analysis_fast}} once per contrast, which
+#' \code{\link{pairwise_fast}} does for every experimental arm. Multi-arm mode does not support
 #' subgroups or the illness-death model, which remain two-group.
+#'
+#' The illness-death model (activated by \code{h01.*} or \code{h02.*}) also
+#' accepts \code{prevalence} and \code{fixed.alloc}. The transition hazards
+#' (\code{h01.*}, \code{h02.*}, \code{h12.*}, \code{h12.switch.*}),
+#' \code{switch.prop}, and the dropout specification then follow the rules of
+#' \code{e.hazard} with subgroups: in a two-group simulation each is shared or
+#' a list with one element per group, and each group's element is shared or a
+#' list with one element per subgroup cell, for example
+#' \code{h01.hazard = list(list(0.10, 0.06), 0.05)}; with a scalar \code{n}
+#' and no \code{alloc}, a list without list elements holds one element per
+#' cell of a single group. All subjects share one accrual process and the
+#' subgroup cells are assigned after accrual, so the subgroups enroll over the
+#' same calendar in proportion to their prevalence. This gives a mixture of
+#' illness-death models without generating the subgroups separately and
+#' adjusting their accrual rates. With a single cell (for example
+#' \code{prevalence = 1}) the data equal those without \code{prevalence}, with
+#' the subgroup column added.
 #'
 #' @param nsim Number of simulated trials.
 #' @param n Either a single total sample size (split by \code{alloc}), a
@@ -109,9 +136,19 @@
 #' @param d.median Dropout median(s); an alternative to \code{d.hazard}.
 #' @param d.time Dropout breakpoints for piecewise hazards.
 #' @param seed Optional integer seed for the \code{dqrng} generator.
+#' @param stream Optional non-negative whole number selecting an independent
+#'   \code{dqrng} random-number stream for the given \code{seed}; requires
+#'   \code{seed}. A large simulation can be split into batches that are
+#'   generated with the same \code{seed} and \code{stream = 1, 2, ...},
+#'   sequentially or in parallel, and the result of each batch does not depend
+#'   on how the batches are distributed. With the default Xoroshiro128++
+#'   generator of \code{dqrng}, stream \code{k} starts \code{k} jumps of
+#'   \eqn{2^{64}} draws ahead of the seeded state, so \code{stream = 0} gives
+#'   the same numbers as no stream. See the section on batches.
 #' @param prevalence Optional subgroup prevalence specification (numeric
 #'   vector, list of vectors, array, or a named \code{control}/\code{treatment}
-#'   list for group-specific prevalence).
+#'   list for group-specific prevalence), for the single-endpoint and the
+#'   illness-death models.
 #' @param fixed.alloc Logical; when \code{TRUE} subgroup sizes are
 #'   deterministic rather than drawn.
 #' @param h01.hazard Transition hazard(s) for the non-terminal (intermediate)
@@ -141,8 +178,9 @@
 #'   to \code{h12.hazard}.
 #' @param h12.time Breakpoints for a piecewise \code{h12.hazard}, measured from
 #'   the intermediate-event time (clock-reset).
-#' @param switch.prop Probability that a subject with an intermediate event
-#'   switches treatment, a scalar or a two-element list (control, treatment).
+#' @param switch.prop Probability that a subject whose intermediate event is
+#'   observed (on or before dropout) switches treatment at that event, a
+#'   scalar or a two-element list (control, treatment).
 #'   Defaults to zero (no switching); the treatment group is typically left at
 #'   zero.
 #' @param h12.switch.hazard Transition hazard(s) from state 1 to state 2 for
@@ -154,21 +192,59 @@
 #' @param switch.clock Time origin for the post-event hazards. Currently only
 #'   \code{"reset"} (measured from the intermediate event) is implemented.
 #'
+#' @section Batches and parallel execution:
+#' The output has \code{nsim * sum(n)} rows, so memory rather than time limits
+#' the number of simulated trials in one call. A large study can be run in
+#' batches: each batch is generated with the same \code{seed} and its own
+#' \code{stream}, analyzed with \code{\link{analysis_fast}}, and only the
+#' analysis results are kept. Because each stream is an independent sequence of
+#' the \code{dqrng} generator, the data of batch \code{b} are the same whether
+#' the batches are run one after another or distributed over parallel workers
+#' (for example with \code{parallel::mclapply()} or the future framework), and
+#' whatever the number of workers. The simulation identifiers start at 1 in
+#' every batch, so they are renumbered before the batch results are combined.
+#' Functions that draw further random numbers, such as \code{\link{switch_fast}},
+#' continue the same stream within a batch. The max-combo p-values of
+#' \code{\link{analysis_fast}} with four or more weights (or a two-sided test)
+#' are computed with R's own random-number generator, so a batch should also
+#' call \code{set.seed()} before the analysis for p-values that are identical
+#' across runs.
+#'
 #' @return A \code{data.frame} with \code{nsim * sum(n)} rows. The columns are
 #'   \code{sim}, \code{group}, any subgroup columns, \code{accrual_time},
 #'   \code{surv_time}, \code{dropout_time}, \code{tte}, \code{event}, and
 #'   \code{calendar_time}.
 #'   In the illness-death model the columns are instead \code{sim},
-#'   \code{group}, \code{accrual_time}, \code{e1_surv_time},
+#'   \code{group}, any subgroup columns, \code{accrual_time},
+#'   \code{e1_surv_time},
 #'   \code{e2_surv_time}, \code{dropout_time}, \code{e1_tte}, \code{e1_event},
 #'   \code{e2_tte}, \code{e2_event}, \code{e1_calendar_time},
 #'   \code{e2_calendar_time}, \code{intermediate}, \code{switched}, and
 #'   \code{switch_time}, where \code{e1} is the first (state-0 exit) endpoint
 #'   and \code{e2} is the terminal endpoint. In oncology \code{e1} is
 #'   progression-free survival, \code{e2} is overall survival, and
-#'   \code{intermediate} flags progression.
+#'   \code{intermediate} flags progression. The column \code{intermediate}
+#'   describes the latent process (an intermediate event before the terminal
+#'   event, \code{e1_surv_time < e2_surv_time}), also when it would occur
+#'   after dropout; the observed intermediate event is \code{intermediate == 1}
+#'   with \code{e1_event == 1}. A switch (\code{switched == 1}, at
+#'   \code{switch_time}, the intermediate-event time) occurs only after an
+#'   observed intermediate event.
 #'
 #' @examples
+#' # Batches from independent random-number streams: the simulations of each
+#' # batch are renumbered before the analysis results are combined.
+#' run_batch <- function(b, nsim = 20) {
+#'   d <- simdata_fast(nsim = nsim, n = c(100, 100), a.time = c(0, 12),
+#'                     a.rate = 200 / 12, e.median = list(12, 16),
+#'                     seed = 2026, stream = b)
+#'   r <- analysis_fast(d, control = 1, event.looks = 120)
+#'   r$sim <- r$sim + (b - 1) * nsim
+#'   r
+#' }
+#' res <- do.call(rbind, lapply(1:3, run_batch))
+#' range(res$sim)
+#'
 #' # One-group simulation, simple exponential, no dropout
 #' df1 <- simdata_fast(
 #'   nsim     = 100,
@@ -294,6 +370,20 @@
 #' )
 #' head(dfsw)
 #'
+#' # Illness-death model with two subgroups (prevalence 0.4 and 0.6): the
+#' # treatment effect on progression is larger in subgroup 2.
+#' dfsg <- simdata_fast(
+#'   nsim       = 100,
+#'   n          = c(150, 150),
+#'   a.time     = c(0, 12),
+#'   a.rate     = 300 / 12,
+#'   h01.median = list(8, list(10, 14)),
+#'   h02.median = list(24, 30),
+#'   prevalence = c(0.4, 0.6),
+#'   seed       = 8
+#' )
+#' table(dfsg$group, dfsg$subgroup) / 100
+#'
 #' # Three-arm trial (one control and two treatment arms) analyzed as pairwise
 #' # contrasts against the shared control.
 #' dfk <- simdata_fast(
@@ -309,7 +399,8 @@
 #' res12 <- analysis_fast(sub12, control = 1, time.looks = 24, side = 1)
 #' head(res12)
 #'
-#' @seealso \code{\link{analysis_fast}}
+#' @seealso \code{\link{analysis_fast}}, \code{\link{cutoff_fast}},
+#'   \code{\link{switch_fast}}, \code{\link{pairwise_fast}}
 #'
 #' @export
 simdata_fast <- function(nsim       = 1000,
@@ -340,9 +431,22 @@ simdata_fast <- function(nsim       = 1000,
                          h12.switch.hazard = NULL,
                          h12.switch.median = NULL,
                          h12.switch.time   = NULL,
-                         switch.clock = "reset") {
+                         switch.clock = "reset",
+                         stream     = NULL) {
 
-  if (!is.null(seed)) dqrng::dqset.seed(seed)
+  if (missing(n) || !is.numeric(n) || length(n) < 1L || anyNA(n) ||
+      any(!is.finite(n)) || any(n < 1) || any(abs(n - round(n)) > 1e-8)) {
+    stop("'n' must contain positive whole numbers")
+  }
+  if (!is.null(stream)) {
+    if (is.null(seed)) stop("'stream' requires 'seed'")
+    if (length(stream) != 1L || !is.finite(stream) || stream < 0 ||
+        stream > .Machine$integer.max ||
+        abs(stream - round(stream)) > 1e-8) {
+      stop("'stream' must be a single non-negative whole number")
+    }
+  }
+  if (!is.null(seed)) dqrng::dqset.seed(seed, stream = stream)
 
   # Illness-death (two correlated endpoints, optional switching) mode dispatches
   # to a separate kernel; the single-endpoint path below is left unchanged (same
@@ -366,7 +470,8 @@ simdata_fast <- function(nsim       = 1000,
       h12.switch.time = h12.switch.time,
       switch.clock = switch.clock,
       d.hazard = d.hazard, d.median = d.median, d.time = d.time,
-      prevalence = prevalence, alloc_given = !missing(alloc)))
+      prevalence = prevalence, fixed.alloc = fixed.alloc,
+      alloc_given = !missing(alloc)))
   }
 
   # Multi-arm (K > 2) mode dispatches to a separate assembler that generates each
@@ -862,7 +967,8 @@ resolve_accrual_counts <- function(n_grp_int, a.time, a.rate, a.prop) {
 # ------------------------------------------------------------------ #
 # Validates the transition-hazard arguments, builds the per-group
 # piecewise-exponential pre-computations, and calls simdata_core_id. The seed is
-# already set by the caller. Subgroups are not supported here.
+# already set by the caller. With 'prevalence' the work is passed to
+# simdata_fast_id_sub(); without it the code below is unchanged.
 simdata_fast_id <- function(nsim, n, alloc, a.time, a.rate, a.prop,
                             h01.hazard, h01.median, h01.time,
                             h02.hazard, h02.median, h02.time,
@@ -871,12 +977,9 @@ simdata_fast_id <- function(nsim, n, alloc, a.time, a.rate, a.prop,
                             h12.switch.hazard, h12.switch.median, h12.switch.time,
                             switch.clock,
                             d.hazard, d.median, d.time,
-                            prevalence, alloc_given = FALSE) {
+                            prevalence, fixed.alloc = FALSE,
+                            alloc_given = FALSE) {
 
-  if (!is.null(prevalence)) {
-    stop("Subgroups ('prevalence') are not supported with the illness-death ",
-         "model; call simdata_fast separately per subgroup and combine with rbind().")
-  }
   if (!identical(switch.clock, "reset")) {
     stop("Only switch.clock = \"reset\" is currently implemented.")
   }
@@ -917,6 +1020,20 @@ simdata_fast_id <- function(nsim, n, alloc, a.time, a.rate, a.prop,
     stop("Specify exactly one of 'd.hazard' and 'd.median'")
   }
   if (!is.null(d.median)) d.hazard <- convert_median_to_hazard(d.median)
+
+  if (!is.null(prevalence)) {
+    return(simdata_fast_id_sub(
+      nsim = nsim, n = n, alloc = alloc, alloc_given = alloc_given,
+      a.time = a.time, a.rate = a.rate, a.prop = a.prop,
+      h01.hazard = h01.hazard, h01.time = h01.time,
+      h02.hazard = h02.hazard, h02.time = h02.time,
+      h12.hazard = h12.hazard, h12.time = h12.time,
+      switch.prop = switch.prop,
+      h12.switch.hazard = h12.switch.hazard,
+      h12.switch.time = h12.switch.time,
+      has_dropout = has_dropout, d.hazard = d.hazard, d.time = d.time,
+      prevalence = prevalence, fixed.alloc = fixed.alloc))
+  }
 
   # A two-group simulation is signalled by a length-two 'n', an explicitly
   # supplied 'alloc', or any group-specific (length-two list) hazard, switch, or

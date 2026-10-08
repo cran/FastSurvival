@@ -359,7 +359,8 @@ to <code>length(n)</code>. The analysis path keeps its two-group
 contract, so a multi-arm design is analyzed as a set of pairwise
 contrasts. Each experimental arm is compared against the control by
 subsetting the generated data to those two arms and calling
-<code>analysis_fast</code> once per contrast. Because every contrast
+<code>analysis_fast</code> once per contrast, which
+<code>pairwise_fast</code> does in a single call. Because every contrast
 reuses the same control arm, the pairwise statistics are positively
 correlated, and that correlation is what a Dunnett-type adjustment
 exploits to be less conservative than a Bonferroni correction.</p>
@@ -368,8 +369,8 @@ experimental arms), runs the two pairwise log-rank tests, and reports
 the operating characteristics of the screening design under a Bonferroni
 correction, including the disjunctive power of finding at least one
 winning arm and the probability of selecting the truly better
-experimental arm. It then confirms empirically that the family-wise
-error rate is controlled under the global null.</p>
+experimental arm. It then estimates the family-wise error rate under the
+global null and compares it with its normal approximation.</p>
 </div>
 <div id="design-parameters" class="section level2">
 <h2>Design parameters</h2>
@@ -576,8 +577,9 @@ rejected arms.</p>
 <h2>Correlation between the contrasts</h2>
 <p>The two pairwise log-rank statistics share the control arm, so they
 are positively correlated. This correlation is the reason a Dunnett
-adjustment is less conservative than Bonferroni, since Bonferroni
-ignores it and treats the comparisons as if they were independent.</p>
+adjustment is less conservative than Bonferroni, which does not use the
+correlation and is valid under any dependence between the
+comparisons.</p>
 <div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">round</span>(stats<span class="sc">::</span><span class="fu">cor</span>(Z, <span class="at">use =</span> <span class="st">&quot;complete.obs&quot;</span>), <span class="dv">3</span>)</span>
 <span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="co">#&gt;              arm2_vs_ctrl arm3_vs_ctrl</span></span>
 <span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co">#&gt; arm2_vs_ctrl        1.000        0.508</span></span>
@@ -602,30 +604,46 @@ the nominal family-wise level.</p>
 <span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>  <span class="at">seed     =</span> seed <span class="sc">+</span> <span class="dv">1</span></span>
 <span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>)</span>
 <span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a></span>
-<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>P0 <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, <span class="at">nrow =</span> nsim, <span class="at">ncol =</span> n_contrast)</span>
-<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="cf">for</span> (k <span class="cf">in</span> <span class="fu">seq_along</span>(exp_arms)) {</span>
-<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a>  sub0 <span class="ot">&lt;-</span> df0[df0<span class="sc">$</span>group <span class="sc">%in%</span> <span class="fu">c</span>(control_arm, exp_arms[k]), ]</span>
-<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>  res0 <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(sub0, <span class="at">control =</span> control_arm,</span>
-<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a>                        <span class="at">time.looks =</span> analysis_month, <span class="at">stat =</span> <span class="st">&quot;logrank&quot;</span>, <span class="at">side =</span> <span class="dv">1</span>)</span>
-<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a>  P0[, k] <span class="ot">&lt;-</span> res0<span class="sc">$</span>logrank.p</span>
-<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a>}</span>
-<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a></span>
-<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
-<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a>  <span class="at">quantity =</span> <span class="fu">c</span>(<span class="st">&quot;Per-contrast type I error (nominal)&quot;</span>,</span>
-<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a>               <span class="st">&quot;Family-wise error, Bonferroni&quot;</span>),</span>
-<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a>  <span class="at">value =</span> <span class="fu">c</span>(<span class="fu">round</span>(<span class="fu">mean</span>(P0 <span class="sc">&lt;=</span> alpha_total), <span class="dv">3</span>),</span>
-<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a>            <span class="fu">round</span>(<span class="fu">mean</span>(<span class="fu">rowSums</span>(P0 <span class="sc">&lt;=</span> thr_bonferroni) <span class="sc">&gt;</span> <span class="dv">0</span>), <span class="dv">3</span>)),</span>
-<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">NULL</span></span>
-<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a>)</span>
-<span id="cb10-25"><a href="#cb10-25" tabindex="-1"></a><span class="co">#&gt;                              quantity value</span></span>
-<span id="cb10-26"><a href="#cb10-26" tabindex="-1"></a><span class="co">#&gt; 1 Per-contrast type I error (nominal) 0.024</span></span>
-<span id="cb10-27"><a href="#cb10-27" tabindex="-1"></a><span class="co">#&gt; 2       Family-wise error, Bonferroni 0.022</span></span></code></pre></div>
-<p>The per-contrast error is near the nominal one-sided level, and the
-Bonferroni family-wise error is at or below the target, confirming that
-the screening rule controls the error rate. A Dunnett procedure would
-recover some of the conservatism by using the shared-control
-correlation, at the cost of the closed-form simplicity of the Bonferroni
-threshold.</p>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>pw0 <span class="ot">&lt;-</span> <span class="fu">pairwise_fast</span>(df0, <span class="at">control =</span> control_arm,</span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a>                     <span class="at">time.looks =</span> analysis_month, <span class="at">stat =</span> <span class="st">&quot;logrank&quot;</span>, <span class="at">side =</span> <span class="dv">1</span>)</span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="co"># One column per contrast; the rows of each arm are ordered by simulation.</span></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>P0 <span class="ot">&lt;-</span> <span class="fu">sapply</span>(exp_arms, <span class="cf">function</span>(k) pw0<span class="sc">$</span>logrank.p[pw0<span class="sc">$</span>arm <span class="sc">==</span> k])</span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a></span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a>pce_hat  <span class="ot">&lt;-</span> <span class="fu">mean</span>(P0 <span class="sc">&lt;=</span> alpha_total)</span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a>fwer_hat <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">rowSums</span>(P0 <span class="sc">&lt;=</span> thr_bonferroni) <span class="sc">&gt;</span> <span class="dv">0</span>)</span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a><span class="co"># Normal approximation with the shared-control correlation of one half.</span></span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a>fwer_nrm <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> mvtnorm<span class="sc">::</span><span class="fu">pmvnorm</span>(</span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a>  <span class="at">upper =</span> <span class="fu">rep</span>(stats<span class="sc">::</span><span class="fu">qnorm</span>(<span class="dv">1</span> <span class="sc">-</span> thr_bonferroni), n_contrast),</span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a>  <span class="at">corr =</span> <span class="fu">matrix</span>(<span class="fl">0.5</span>, n_contrast, n_contrast) <span class="sc">+</span> <span class="fu">diag</span>(<span class="fl">0.5</span>, n_contrast),</span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a>  <span class="at">algorithm =</span> mvtnorm<span class="sc">::</span><span class="fu">TVPACK</span>()</span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a>)[<span class="dv">1</span>]</span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a></span>
+<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb10-25"><a href="#cb10-25" tabindex="-1"></a>  <span class="at">quantity =</span> <span class="fu">c</span>(<span class="st">&quot;Per-contrast type I error (nominal 0.025)&quot;</span>,</span>
+<span id="cb10-26"><a href="#cb10-26" tabindex="-1"></a>               <span class="st">&quot;Family-wise error, Bonferroni&quot;</span>,</span>
+<span id="cb10-27"><a href="#cb10-27" tabindex="-1"></a>               <span class="st">&quot;Family-wise error, Bonferroni (normal approximation)&quot;</span>),</span>
+<span id="cb10-28"><a href="#cb10-28" tabindex="-1"></a>  <span class="at">estimate =</span> <span class="fu">round</span>(<span class="fu">c</span>(pce_hat, fwer_hat, fwer_nrm), <span class="dv">4</span>),</span>
+<span id="cb10-29"><a href="#cb10-29" tabindex="-1"></a>  <span class="at">mc.se    =</span> <span class="fu">round</span>(<span class="fu">c</span>(<span class="fu">sqrt</span>(pce_hat <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> pce_hat) <span class="sc">/</span> nsim),</span>
+<span id="cb10-30"><a href="#cb10-30" tabindex="-1"></a>                     <span class="fu">sqrt</span>(fwer_hat <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> fwer_hat) <span class="sc">/</span> nsim), <span class="cn">NA</span>), <span class="dv">4</span>),</span>
+<span id="cb10-31"><a href="#cb10-31" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">NULL</span></span>
+<span id="cb10-32"><a href="#cb10-32" tabindex="-1"></a>)</span>
+<span id="cb10-33"><a href="#cb10-33" tabindex="-1"></a><span class="co">#&gt;                                               quantity estimate  mc.se</span></span>
+<span id="cb10-34"><a href="#cb10-34" tabindex="-1"></a><span class="co">#&gt; 1            Per-contrast type I error (nominal 0.025)   0.0243 0.0034</span></span>
+<span id="cb10-35"><a href="#cb10-35" tabindex="-1"></a><span class="co">#&gt; 2                        Family-wise error, Bonferroni   0.0220 0.0033</span></span>
+<span id="cb10-36"><a href="#cb10-36" tabindex="-1"></a><span class="co">#&gt; 3 Family-wise error, Bonferroni (normal approximation)   0.0232     NA</span></span></code></pre></div>
+<p>The column <code>mc.se</code> is the Monte Carlo standard error of
+each estimate (for the per-contrast error, which pools the two
+correlated contrasts, it is an upper bound). The per-contrast error is
+near the nominal one-sided level, and the Bonferroni family-wise error
+agrees with its normal approximation, which lies below the target
+because the Bonferroni threshold ignores the positive correlation, to
+within two Monte Carlo standard errors. With 2,000 trials the simulation
+cannot by itself resolve differences of a few thousandths, so the
+guarantee that the family-wise error does not exceed the target comes
+from the Bonferroni inequality, and the simulation confirms that the
+implementation is consistent with it. A Dunnett procedure would recover
+some of the conservatism by using the shared-control correlation, at the
+cost of the closed-form simplicity of the Bonferroni threshold.</p>
 </div>
 <div id="remarks" class="section level2">
 <h2>Remarks</h2>

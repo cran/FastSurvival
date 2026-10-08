@@ -17,6 +17,7 @@ have_survRM2  <- requireNamespace("survRM2", quietly = TRUE)
 have_survAH   <- requireNamespace("survAH", quietly = TRUE)
 have_nph      <- requireNamespace("nph", quietly = TRUE)
 have_nphRCT   <- requireNamespace("nphRCT", quietly = TRUE)
+have_simtrial <- requireNamespace("simtrial", quietly = TRUE)
 ```
 
 # Purpose
@@ -81,8 +82,8 @@ data.frame(
 
 # Log-rank test
 
-`survdiff_fast()` with `side = 1` returns a signed Z-score. Its square is the
-chi-square statistic from `survdiff()`.
+`survdiff_fast()` with `side = 1` returns the signed Z-score of the log-rank
+test (Mantel, 1966). Its square is the chi-square statistic from `survdiff()`.
 
 ```{r logrank, eval = have_survival}
 fast_lr <- survdiff_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
@@ -121,24 +122,28 @@ including the ordinary log-rank test recovered at `rho = 0, gamma = 0`.
 
 # Cox hazard ratio
 
-`coxph_fast()` returns the Pike-Halley Estimator, a closed-form approximation
-to the Cox partial likelihood maximizer. We report the log hazard ratio from
-both; the sign convention is the same and `side` does not affect the point
-estimate.
+`coxph_fast()` returns the Pike-Halley Estimator (Homma, 2025), a closed-form
+approximation to the maximizer of the Cox partial likelihood with the Breslow method for
+ties. The reference is therefore `coxph()` with `ties = "breslow"` (its default
+is the Efron method). We report the log hazard ratio from both; the sign
+convention is the same and `side` does not affect the point estimate.
 
 ```{r cox, eval = have_survival}
 fast_hr <- coxph_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
                       control = 0, side = 1)
 
-ref_cox <- coxph(Surv(rfstime, status) ~ hormon, data = gbsg)
+ref_cox <- coxph(Surv(rfstime, status) ~ hormon, data = gbsg,
+                 ties = "breslow")
 
 c(fast = unclass(fast_hr)["coef"], cox = unname(coef(ref_cox)))
+cox_diff <- abs(unname(unclass(fast_hr)["coef"]) - unname(coef(ref_cox)))
 ```
 
 Because the Pike-Halley Estimator is a closed-form approximation rather than
 the exact partial-likelihood maximizer, the two log hazard ratios are not
-expected to be identical. They differ slightly, here in the fourth decimal
-place, which reflects the approximation and is not a sign of error.
+expected to be identical. Their absolute difference here is
+`r if (exists("cox_diff")) format(signif(cox_diff, 2)) else "not computed (the survival package is not installed)"`,
+which reflects the approximation and is not a sign of error.
 
 With `strata`, `coxph_fast()` approximates the stratified Cox model, in which
 each stratum has its own baseline hazard. Stratifying by tumor grade, the
@@ -157,7 +162,8 @@ c(fast = unclass(fast_hr_s)["coef"], cox = unname(coef(ref_cox_s)))
 
 # Restricted mean survival time
 
-`rmst_fast()` integrates the Kaplan-Meier survival curve up to a horizon. We
+`rmst_fast()` integrates the Kaplan-Meier survival curve up to a horizon
+(Royston and Parmar, 2013). We
 compare the two-group RMST difference against `survRM2::rmst2()` at 1000 days.
 
 ```{r rmst, eval = have_survival && have_survRM2}
@@ -178,12 +184,13 @@ c(fast = unclass(fast_rmst)["diff"],
 # Window mean survival time
 
 `wmst_fast()` integrates the Kaplan-Meier curve between a lower and an upper
-window limit, generalizing the restricted mean survival time. CRAN has no
+window limit, generalizing the restricted mean survival time (Paukner and
+Chappell, 2021). CRAN has no
 dedicated WMST package, so we validate the per-group windowed area directly
 against a Kaplan-Meier step-function integral computed from `survfit()` over
 the same window. A full comparison against the `survWMST` package, which is
 distributed on GitHub, is provided in
-`tools/compare_wmst_survwmst.R`.
+`tools/compare_wmst_survwmst.R` of the package's GitHub repository.
 
 ```{r wmst, eval = have_survival}
 tau1 <- 200
@@ -249,7 +256,8 @@ vignette.
 # Milestone survival
 
 `milestone_fast()` compares Kaplan-Meier survival between two groups at a
-milestone timepoint. The per-group survival probabilities match those from
+milestone timepoint, here with the complementary log-log intervals and the
+MOVER interval of the difference of Tang (2021). The per-group survival probabilities match those from
 `survfit()`.
 
 ```{r milestone, eval = have_survival}
@@ -378,14 +386,15 @@ The point estimates match the survival-based reference to numerical precision.
 The average hazard ratio was additionally cross-checked against the archived
 AHR package, the reference implementation used by Dormuth et al. (2024): the
 two group shares, the average hazard ratio, the variances, and both test
-statistics agree to within the order of 1e-15. That external comparison is
-reproducible with the `tools/compare_ahr_ahrKM.R` script shipped in the package
-sources.
+statistics agree to within about 1e-14. That external comparison is
+reproducible with the `tools/compare_ahr_ahrKM.R` script of the package's
+GitHub repository.
 
 # Max-combo test
 
 `maxcombo_fast()` computes the max-combo test, the most extreme of a set of
-Fleming-Harrington weighted log-rank statistics. The `nph` package provides
+Fleming-Harrington weighted log-rank statistics (Karrison, 2016). The `nph`
+package provides
 `logrank.maxtest()`, whose default weight set is FH(0, 0), FH(0, 1), and
 FH(1, 0). We request the same three weights from `maxcombo_fast()` and compare
 the component Z-scores. The individual Z-scores are kept in the `z` attribute,
@@ -412,9 +421,9 @@ data.frame(
 
 The component statistics agree in absolute value. The final max-combo statistic
 is the largest of these, which for the one-sided test is the most extreme
-component Z. The p-values from the two packages are close but not identical,
-since they use different numerical methods for the joint distribution (a
-multivariate normal integral here, a Bonferroni-style combination in `nph`).
+component Z. The p-values are not compared here, because
+`nph::logrank.maxtest()` reports two-sided p-values and the call above is
+one-sided.
 
 # Robust modestly-weighted log-rank test
 
@@ -454,14 +463,81 @@ data.frame(
 ```
 
 The component statistics agree in absolute value. The null correlation of the
-two components, reported in the `corr` attribute, matches the covariance
-computed by the authors' `find_cor` routine to numerical precision. The
+two components, reported in the `corr` attribute, is checked against an
+independent implementation in the package test suite. The
 combined statistic and one-sided p-value then follow from the bivariate normal
-distribution of the two components, evaluated with `mvtnorm::pmvnorm`. On the
-POPLAR overall-survival data analyzed in the original article, `rmw_fast()`
-reproduces the published one-sided p-values of 0.0028 for the log-rank test,
-0.0009 for the modestly-weighted test, and 0.0012 for the rMW test, with a
-component correlation of 0.97.
+distribution of the two components, evaluated with `mvtnorm::pmvnorm`.
+
+# Analysis cutoffs
+
+The simulation layer determines the calendar time of each analysis with
+`cutoff_fast()`, which combines a target number of events, a planned calendar
+time, a maximum calendar time, a minimum time after the previous look, and a
+minimum follow-up after a given number of enrolled subjects. The same rule is
+implemented one simulated trial at a time by `get_analysis_date()` of the
+[simtrial](https://cran.r-project.org/package=simtrial) package. We compare the
+two on 50 simulated trials for a look at "150 events, but not before month 18
+and not before 6 months after the 250th enrolled subject, and in any case by
+month 30".
+
+```{r cutoff, eval = have_simtrial}
+sim_c <- simdata_fast(nsim = 50, n = c(150, 150), a.time = c(0, 12),
+                      a.rate = 300 / 12, e.median = list(12, 16),
+                      d.hazard = 0.01, seed = 2026)
+cut_c <- cutoff_fast(sim_c, event.looks = 150, time.looks = 18,
+                     max.time = 30, min.enrolled = 250, min.followup = 6)
+ref_c <- vapply(seq_len(50), function(s) {
+  d <- sim_c[sim_c$sim == s, ]
+  x <- data.frame(enroll_time = d$accrual_time,
+                  cte = d$accrual_time + d$tte,
+                  fail = d$event, stratum = "All")
+  simtrial::get_analysis_date(x, planned_calendar_time = 18,
+                              target_event_overall = 150,
+                              max_extension_for_target_event = 30,
+                              min_n_overall = 250, min_followup = 6)
+}, numeric(1))
+c(max_abs_difference = max(abs(cut_c[, 1] - ref_c)))
+```
+
+The cutoffs agree exactly. The two functions differ only when an event target
+is never met in the simulated data, which `cutoff_fast()` reports as an
+unreached look rather than as the time of the last observed event.
+
+# Treatment switching
+
+`switch_fast()` changes only the outcomes after each subject's switch. For an
+exponential survival time with hazard `lambda`, a switch at time `s` after
+accrual that multiplies the remaining time by `f` gives the survival function
+`exp(-lambda t)` for `t <= s` and `exp(-lambda s - lambda (t - s) / f)` for
+`t > s`. We let every control subject still alive at calendar month 12 switch
+with `f = 2`, so that `s = 12 - a` for a subject accrued at time `a`, and
+compare the empirical survival of the control group with the average of this
+survival function over the accrual times.
+
+```{r switching}
+lam   <- log(2) / 12
+sim_s <- simdata_fast(nsim = 200, n = c(250, 250), a.time = c(0, 6),
+                      a.prop = 1, e.hazard = list(lam, lam / 1.5),
+                      seed = 2027)
+sw    <- switch_fast(sim_s, group = 1, when = "cutoff",
+                     cutoff = rep(12, 200), aft.factor = 2)
+ctl   <- sw$group == 1
+s_sw  <- 12 - sw$accrual_time[ctl]
+t_grid <- c(6, 12, 18, 24, 36)
+data.frame(
+  t         = t_grid,
+  empirical = round(sapply(t_grid, function(t) mean(sw$surv_time[ctl] > t)), 4),
+  analytic  = round(sapply(t_grid, function(t) {
+    mean(ifelse(t <= s_sw, exp(-lam * t),
+                exp(-lam * s_sw - lam * (t - s_sw) / 2)))
+  }), 4)
+)
+```
+
+The empirical survival matches the analytic survival function to Monte Carlo
+error (the standard error is at most about 0.002 with 50,000 control subjects). The
+vignette on treatment switching also checks the switching model with the
+rank-preserving structural failure time estimator of the rpsftm package.
 
 # Summary
 
@@ -473,8 +549,9 @@ Kaplan-Meier integral and the weighted Kaplan-Meier statistic matches the RMST
 identity; the average hazard ratio matches a survival-based reference; and the
 closed-form Cox hazard ratio, with or without strata, agrees with the
 partial-likelihood maximizer to the order expected for the Pike-Halley
-approximation. This agreement is verified
-continuously by the package test suite.
+approximation. In the simulation layer, the analysis cutoffs agree with
+simtrial and the switched survival times follow their analytic distribution.
+This agreement is verified continuously by the package test suite.
 
 # References
  

@@ -7,7 +7,8 @@
 #' confidence interval. When a \code{group} is supplied, it additionally
 #' returns the two-group contrasts: the RMST difference (treatment minus
 #' control) and the RMST ratio (treatment over control), each with a standard
-#' error, confidence interval, and two-sided test. The C++ backend integrates
+#' error, confidence interval, and test (one- or two-sided, following
+#' \code{side}). The C++ backend integrates
 #' the survival step function in a single scan and is reused once per group, so
 #' the function is suitable for simulation loops with \code{presorted = TRUE}.
 #'
@@ -61,6 +62,7 @@
 #' @param presorted A logical value. If \code{TRUE}, the inputs are assumed to
 #'   be sorted in ascending order of \code{time}. If \code{FALSE} (default),
 #'   sorting is handled internally.
+#'   The order is checked, and an error is given when it does not hold.
 #'
 #' @return An object of class \code{"rmst_fast"}, a named numeric vector. In
 #'   single-group mode it has length 4 with elements \code{rmst},
@@ -153,6 +155,8 @@ rmst_fast <- function(time, event, group = NULL, control = NULL, side = 2,
       ord   <- order(time)
       time  <- time[ord]
       event <- event[ord]
+    } else {
+      check_presorted(time)
     }
 
     res      <- rmst_core(time, event, tau)
@@ -185,6 +189,8 @@ rmst_fast <- function(time, event, group = NULL, control = NULL, side = 2,
     time  <- time[ord]
     event <- event[ord]
     j     <- j[ord]
+  } else {
+    check_presorted(time)
   }
 
   is1  <- j == 1L

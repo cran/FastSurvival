@@ -83,9 +83,9 @@ test_that("pairwise_fast: input validation", {
   df <- make_karm(30)
 
   expect_error(pairwise_fast(df, control = 1),
-               "exactly one of 'event.looks' or 'time.looks'")
+               "exactly one of 'event.looks', 'time.looks', or 'cutoff.looks'")
   expect_error(pairwise_fast(df, control = 1, event.looks = 100, time.looks = 30),
-               "exactly one of 'event.looks' or 'time.looks'")
+               "exactly one of 'event.looks', 'time.looks', or 'cutoff.looks'")
   expect_error(pairwise_fast(df, control = 1, event.looks = 100),
                "'primary' must name")
   expect_error(pairwise_fast(df, control = 9, time.looks = 30),
@@ -133,4 +133,71 @@ test_that("pairwise_fast: the adjusted p-value column must be unambiguous", {
                       stat = c("logrank", "rmst"), tau = 12,
                       adjust = "bonferroni", p.col = "rmst.p")
   expect_equal(pw$p.adj, pmin(1, 2 * pw$rmst.p))
+})
+
+test_that("pairwise_fast: event-driven mode equals re-cutting the data at the primary cutoffs", {
+  nsim <- 30
+  df <- simdata_fast(nsim = nsim, n = c(120, 120, 120), a.time = c(0, 12),
+                     a.rate = 360 / 12, e.median = list(12, 16, 20),
+                     d.hazard = 0.02, seed = 919)
+  looks <- c(80, 120)
+  pw <- pairwise_fast(df, control = 1, event.looks = looks, primary = 3,
+                      stat = c("logrank", "rmst"), tau = 12)
+  prim <- analysis_fast(df[df$group %in% c(1, 3), ], control = 1,
+                        event.looks = looks)
+  expect_true(all(prim$reached))
+  A <- matrix(prim$cutoff, nrow = nsim, byrow = TRUE)
+  big <- max(A) + 1
+  for (j in c(2, 3)) {
+    for (l in seq_along(looks)) {
+      # Reference: administrative censoring at the primary cutoff in R, then
+      # a single uncut calendar look.
+      sub      <- df[df$group %in% c(1, j), ]
+      A_row    <- A[sub$sim, l]
+      enrolled <- sub$accrual_time <= A_row
+      ended    <- sub$accrual_time + sub$tte <= A_row
+      cut_dat       <- sub
+      cut_dat$tte   <- pmin(sub$tte, A_row - sub$accrual_time)
+      cut_dat$event <- sub$event * as.integer(ended)
+      cut_dat       <- cut_dat[enrolled, ]
+      ref <- analysis_fast(cut_dat, control = 1, time.looks = big,
+                           stat = c("logrank", "rmst"), tau = 12)
+      got <- pw[pw$arm == j & pw$look == l, ]
+      got <- got[order(got$sim), ]
+      expect_equal(got$cutoff, A[, l])
+      expect_equal(got$look.value, rep(looks[l], nsim))
+      expect_equal(got$logrank.z, ref$logrank.z, tolerance = 1e-10)
+      expect_equal(got$rmst.diff, ref$rmst.diff, tolerance = 1e-10)
+      expect_equal(got$n.event, ref$n.event)
+      expect_equal(got$n.enrolled, ref$n.enrolled)
+    }
+  }
+})
+
+test_that("pairwise_fast: cutoff.looks analyzes every contrast at the supplied cutoffs", {
+  df  <- make_karm(40)
+  cut <- cutoff_fast(df, event.looks = 150, time.looks = 18)
+  pw  <- pairwise_fast(df, control = 1, cutoff.looks = cut, stat = "logrank",
+                       side = 1)
+  expect_equal(nrow(pw), 2 * 40)
+  for (j in 2:3) {
+    ref <- analysis_fast(df[df$group %in% c(1, j), ], control = 1,
+                         cutoff.looks = cut, stat = "logrank", side = 1)
+    got <- pw[pw$arm == j, ]
+    got <- got[order(got$sim), ]
+    expect_equal(got$cutoff, ref$cutoff)
+    expect_equal(got$logrank.z, ref$logrank.z, tolerance = 1e-12)
+  }
+})
+
+test_that("pairwise_fast: unreached shared cutoffs blank the statistics", {
+  df  <- make_karm(10)
+  cut <- cutoff_fast(df, event.looks = 100)
+  cut[2, 1] <- NA
+  pw <- pairwise_fast(df, control = 1, cutoff.looks = cut, stat = "logrank")
+  miss <- pw[pw$sim == 2, ]
+  expect_false(any(miss$reached))
+  expect_true(all(is.na(miss$logrank.z)))
+  expect_true(all(is.na(miss$n.event)))
+  expect_true(all(!is.na(pw$logrank.z[pw$sim != 2])))
 })

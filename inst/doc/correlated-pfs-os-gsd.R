@@ -69,35 +69,33 @@ df <- simdata_fast(
   seed       = seed
 )
 
-# Observed PFS endpoint (e1).
-pfs_dat <- data.frame(
-  sim          = df$sim,
-  group        = df$group,
-  accrual_time = df$accrual_time,
-  tte          = df$e1_tte,
-  event        = df$e1_event
-)
-
-# Observed OS endpoint (e2).
-os_dat <- data.frame(
-  sim          = df$sim,
-  group        = df$group,
-  accrual_time = df$accrual_time,
-  os_tte       = df$e2_tte,
-  os_event     = df$e2_event
-)
+# Single-endpoint view of PFS (k = 1) or OS (k = 2), in the columns that
+# analysis_fast() reads.
+ep <- function(d, k) {
+  data.frame(
+    sim          = d$sim,
+    group        = d$group,
+    accrual_time = d$accrual_time,
+    tte          = d[[paste0("e", k, "_tte")]],
+    event        = d[[paste0("e", k, "_event")]]
+  )
+}
+pfs_dat <- ep(df, 1)
+os_dat  <- ep(df, 2)
 
 ## ----pfs-analysis-------------------------------------------------------------
+# Per-simulation calendar cutoffs A_l (rows = simulation, columns = look),
+# triggered by the PFS events.
+A_mat <- cutoff_fast(df, event.looks = d_PFS,
+                     tte.col = "e1_tte", event.col = "e1_event")
+
 pfs_res <- analysis_fast(
   pfs_dat,
-  control     = 1,
-  event.looks = d_PFS,
-  stat        = "logrank",
-  side        = 1
+  control      = 1,
+  cutoff.looks = A_mat,
+  stat         = "logrank",
+  side         = 1
 )
-
-# Per-simulation calendar cutoffs A_l (rows = simulation, columns = look)
-A_mat <- matrix(pfs_res$cutoff, nrow = nsim, ncol = L, byrow = TRUE)
 
 # With this sample size and these event targets the looks are reached in
 # essentially every simulation; warn if any target is not reached.
@@ -109,48 +107,21 @@ if (!all(pfs_res$reached)) {
 Z_PFS <- matrix(pfs_res$logrank.z, nrow = nsim, ncol = L, byrow = TRUE)
 
 ## ----os-analysis--------------------------------------------------------------
-big <- max(A_mat, na.rm = TRUE) + 1
-
-os_blocks <- vector("list", L)
-for (l in seq_len(L)) {
-  A_l    <- A_mat[os_dat$sim, l]                        # per-row cutoff at look l
-  follow <- pmax(0, A_l - os_dat$accrual_time)          # administrative follow-up
-  obs_t  <- pmin(os_dat$os_tte, follow)                 # observed OS time at the look
-  obs_e  <- os_dat$os_event *
-    as.integer(os_dat$accrual_time + os_dat$os_tte <= A_l)
-
-  cut_l <- data.frame(
-    sim          = os_dat$sim,
-    group        = os_dat$group,
-    accrual_time = 0,
-    tte          = obs_t,
-    event        = obs_e
-  )
-  res_l <- analysis_fast(
-    cut_l, control = 1, time.looks = big, stat = "logrank", side = 1
-  )
-
-  # Relabel as look l and report the PFS-driven cutoff for the timing summary;
-  # keep only the columns that are meaningful for the censored OS data.
-  res_l$look       <- l
-  res_l$look.value <- d_PFS[l]
-  res_l$cutoff     <- A_mat[, l]
-  os_blocks[[l]] <- res_l[, c("sim", "look", "look.value", "cutoff",
-                              "n.event", "logrank.z", "logrank.chisq",
-                              "logrank.p")]
-}
-
-os_res <- do.call(rbind, os_blocks)
-os_res <- os_res[order(os_res$sim, os_res$look), ]
+os_res <- analysis_fast(
+  os_dat,
+  control      = 1,
+  cutoff.looks = A_mat,
+  stat         = "logrank",
+  side         = 1
+)
 
 # Standardized OS log-rank statistics
-Z_OS <- matrix(NA_real_, nsim, L)
-for (l in seq_len(L)) Z_OS[, l] <- os_blocks[[l]]$logrank.z
+Z_OS <- matrix(os_res$logrank.z, nrow = nsim, ncol = L, byrow = TRUE)
 
 ## ----event-counts-------------------------------------------------------------
 d_PFS_emp <- colMeans(matrix(pfs_res$n.event, nrow = nsim, ncol = L, byrow = TRUE))
 d_OS_emp  <- colMeans(matrix(os_res$n.event,  nrow = nsim, ncol = L, byrow = TRUE))
-A_mean    <- colMeans(A_mat)
+A_mean    <- unname(colMeans(A_mat))
 
 data.frame(
   look          = seq_len(L),
@@ -240,21 +211,20 @@ os_look  <- reject_look(Z_OS,  eff_OS)
 pfs_reject <- !is.na(pfs_look)
 os_reject  <- !is.na(os_look)
 
-# Hierarchical gatekeeping: OS is claimed only if PFS is claimed at the same or
-# an earlier look.
-joint_reject <- pfs_reject & os_reject & (os_look >= pfs_look)
+# Hierarchical testing: OS is claimed at look l when PFS has been claimed at
+# look l or earlier and the OS statistic crosses its look-l boundary.
+os_cross <- Z_OS <= matrix(eff_OS, nrow = nsim, ncol = L, byrow = TRUE)
+os_cross[is.na(os_cross)] <- FALSE
+hier_reject <- Reduce(`|`, lapply(seq_len(L), function(l) {
+  pfs_reject & pfs_look <= l & os_cross[, l]
+}))
 
 power_table <- data.frame(
   quantity = c("PFS power (marginal)",
                "OS power (marginal)",
-               "OS power (after PFS, hierarchical)",
-               "Joint power (both endpoints)"),
-  value = c(mean(pfs_reject),
-            mean(os_reject),
-            mean(joint_reject),
-            mean(joint_reject))
+               "OS power within the hierarchical procedure"),
+  value = round(c(mean(pfs_reject), mean(os_reject), mean(hier_reject)), 3)
 )
-power_table$value <- round(power_table$value, 3)
 power_table
 
 ## ----correlation--------------------------------------------------------------

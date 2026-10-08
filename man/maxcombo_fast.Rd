@@ -45,16 +45,17 @@ G(1,0) for early differences, and G(1,1) for middle differences.}
 \item{presorted}{A logical value. If \code{TRUE}, \code{time}, \code{event},
 and \code{group} are assumed to be sorted in ascending order of
 \code{time}, and the internal \code{order()} call is skipped. If
-\code{FALSE} (default), sorting is handled internally.}
+\code{FALSE} (default), sorting is handled internally.
+The order is checked, and an error is given when it does not hold.}
 
 \item{abseps}{A single positive numeric value, the absolute error tolerance
 passed to the multivariate normal integration. Defaults to 1e-5. Larger
-values speed up the four-or-more-weight case at the cost of p-value
-precision.}
+values speed up the quasi-Monte-Carlo integration (four or more weights,
+or a two-sided test) at the cost of p-value precision.}
 
 \item{maxpts}{A single positive integer, the maximum number of function
-evaluations for the quasi-Monte-Carlo integration used when four or more
-weights are supplied. Defaults to 25000.}
+evaluations for the quasi-Monte-Carlo integration used with four or more
+weights or with a two-sided test (see Details). Defaults to 25000.}
 }
 \value{
 An object of class \code{"maxcombo_fast"}, a named numeric vector of

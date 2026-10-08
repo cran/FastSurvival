@@ -33,7 +33,8 @@ arms are stacked into one data frame with a `group` column labeled 1 to
 `length(n)`. The analysis path keeps its two-group contract, so a multi-arm
 design is analyzed as a set of pairwise contrasts. Each experimental arm is
 compared against the control by subsetting the generated data to those two arms
-and calling `analysis_fast` once per contrast. Because every contrast reuses the
+and calling `analysis_fast` once per contrast, which `pairwise_fast` does in a
+single call. Because every contrast reuses the
 same control arm, the pairwise statistics are positively correlated, and that
 correlation is what a Dunnett-type adjustment exploits to be less conservative
 than a Bonferroni correction.
@@ -42,8 +43,8 @@ This vignette generates a three-arm trial (one control and two experimental
 arms), runs the two pairwise log-rank tests, and reports the operating
 characteristics of the screening design under a Bonferroni correction, including
 the disjunctive power of finding at least one winning arm and the probability of
-selecting the truly better experimental arm. It then confirms empirically that
-the family-wise error rate is controlled under the global null.
+selecting the truly better experimental arm. It then estimates the family-wise
+error rate under the global null and compares it with its normal approximation.
 
 ## Design parameters
 
@@ -234,8 +235,8 @@ data.frame(
 
 The two pairwise log-rank statistics share the control arm, so they are
 positively correlated. This correlation is the reason a Dunnett adjustment is
-less conservative than Bonferroni, since Bonferroni ignores it and treats the
-comparisons as if they were independent.
+less conservative than Bonferroni, which does not use the correlation and is
+valid under any dependence between the comparisons.
 
 ```{r correlation}
 round(stats::cor(Z, use = "complete.obs"), 3)
@@ -261,26 +262,41 @@ df0 <- simdata_fast(
   seed     = seed + 1
 )
 
-P0 <- matrix(NA_real_, nrow = nsim, ncol = n_contrast)
-for (k in seq_along(exp_arms)) {
-  sub0 <- df0[df0$group %in% c(control_arm, exp_arms[k]), ]
-  res0 <- analysis_fast(sub0, control = control_arm,
-                        time.looks = analysis_month, stat = "logrank", side = 1)
-  P0[, k] <- res0$logrank.p
-}
+pw0 <- pairwise_fast(df0, control = control_arm,
+                     time.looks = analysis_month, stat = "logrank", side = 1)
+# One column per contrast; the rows of each arm are ordered by simulation.
+P0 <- sapply(exp_arms, function(k) pw0$logrank.p[pw0$arm == k])
+
+pce_hat  <- mean(P0 <= alpha_total)
+fwer_hat <- mean(rowSums(P0 <= thr_bonferroni) > 0)
+# Normal approximation with the shared-control correlation of one half.
+fwer_nrm <- 1 - mvtnorm::pmvnorm(
+  upper = rep(stats::qnorm(1 - thr_bonferroni), n_contrast),
+  corr = matrix(0.5, n_contrast, n_contrast) + diag(0.5, n_contrast),
+  algorithm = mvtnorm::TVPACK()
+)[1]
 
 data.frame(
-  quantity = c("Per-contrast type I error (nominal)",
-               "Family-wise error, Bonferroni"),
-  value = c(round(mean(P0 <= alpha_total), 3),
-            round(mean(rowSums(P0 <= thr_bonferroni) > 0), 3)),
+  quantity = c("Per-contrast type I error (nominal 0.025)",
+               "Family-wise error, Bonferroni",
+               "Family-wise error, Bonferroni (normal approximation)"),
+  estimate = round(c(pce_hat, fwer_hat, fwer_nrm), 4),
+  mc.se    = round(c(sqrt(pce_hat * (1 - pce_hat) / nsim),
+                     sqrt(fwer_hat * (1 - fwer_hat) / nsim), NA), 4),
   row.names = NULL
 )
 ```
 
-The per-contrast error is near the nominal one-sided level, and the Bonferroni
-family-wise error is at or below the target, confirming that the screening rule
-controls the error rate. A Dunnett procedure would recover some of the
+The column `mc.se` is the Monte Carlo standard error of each estimate (for the
+per-contrast error, which pools the two correlated contrasts, it is an upper
+bound). The per-contrast error is near the nominal one-sided level, and the
+Bonferroni family-wise error agrees with its normal approximation, which lies
+below the target because the Bonferroni threshold ignores the positive
+correlation, to within two Monte Carlo standard errors. With `r format(nsim, big.mark = ",")`
+trials the simulation cannot by itself resolve differences of a few thousandths,
+so the guarantee that the family-wise error does not exceed the target comes from
+the Bonferroni inequality, and the simulation confirms that the implementation
+is consistent with it. A Dunnett procedure would recover some of the
 conservatism by using the shared-control correlation, at the cost of the
 closed-form simplicity of the Bonferroni threshold.
 

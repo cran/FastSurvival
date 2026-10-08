@@ -30,8 +30,8 @@ using namespace Rcpp;
 // In oncology the first endpoint is progression-free survival, the terminal
 // endpoint is overall survival, and the intermediate event is progression; the
 // same structure applies to other settings (for example a non-fatal event and
-// all-cause death in a cardiovascular outcome trial). Subgroups are not
-// supported here; the no-subgroup pipeline is used.
+// all-cause death in a cardiovascular outcome trial). Subgroups are handled
+// by simdata_core_id_sub() at the end of this file.
 
 // Per-group dqrng consumption order (drawn contiguously over all simulations):
 //   1. accrual (one dqrunif per subject, within-interval position)
@@ -76,7 +76,7 @@ static inline double inv_cum_hazard(double tgt,
                                     const std::vector<double>& fin_time,
                                     const std::vector<double>& cum_haz) {
   const int n_int = (int) hazard.size();
-  if (n_int == 1) return tgt / hazard[0];
+  if (n_int == 1) return (hazard[0] > 0.0) ? tgt / hazard[0] : R_PosInf;
   int lo = 0, hi = n_int - 1;
   while (lo < hi) {
     int mid = lo + (hi - lo) / 2;
@@ -84,7 +84,15 @@ static inline double inv_cum_hazard(double tgt,
   }
   int k = lo;
   if (cum_haz[k] > tgt && k > 0) --k;
-  return fin_time[k] + (tgt - cum_haz[k]) / hazard[k];
+  // A zero hazard in the last piece gives an infinite time.
+  return (hazard[k] > 0.0) ? fin_time[k] + (tgt - cum_haz[k]) / hazard[k]
+                           : R_PosInf;
+}
+
+// Event indicator of min(t, dr): ties count as events, and a subject with
+// neither a finite event time nor a finite dropout time is censored.
+static inline int event_first(double t, double dr) {
+  return (t < dr || (t == dr && std::isfinite(t))) ? 1 : 0;
 }
 
 // Fill one group's block of every output column starting at row 'base'.
@@ -138,6 +146,7 @@ static void simulate_group_id_into(
     double e1_t, e2_t;
     int    intermediate = 0, switched = 0;
     double sw_time = NA_REAL;
+    const double dr = dro_col[base + i];
 
     if (t02 <= t01) {
       // Direct terminal event before any intermediate event.
@@ -145,9 +154,12 @@ static void simulate_group_id_into(
       e2_t = t02;
     } else {
       // Intermediate event first, then post-event survival (clock-reset).
+      // 'intermediate' flags the latent intermediate event; a switch requires
+      // the intermediate event to be observed, that is, on or before dropout
+      // (t01 is finite here because t01 < t02).
       intermediate = 1;
       e1_t = t01;
-      const bool sw = (u_sw[i] < switch_prop);
+      const bool sw = (u_sw[i] < switch_prop) && (t01 <= dr);
       double osp;
       if (sw) {
         switched = 1;
@@ -159,16 +171,15 @@ static void simulate_group_id_into(
       e2_t = t01 + osp;
     }
 
-    const double dr = dro_col[base + i];
     const double e1_tt = (e1_t <= dr) ? e1_t : dr;
     const double e2_tt = (e2_t <= dr) ? e2_t : dr;
 
     e1_surv_col[base + i] = e1_t;
     e2_surv_col[base + i] = e2_t;
     e1_tte_col[base + i]  = e1_tt;
-    e1_evt_col[base + i]  = (e1_t <= dr) ? 1 : 0;
+    e1_evt_col[base + i]  = event_first(e1_t, dr);
     e2_tte_col[base + i]  = e2_tt;
-    e2_evt_col[base + i]  = (e2_t <= dr) ? 1 : 0;
+    e2_evt_col[base + i]  = event_first(e2_t, dr);
     e1_cal_col[base + i]  = acc_col[base + i] + e1_tt;
     e2_cal_col[base + i]  = acc_col[base + i] + e2_tt;
     inter_col[base + i]   = intermediate;
@@ -356,4 +367,276 @@ DataFrame simdata_core_id(
   return assemble(sim_col, grp_col, acc, e1_surv, e2_surv, dro,
                   e1_tte, e1_evt, e2_tte, e2_evt, e1_cal, e2_cal,
                   inter, sw, sw_time);
+}
+
+// ------------------------------------------------------------------ //
+//  Illness-death simulator with subgroups (prevalence)
+// ------------------------------------------------------------------ //
+// Subgroups share one accrual process: each group's accrual times are drawn
+// first, then every subject is assigned a subgroup cell from the prevalence
+// (a categorical draw per subject, or fixed counts permuted at random within
+// each simulated trial), so cell membership does not depend on the accrual
+// time and all cells share the calendar. The transition, switching, and
+// dropout draws are then made cell by cell (cells in ascending order, the
+// subjects of a cell in their original order), in the order T01, T02, switch
+// uniform, post-event survival, dropout. With a single cell no cell draw is
+// made and the draws coincide with those of simdata_core_id. Rows are written
+// directly in (sim, group) interleaved order.
+
+// Transition, switching, and dropout specification of one subgroup cell.
+struct IdCellSpec {
+  std::vector<double> h01_haz, h01_fin, h01_cum;
+  std::vector<double> h02_haz, h02_fin, h02_cum;
+  std::vector<double> h12_haz, h12_fin, h12_cum;
+  std::vector<double> h12s_haz, h12s_fin, h12s_cum;
+  std::vector<double> d_haz, d_fin, d_cum;
+  double sw;
+};
+
+static std::vector<double> list_vec(const List& x, const char* name) {
+  NumericVector v = x[name];
+  return std::vector<double>(v.begin(), v.end());
+}
+
+// Unpack the per-cell specifications built by simdata_fast_id_sub() in R.
+static std::vector<IdCellSpec> unpack_cells(const List& spec) {
+  const int n_cell = spec.size();
+  std::vector<IdCellSpec> out(n_cell);
+  for (int c = 0; c < n_cell; ++c) {
+    List x = spec[c];
+    out[c].h01_haz  = list_vec(x, "h01_haz");
+    out[c].h01_fin  = list_vec(x, "h01_fin");
+    out[c].h01_cum  = list_vec(x, "h01_cum");
+    out[c].h02_haz  = list_vec(x, "h02_haz");
+    out[c].h02_fin  = list_vec(x, "h02_fin");
+    out[c].h02_cum  = list_vec(x, "h02_cum");
+    out[c].h12_haz  = list_vec(x, "h12_haz");
+    out[c].h12_fin  = list_vec(x, "h12_fin");
+    out[c].h12_cum  = list_vec(x, "h12_cum");
+    out[c].h12s_haz = list_vec(x, "h12s_haz");
+    out[c].h12s_fin = list_vec(x, "h12s_fin");
+    out[c].h12s_cum = list_vec(x, "h12s_cum");
+    out[c].d_haz    = list_vec(x, "d_haz");
+    out[c].d_fin    = list_vec(x, "d_fin");
+    out[c].d_cum    = list_vec(x, "d_cum");
+    out[c].sw       = as<double>(x["sw"]);
+  }
+  return out;
+}
+
+// Output column pointers of the interleaved data frame.
+struct IdSubCols {
+  int* sim; int* grp; int* e1e; int* e2e; int* inter; int* sw;
+  double* acc; double* e1s; double* e2s; double* dro;
+  double* e1t; double* e2t; double* e1c; double* e2c; double* st;
+  std::vector<int*> sub;
+};
+
+// Simulate one group (all simulated trials) into the interleaved output. The
+// subject k of simulated trial s goes to row s * per_sim + row_offset + k.
+static void simulate_group_id_sub(
+    int nsim, int n, int group_id, int row_offset, int per_sim,
+    const std::vector<double>& a_time, const std::vector<int>& acc_counts,
+    const std::vector<IdCellSpec>& cells, bool has_dropout,
+    const std::vector<double>& cum_prev, const IntegerMatrix& level_table,
+    bool fixed_alloc, const std::vector<int>& fixed_counts,
+    IdSubCols& o) {
+  const int total_n = nsim * n;
+  const int n_cell  = (int) cells.size();
+  auto row = [&](int i) { return (i / n) * per_sim + row_offset + (i % n); };
+
+  // 1. Accrual for the whole group block.
+  std::vector<double> acc(total_n);
+  draw_accrual_det(acc.data(), nsim, n, a_time, acc_counts);
+
+  // 2. Cell labels (1-based); no draw with a single cell.
+  std::vector<int> cell(total_n, 1);
+  if (n_cell > 1) {
+    if (fixed_alloc) {
+      int pos = 0;
+      for (int s = 0; s < nsim; ++s)
+        for (int c = 0; c < n_cell; ++c)
+          for (int r = 0; r < fixed_counts[c]; ++r) cell[pos++] = c + 1;
+      NumericVector u_perm = dqrng::dqrunif(total_n);
+      for (int s = 0; s < nsim; ++s) {
+        int* blk = cell.data() + (std::size_t) s * n;
+        const double* us = REAL(u_perm) + (std::size_t) s * n;
+        for (int i = n - 1; i > 0; --i) {
+          int k = (int) (us[i] * (double) (i + 1));
+          if (k > i) k = i;
+          const int tmp = blk[i];
+          blk[i] = blk[k];
+          blk[k] = tmp;
+        }
+      }
+    } else {
+      NumericVector u = dqrng::dqrunif(total_n);
+      const int K = (int) cum_prev.size();
+      for (int i = 0; i < total_n; ++i) {
+        const double ui = u[i];
+        int lo = 0, hi = K - 1;
+        while (lo < hi) {
+          int mid = lo + (hi - lo) / 2;
+          if (cum_prev[mid] < ui) lo = mid + 1; else hi = mid;
+        }
+        cell[i] = lo + 1;
+      }
+    }
+  }
+
+  // 3. Transition, switching, and dropout draws cell by cell.
+  std::vector<int> idx;
+  idx.reserve(total_n);
+  for (int c = 1; c <= n_cell; ++c) {
+    idx.clear();
+    for (int i = 0; i < total_n; ++i) if (cell[i] == c) idx.push_back(i);
+    const int m = (int) idx.size();
+    if (m == 0) continue;
+    const IdCellSpec& sp = cells[c - 1];
+
+    NumericVector e_01  = dqrng::dqrexp(m, 1.0);
+    NumericVector e_02  = dqrng::dqrexp(m, 1.0);
+    NumericVector u_sw  = dqrng::dqrunif(m);
+    NumericVector e_osp = dqrng::dqrexp(m, 1.0);
+    std::vector<double> drv(m, R_PosInf);
+    if (has_dropout) {
+      NumericVector e_dro = dqrng::dqrexp(m, 1.0);
+      for (int r = 0; r < m; ++r)
+        drv[r] = inv_cum_hazard(e_dro[r], sp.d_haz, sp.d_fin, sp.d_cum);
+    }
+
+    for (int r = 0; r < m; ++r) {
+      const int i  = idx[r];
+      const int rw = row(i);
+      const double t01 = inv_cum_hazard(e_01[r], sp.h01_haz, sp.h01_fin, sp.h01_cum);
+      const double t02 = inv_cum_hazard(e_02[r], sp.h02_haz, sp.h02_fin, sp.h02_cum);
+      const double dr  = drv[r];
+      double e1_t, e2_t;
+      int    intermediate = 0, switched = 0;
+      double sw_time = NA_REAL;
+      if (t02 <= t01) {
+        e1_t = t02;
+        e2_t = t02;
+      } else {
+        // As in simdata_core_id: a switch requires the intermediate event on
+        // or before dropout.
+        intermediate = 1;
+        e1_t = t01;
+        const bool swr = (u_sw[r] < sp.sw) && (t01 <= dr);
+        double osp;
+        if (swr) {
+          switched = 1;
+          sw_time  = t01;
+          osp = inv_cum_hazard(e_osp[r], sp.h12s_haz, sp.h12s_fin, sp.h12s_cum);
+        } else {
+          osp = inv_cum_hazard(e_osp[r], sp.h12_haz, sp.h12_fin, sp.h12_cum);
+        }
+        e2_t = t01 + osp;
+      }
+      const double e1_tt = (e1_t <= dr) ? e1_t : dr;
+      const double e2_tt = (e2_t <= dr) ? e2_t : dr;
+      o.sim[rw]   = i / n + 1;
+      o.grp[rw]   = group_id;
+      o.acc[rw]   = acc[i];
+      o.e1s[rw]   = e1_t;
+      o.e2s[rw]   = e2_t;
+      o.dro[rw]   = dr;
+      o.e1t[rw]   = e1_tt;
+      o.e1e[rw]   = event_first(e1_t, dr);
+      o.e2t[rw]   = e2_tt;
+      o.e2e[rw]   = event_first(e2_t, dr);
+      o.e1c[rw]   = acc[i] + e1_tt;
+      o.e2c[rw]   = acc[i] + e2_tt;
+      o.inter[rw] = intermediate;
+      o.sw[rw]    = switched;
+      o.st[rw]    = sw_time;
+      for (std::size_t f = 0; f < o.sub.size(); ++f)
+        o.sub[f][rw] = level_table(c - 1, (int) f);
+    }
+  }
+}
+
+// [[Rcpp::export]]
+DataFrame simdata_core_id_sub(
+    int nsim,
+    const IntegerVector& n_grp,
+    const NumericVector& a_time,
+    const IntegerVector& acc_counts_c,
+    const IntegerVector& acc_counts_t,
+    const List& spec_c,
+    const List& spec_t,
+    bool has_dropout,
+    const NumericVector& cum_prev_c,
+    const NumericVector& cum_prev_t,
+    const IntegerMatrix& level_table_c,
+    const IntegerMatrix& level_table_t,
+    const CharacterVector& sub_names,
+    bool fixed_alloc,
+    const IntegerVector& fixed_counts_c,
+    const IntegerVector& fixed_counts_t
+) {
+  const int n_groups = n_grp.size();
+  const int nc = n_grp[0];
+  const int nt = (n_groups == 2) ? n_grp[1] : 0;
+  const int per_sim = nc + nt;
+  const int total = nsim * per_sim;
+  const int n_fac = level_table_c.ncol();
+
+  IntegerVector sim_col(total), grp_col(total), e1_evt(total), e2_evt(total),
+                inter(total), sw(total);
+  NumericVector acc(total), e1_surv(total), e2_surv(total), dro(total),
+                e1_tte(total), e2_tte(total), e1_cal(total), e2_cal(total),
+                sw_time(total);
+  std::vector<IntegerVector> sub_store(n_fac);
+
+  IdSubCols o;
+  o.sim = INTEGER(sim_col); o.grp = INTEGER(grp_col);
+  o.e1e = INTEGER(e1_evt); o.e2e = INTEGER(e2_evt);
+  o.inter = INTEGER(inter); o.sw = INTEGER(sw);
+  o.acc = REAL(acc); o.e1s = REAL(e1_surv); o.e2s = REAL(e2_surv);
+  o.dro = REAL(dro); o.e1t = REAL(e1_tte); o.e2t = REAL(e2_tte);
+  o.e1c = REAL(e1_cal); o.e2c = REAL(e2_cal); o.st = REAL(sw_time);
+  for (int f = 0; f < n_fac; ++f) {
+    sub_store[f] = IntegerVector(total);
+    o.sub.push_back(INTEGER(sub_store[f]));
+  }
+
+  const std::vector<double> at(a_time.begin(), a_time.end());
+  const std::vector<int> acc_c(acc_counts_c.begin(), acc_counts_c.end());
+  const std::vector<int> acc_t(acc_counts_t.begin(), acc_counts_t.end());
+  const std::vector<double> cpc(cum_prev_c.begin(), cum_prev_c.end());
+  const std::vector<double> cpt(cum_prev_t.begin(), cum_prev_t.end());
+  const std::vector<int> fcc(fixed_counts_c.begin(), fixed_counts_c.end());
+  const std::vector<int> fct(fixed_counts_t.begin(), fixed_counts_t.end());
+
+  // Control (or the single group) first, then treatment, each drawn as a
+  // contiguous block over all simulated trials, as in simdata_core_id.
+  simulate_group_id_sub(nsim, nc, 1, 0, per_sim, at, acc_c,
+                        unpack_cells(spec_c), has_dropout, cpc,
+                        level_table_c, fixed_alloc, fcc, o);
+  if (n_groups == 2) {
+    simulate_group_id_sub(nsim, nt, 2, nc, per_sim, at, acc_t,
+                          unpack_cells(spec_t), has_dropout, cpt,
+                          level_table_t, fixed_alloc, fct, o);
+  }
+
+  List cols;
+  cols["sim"]   = sim_col;
+  cols["group"] = grp_col;
+  for (int f = 0; f < n_fac; ++f)
+    cols[std::string(sub_names[f])] = sub_store[f];
+  cols["accrual_time"]     = acc;
+  cols["e1_surv_time"]     = e1_surv;
+  cols["e2_surv_time"]     = e2_surv;
+  cols["dropout_time"]     = dro;
+  cols["e1_tte"]           = e1_tte;
+  cols["e1_event"]         = e1_evt;
+  cols["e2_tte"]           = e2_tte;
+  cols["e2_event"]         = e2_evt;
+  cols["e1_calendar_time"] = e1_cal;
+  cols["e2_calendar_time"] = e2_cal;
+  cols["intermediate"]     = inter;
+  cols["switched"]         = sw;
+  cols["switch_time"]      = sw_time;
+  return DataFrame(cols);
 }

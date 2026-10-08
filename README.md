@@ -7,6 +7,7 @@
 [![CRAN downloads](https://cranlogs.r-pkg.org/badges/FastSurvival)](https://cran.r-project.org/package=FastSurvival)
 [![CRAN downloads total](https://cranlogs.r-pkg.org/badges/grand-total/FastSurvival)](https://cran.r-project.org/package=FastSurvival)
 [![pkgdown site](https://img.shields.io/badge/docs-pkgdown-blue.svg)](https://gosukehommaEX.github.io/FastSurvival/)
+[![Codecov test coverage](https://codecov.io/gh/gosukehommaEX/FastSurvival/graph/badge.svg)](https://app.codecov.io/gh/gosukehommaEX/FastSurvival)
 <!-- badges: end -->
 
 FastSurvival provides fast alternatives to the standard survival analysis
@@ -20,6 +21,7 @@ where the standard iterative or object-building overhead of `survfit()`,
 `survdiff()`, and `coxph()` becomes a computational bottleneck. Core
 computations are implemented in C++ via
 [Rcpp](https://cran.r-project.org/package=Rcpp) for maximum performance.
+Collett (2014) gives the methodological background of the standard methods.
 
 The full documentation site, including function references and articles, is
 available at <https://gosukehommaEX.github.io/FastSurvival/>.
@@ -47,9 +49,11 @@ available at <https://gosukehommaEX.github.io/FastSurvival/>.
 
 | Function | Description |
 |----------|-------------|
-| `simdata_fast()` | Individual patient data simulator for one-, two-, or multi-arm trials, with piecewise-uniform accrual, piecewise-exponential survival and dropout, optional subgroups, and two correlated endpoints from an illness-death model. |
-| `analysis_fast()` | Interim or sequential analysis of simulated data at one or more looks, defined by target event counts or calendar times. |
-| `pairwise_fast()` | Pairwise comparison of each experimental arm against a shared control on multi-arm data, at fixed calendar looks or a primary contrast's event-driven cutoffs, with an optional Bonferroni adjustment. |
+| `simdata_fast()` | Individual patient data simulator for one-, two-, or multi-arm trials, with piecewise-uniform accrual, piecewise-exponential survival and dropout, optional subgroups, and two correlated endpoints from an illness-death model, which can also be combined with subgroups. |
+| `cutoff_fast()` | Per-simulation calendar cutoffs of the analysis looks from combined trigger rules (target events, planned and maximum calendar times, minimum time after the previous look, minimum follow-up after a number of enrolled subjects). |
+| `analysis_fast()` | Interim or sequential analysis of simulated data at one or more looks, defined by target event counts, calendar times, or per-simulation cutoffs from `cutoff_fast()`. |
+| `switch_fast()` | Treatment switching in simulated data: switching at an intermediate event (such as progression), at an opening time after an interim analysis, or at the later of the two, optionally only in the trials selected by an interim decision, with an accelerated-failure-time or new-hazard effect after the switch. |
+| `pairwise_fast()` | Pairwise comparison of each experimental arm against a shared control on multi-arm data, at fixed calendar looks, a primary contrast's event-driven cutoffs, or supplied per-simulation cutoffs, with an optional Bonferroni adjustment. |
 | `simsummary_fast()` | Operating-characteristic summary (rejection and futility rates, stopping-look distribution, expected timing) from `analysis_fast()` output and supplied boundaries. |
 
 ### Visualization
@@ -172,7 +176,8 @@ vectors. This makes it orders of magnitude faster than `survfit()` plus
 `summary()` when the same sorted data are evaluated repeatedly at a fixed
 landmark time inside a simulation loop.
 
-**survdiff_fast** computes the log-rank statistic using a two-pointer merge
+**survdiff_fast** computes the log-rank statistic (Mantel, 1966) using a
+two-pointer merge
 scan over the pooled sorted data, walking the time axis once while
 maintaining per-group at-risk counters and processing tied event times
 atomically. The C++ backend avoids the rank construction, `tabulate()`, and
@@ -185,9 +190,15 @@ sharing the same single-scan backend.
 
 **coxph_fast** implements the Pike-Halley Estimator proposed by Homma
 (2025), a closed-form approximation to the Cox partial likelihood maximizer.
-The estimator anchors at the Pike closed-form estimate and applies a single
-analytic Halley correction to the Cox score, giving residual error of order
-O_p(n^{-3/2}) relative to the Cox maximum likelihood estimate. On the
+The estimator anchors at the Pike closed-form estimate, the ratio of the
+observed-to-expected event ratios of the two groups from the log-rank
+computation (Berry, Kitchin, and Mock, 1991), and applies a single analytic
+Halley correction to the Cox score. Because the Halley step converges
+cubically, the residual error relative to the Cox maximum likelihood estimate
+is of the order of the cube of the error of the Pike anchor. It is negligible
+near the null hypothesis. At a fixed hazard ratio away from 1 the Pike anchor
+keeps a bias that does not vanish with the sample size, so the residual error
+levels off at a small value. On the
 `pharmacoSmoking` dataset (tie rate 77.5%), the Pike-Halley Estimator
 reproduces the Breslow-based Cox estimate to within on the order of 1e-08.
 The Wald confidence interval uses the observed information at the Pike
@@ -198,10 +209,11 @@ anchor, score, and information are summed over strata, which approximates the
 stratified Cox model `coxph(... + strata(s), ties = "breslow")`.
 
 **rmst_fast** integrates the Kaplan-Meier survival step function up to a
-horizon in a single C++ scan, reused once per group. With a single group it
+horizon (Royston and Parmar, 2013) in a single C++ scan, reused once per
+group. With a single group it
 returns the RMST with a Greenwood-type standard error and a Wald confidence
 interval; with two groups it adds the RMST difference and ratio contrasts,
-each with a standard error, confidence interval, and two-sided test.
+each with a standard error, confidence interval, and test.
 
 **wmst_fast** computes the window mean survival time, the area under the
 Kaplan-Meier curve between a lower and an upper window limit, generalizing the
@@ -211,7 +223,7 @@ on a clinically relevant window, following Paukner and Chappell (2021). The
 same single C++ scan as `rmst_fast` accumulates the windowed area and a
 Greenwood-type variance in which each event time contributes its squared
 remaining window area. With two groups it reports the difference (treatment
-minus control) with a standard error, confidence interval, and two-sided test.
+minus control) with a standard error, confidence interval, and test.
 
 **milestone_fast** compares the Kaplan-Meier survival probabilities of two
 groups at a prespecified milestone timepoint, estimating the difference
@@ -227,11 +239,13 @@ quantile depends on the local hazard, two variance methods are provided: a
 native method using a kernel-smoothed hazard with a Greenwood increment, and an
 `nph`-compatible method using a local constant hazard, which reproduces the
 standard error and p-value of the median comparison in the `nph` package to
-numerical precision. The point estimate is the same under both methods.
+numerical precision when the Kaplan-Meier and Nelson-Aalen medians coincide
+(the usual case). The point estimate is the same under both methods.
 
 **maxcombo_fast** computes the max-combo test, the maximum over a set of
 Fleming-Harrington weighted log-rank statistics, for comparing survival
-under non-proportional hazards. The C++ backend evaluates every weighted
+under non-proportional hazards (Karrison, 2016; Lin et al., 2020). The C++
+backend evaluates every weighted
 numerator and the full between-scheme covariance matrix in a single scan,
 and the p-value follows from the implied multivariate normal distribution.
 Taking the most extreme of several complementary weights makes the test
@@ -285,8 +299,8 @@ double-integral covariance terms in linear scans. The primary test is on the
 group-share scale, as in the source method, with an equivalent test and a
 confidence interval reported on the log scale.
 
-**simdata_fast** generates individual patient data for one- or two-group
-time-to-event trials. Accrual times follow a piecewise-uniform distribution,
+**simdata_fast** generates individual patient data for one-group, two-group,
+or multi-arm time-to-event trials. Accrual times follow a piecewise-uniform distribution,
 and survival and dropout times follow either a simple or piecewise
 exponential distribution, selected automatically based on whether a scalar
 or vector hazard is supplied. Optional subgroups are defined by a prevalence
@@ -298,17 +312,36 @@ optional treatment switching. The entire generation pipeline runs in a
 single C++ kernel
 that materializes the output data frame once, avoiding intermediate R-level
 vector operations and copies, and random-number generation uses
-[dqrng](https://cran.r-project.org/package=dqrng) for speed.
+[dqrng](https://cran.r-project.org/package=dqrng) for speed. With the
+`stream` argument a large study can be generated in batches from independent
+random-number streams, sequentially or in parallel, with results that do not
+depend on how the batches are distributed.
+
+**cutoff_fast** determines the calendar time of every analysis look in every
+simulated trial in a single C++ pass, from a target number of events (on the
+whole trial, a subset of subjects, or another endpoint), a planned calendar
+time, a maximum calendar time, a minimum time after the previous look, and a
+minimum follow-up after a given number of enrolled subjects, combined as in
+`get_analysis_date()` of the
+[simtrial](https://cran.r-project.org/package=simtrial) package. The resulting
+cutoffs are passed to `analysis_fast()`, `pairwise_fast()`, and
+`switch_fast()`, so that the same analysis times can drive several endpoints,
+several contrasts, and a modification of the data after an interim analysis.
 
 **analysis_fast** performs interim or sequential analyses of simulated
-two-group data at one or more looks, defined either by a target cumulative
-number of events or by a calendar time. At every look the data are
+two-group data at one or more looks, defined by a target cumulative number
+of events, by a calendar time, or by per-simulation cutoffs from
+`cutoff_fast()`. At every look the data are
 administratively censored at the corresponding calendar cutoff, and the
 requested statistics are computed for each simulated trial. The censoring,
 time sorting, and per-cell statistics are handled by a fused C++ kernel that
 reuses the same analysis cores as the standalone functions, so the same
 results are obtained without the per-iteration overhead of repeated wrapper
-calls. Statistics can also be reported within each subgroup.
+calls. Statistics can also be reported within each subgroup. The max-combo
+p-value, a multivariate normal integral per trial and look, dominates the
+computing time; when only the decisions at nominal levels are needed,
+`mc.alpha` integrates only the p-values that the Bonferroni bounds do not
+already place on one side of the level, with unchanged decisions.
 
 **pairwise_fast** compares each experimental arm against a shared control on
 multi-arm data by running `analysis_fast()` once per contrast and stacking the
@@ -316,8 +349,21 @@ results with an `arm` column. With fixed calendar looks every contrast shares
 the same data cutoff. With an event-driven design a designated primary contrast
 fixes the per-simulation calendar cutoff at which all contrasts are analyzed,
 reproducing the standard rule that the primary analysis defines a single data
-cutoff. An optional Bonferroni adjustment controls the family-wise error rate
+cutoff. Per-simulation cutoffs from `cutoff_fast()` can also be supplied
+directly. An optional Bonferroni adjustment controls the family-wise error rate
 across the contrasts at each look.
+
+**switch_fast** applies a treatment-switching rule to simulated data by
+changing only the outcomes after each subject's switch: switching at the
+intermediate event of an illness-death simulation (for example at
+progression), at an opening time after an interim analysis (crossover at a
+milestone), or at the later of the two, with the remaining time to the terminal
+event multiplied by an acceleration factor (the causal model of the
+rank-preserving structural failure time method of Robins and Tsiatis, 1991) or
+redrawn from a new hazard. Because
+the history before the switch is kept, an interim analysis is unaffected, so a
+crossover decided by an interim result is simulated for all trials at once:
+analyze the interim, select the trials, switch, and analyze the later looks.
 
 **simsummary_fast** aggregates the per-simulation, per-look output of
 `analysis_fast()` into operating characteristics: the rejection rate, the
@@ -377,20 +423,24 @@ res <- analysis_fast(
   stat = "logrank", side = 1
 )
 
-# 3. Summarize operating characteristics against efficacy boundaries
-#    (nominal levels from a group-sequential design, e.g. gsDesign)
+# 3. Summarize operating characteristics against efficacy boundaries:
+#    nominal one-sided levels of Lan-DeMets O'Brien-Fleming-type spending
+#    (one-sided alpha 0.025) at 300 and 450 events, from
+#    gsDesign::gsDesign(k = 2, test.type = 1, timing = 300 / 450,
+#                       sfu = gsDesign::sfLDOF)
 oc <- simsummary_fast(
   res,
   p.col = "logrank.p",
-  alpha = c(0.0006, 0.0238)
+  alpha = c(0.0060, 0.0231)
 )
 oc
 ```
 
-The estimation functions can also be used directly inside a loop. Each
-returned object is internally a numeric vector, so after stripping the class
-with `unclass()` the per-simulation results can be combined with `rbind()`
-into an ordinary numeric matrix:
+The estimation functions can also be used directly inside a loop. Except for
+`milestone_fast()` and `ahr_fast()`, which return lists, each returned object
+is internally a numeric vector, so after stripping the class with
+`unclass()` the per-simulation results can be combined with `rbind()` into an
+ordinary numeric matrix:
 
 ```r
 results <- vector("list", 1000L)
@@ -414,7 +464,7 @@ statistics arising in its consideration. *Cancer Chemotherapy Reports*,
 50(3), 163-170.
  
 Gehan, E. A. (1965). A generalized Wilcoxon test for comparing arbitrarily
-single-censored samples. *Biometrika*, 52, 203-223.
+singly-censored samples. *Biometrika*, 52, 203-223.
  
 Tarone, R. E., & Ware, J. (1977). On distribution-free tests for equality of
 survival distributions. *Biometrika*, 64, 156-160.
@@ -483,6 +533,10 @@ hazard ratio. *Biometrika*, 68(1), 105-112.
 Dormuth, I., Pauly, M., Rauch, G., & Herrmann, C. (2024). Sample size
 calculation under nonproportional hazards using average hazard ratios.
 *Biometrical Journal*, 66(6), e202300271.
+ 
+Robins, J. M., & Tsiatis, A. A. (1991). Correcting for non-compliance in
+randomized trials using rank preserving structural failure time models.
+*Communications in Statistics - Theory and Methods*, 20(8), 2609-2631.
  
 Collett, D. (2014). *Modelling Survival Data in Medical Research* (3rd ed.).
 Chapman and Hall/CRC.

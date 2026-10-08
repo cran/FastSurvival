@@ -219,3 +219,10 @@ test_that("ahsw_fast warns when tau exceeds the observed follow-up", {
   expect_warning(ahsw_fast(tt, ee, gg, control = 0, tau = lim + 1), "exceeds")
   expect_warning(ahsw_fast(tt, ee, gg, control = 0, tau = lim / 2), NA)
 })
+
+test_that("ahsw_fast: presorted = TRUE checks the order", {
+  time  <- c(3, 1, 2, 4, 6, 5)
+  event <- c(1, 1, 0, 1, 1, 0)
+  group <- c(0, 1, 0, 1, 0, 1)
+  expect_error(ahsw_fast(time, event, group, control = 0, tau = 3, presorted = TRUE), "presorted = FALSE")
+})

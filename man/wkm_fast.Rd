@@ -36,7 +36,8 @@ censoring weight), \code{"sqrtPF"} (its square root) or \code{"constant"}
 
 \item{presorted}{Logical; set to \code{TRUE} when \code{time}, \code{event}
 and \code{group} are already sorted in ascending order of \code{time}, to
-skip the internal sort. Defaults to \code{FALSE}.}
+skip the internal sort. Defaults to \code{FALSE}.
+The order is checked, and an error is given when it does not hold.}
 }
 \value{
 A named numeric vector of class \code{"wkm_fast"} with the weighted

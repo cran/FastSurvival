@@ -354,31 +354,38 @@ computations are implemented in C++ via Rcpp.</p>
 </div>
 <div id="function-families" class="section level1">
 <h1>Function families</h1>
-<p>The package has two families of functions.</p>
+<p>The package has two families of functions. Collett (2014) gives the
+methodological background of the standard methods they implement.</p>
 <p>The estimation and testing functions operate on a single dataset and
 return an S3 object with a <code>print()</code> method.
 <code>survfit_fast()</code> evaluates the Kaplan-Meier estimate at a
 single time point. <code>survdiff_fast()</code> computes the log-rank
 test and its weighted and stratified variants. <code>coxph_fast()</code>
-returns a closed-form hazard ratio. <code>rmst_fast()</code> returns the
-restricted mean survival time, and <code>wmst_fast()</code> the window
-mean survival time over an interval. <code>milestone_fast()</code>
-compares survival at a milestone timepoint, and
-<code>medsurv_fast()</code> compares median survival times.
-<code>maxcombo_fast()</code> computes the max-combo test,
+returns a closed-form hazard ratio, the Pike-Halley Estimator (Homma,
+2025). <code>rmst_fast()</code> returns the restricted mean survival
+time, and <code>wmst_fast()</code> the window mean survival time over an
+interval. <code>milestone_fast()</code> compares survival at a milestone
+timepoint, and <code>medsurv_fast()</code> compares median survival
+times. <code>maxcombo_fast()</code> computes the max-combo test,
 <code>rmw_fast()</code> the robust modestly-weighted log-rank test, and
 <code>wkm_fast()</code> the weighted Kaplan-Meier (Pepe-Fleming) test.
 <code>ahsw_fast()</code> computes the average hazard with survival
 weight, and <code>ahr_fast()</code> the Kalbfleisch-Prentice average
 hazard ratio.</p>
 <p>The simulation functions support a full simulation study.
-<code>simdata_fast()</code> generates individual patient data for one-
-or two-group trials. <code>analysis_fast()</code> performs interim or
-sequential analyses of the simulated data at one or more looks, and can
-compute any of the estimation and testing statistics above, optionally
-within subgroups. <code>simsummary_fast()</code> aggregates the
-operating characteristics from the analysis output against supplied
-boundaries.</p>
+<code>simdata_fast()</code> generates individual patient data for
+one-group, two-group, or multi-arm trials. <code>cutoff_fast()</code>
+determines the calendar time of every analysis look in every simulated
+trial from combined event and calendar-time rules.
+<code>analysis_fast()</code> performs interim or sequential analyses of
+the simulated data at one or more looks, and can compute any of the
+estimation and testing statistics above, optionally within subgroups.
+<code>switch_fast()</code> applies treatment switching to the simulated
+data, at progression or after an interim analysis.
+<code>pairwise_fast()</code> compares each experimental arm of a
+multi-arm trial with a shared control. <code>simsummary_fast()</code>
+aggregates the operating characteristics from the analysis output
+against supplied boundaries.</p>
 </div>
 <div id="a-minimal-example" class="section level1">
 <h1>A minimal example</h1>
@@ -386,48 +393,49 @@ boundaries.</p>
 survival package, with a one-sided test of treatment benefit
 (<code>side = 1</code>).</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">library</span>(survival)</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co"># Single-time-point Kaplan-Meier estimate</span></span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>ord <span class="ot">&lt;-</span> <span class="fu">order</span>(ovarian<span class="sc">$</span>futime)</span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="fu">survfit_fast</span>(ovarian<span class="sc">$</span>futime[ord], ovarian<span class="sc">$</span>fustat[ord],</span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>             <span class="at">t_eval =</span> <span class="dv">500</span>, <span class="at">conf.type =</span> <span class="st">&quot;log&quot;</span>)</span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt; Kaplan-Meier survival estimate (single time point)</span></span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt;         survival std.err lower 95% upper 95%</span></span>
-<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt; t = 500   0.5961  0.0999    0.4291    0.8279</span></span>
-<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co">#&gt;  Confidence interval type: log</span></span>
-<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a></span>
-<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="co"># Log-rank test</span></span>
-<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="fu">survdiff_fast</span>(ovarian<span class="sc">$</span>futime, ovarian<span class="sc">$</span>fustat, ovarian<span class="sc">$</span>rx,</span>
-<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>              <span class="at">control =</span> <span class="dv">1</span>, <span class="at">side =</span> <span class="dv">1</span>)</span>
-<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co">#&gt; Log-rank test (two-group)</span></span>
-<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="co">#&gt;   N = 26,  control = 1</span></span>
-<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a><span class="co">#&gt;           Observed Expected (O-E)^2/E (O-E)^2/V</span></span>
-<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a><span class="co">#&gt; control          7   5.2335    0.5962    1.0627</span></span>
-<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a><span class="co">#&gt; treatment        5   6.7665    0.4612    1.0627</span></span>
-<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a><span class="co">#&gt;  Z = -1.031,  one-sided p-value = 0.1513  </span></span>
-<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a><span class="co">#&gt; ---</span></span>
-<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a><span class="co">#&gt; Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</span></span>
-<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a></span>
-<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a><span class="co"># Hazard ratio via the Pike-Halley Estimator</span></span>
-<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a><span class="fu">coxph_fast</span>(ovarian<span class="sc">$</span>futime, ovarian<span class="sc">$</span>fustat, ovarian<span class="sc">$</span>rx,</span>
-<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a>           <span class="at">control =</span> <span class="dv">1</span>, <span class="at">side =</span> <span class="dv">1</span>)</span>
-<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a><span class="co">#&gt; Pike-Halley estimator for the hazard ratio (two-group)</span></span>
-<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a><span class="co">#&gt;   control = 1</span></span>
-<span id="cb2-35"><a href="#cb2-35" tabindex="-1"></a><span class="co">#&gt;   alternative = one.sided</span></span>
-<span id="cb2-36"><a href="#cb2-36" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb2-37"><a href="#cb2-37" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
-<span id="cb2-38"><a href="#cb2-38" tabindex="-1"></a><span class="co">#&gt;          coef exp(coef) se(coef)      z Pr(&gt;|z|)</span></span>
-<span id="cb2-39"><a href="#cb2-39" tabindex="-1"></a><span class="co">#&gt; group -0.5964    0.5508   0.5868 -1.016    0.155</span></span>
-<span id="cb2-40"><a href="#cb2-40" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb2-41"><a href="#cb2-41" tabindex="-1"></a><span class="co">#&gt; Hazard ratio and 95% Wald confidence interval:</span></span>
-<span id="cb2-42"><a href="#cb2-42" tabindex="-1"></a><span class="co">#&gt;       exp(coef) exp(-coef) lower .95 upper .95</span></span>
-<span id="cb2-43"><a href="#cb2-43" tabindex="-1"></a><span class="co">#&gt; group    0.5508     1.8155    0.1744    1.7399</span></span></code></pre></div>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co">#&gt; Warning: package &#39;survival&#39; was built under R version 4.6.1</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co"># Single-time-point Kaplan-Meier estimate</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>ord <span class="ot">&lt;-</span> <span class="fu">order</span>(ovarian<span class="sc">$</span>futime)</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="fu">survfit_fast</span>(ovarian<span class="sc">$</span>futime[ord], ovarian<span class="sc">$</span>fustat[ord],</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>             <span class="at">t_eval =</span> <span class="dv">500</span>, <span class="at">conf.type =</span> <span class="st">&quot;log&quot;</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; Kaplan-Meier survival estimate (single time point)</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt;         survival std.err lower 95% upper 95%</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt; t = 500   0.5961  0.0999    0.4291    0.8279</span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="co">#&gt;  Confidence interval type: log</span></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="co"># Log-rank test</span></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="fu">survdiff_fast</span>(ovarian<span class="sc">$</span>futime, ovarian<span class="sc">$</span>fustat, ovarian<span class="sc">$</span>rx,</span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>              <span class="at">control =</span> <span class="dv">1</span>, <span class="at">side =</span> <span class="dv">1</span>)</span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt; Log-rank test (two-group)</span></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="co">#&gt;   N = 26,  control = 1</span></span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a><span class="co">#&gt;           Observed Expected (O-E)^2/E (O-E)^2/V</span></span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a><span class="co">#&gt; control          7   5.2335    0.5962    1.0627</span></span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a><span class="co">#&gt; treatment        5   6.7665    0.4612    1.0627</span></span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a><span class="co">#&gt;  Z = -1.031,  one-sided p-value = 0.1513  </span></span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a><span class="co">#&gt; ---</span></span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a><span class="co">#&gt; Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</span></span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a><span class="co"># Hazard ratio via the Pike-Halley Estimator</span></span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a><span class="fu">coxph_fast</span>(ovarian<span class="sc">$</span>futime, ovarian<span class="sc">$</span>fustat, ovarian<span class="sc">$</span>rx,</span>
+<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a>           <span class="at">control =</span> <span class="dv">1</span>, <span class="at">side =</span> <span class="dv">1</span>)</span>
+<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a><span class="co">#&gt; Pike-Halley estimator for the hazard ratio (two-group)</span></span>
+<span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-35"><a href="#cb2-35" tabindex="-1"></a><span class="co">#&gt;   control = 1</span></span>
+<span id="cb2-36"><a href="#cb2-36" tabindex="-1"></a><span class="co">#&gt;   alternative = one.sided</span></span>
+<span id="cb2-37"><a href="#cb2-37" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-38"><a href="#cb2-38" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
+<span id="cb2-39"><a href="#cb2-39" tabindex="-1"></a><span class="co">#&gt;          coef exp(coef) se(coef)      z Pr(&gt;|z|)</span></span>
+<span id="cb2-40"><a href="#cb2-40" tabindex="-1"></a><span class="co">#&gt; group -0.5964    0.5508   0.5868 -1.016    0.155</span></span>
+<span id="cb2-41"><a href="#cb2-41" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-42"><a href="#cb2-42" tabindex="-1"></a><span class="co">#&gt; Hazard ratio and 95% Wald confidence interval:</span></span>
+<span id="cb2-43"><a href="#cb2-43" tabindex="-1"></a><span class="co">#&gt;       exp(coef) exp(-coef) lower .95 upper .95</span></span>
+<span id="cb2-44"><a href="#cb2-44" tabindex="-1"></a><span class="co">#&gt; group    0.5508     1.8155    0.1744    1.7399</span></span></code></pre></div>
 </div>
 <div id="where-to-go-next" class="section level1">
 <h1>Where to go next</h1>
@@ -437,9 +445,11 @@ packages on a real clinical-trial dataset. <em>Speed comparison</em>
 quantifies the performance gain. <em>Group sequential design with the
 simulation trio</em> demonstrates <code>simdata_fast()</code>,
 <code>analysis_fast()</code>, and <code>simsummary_fast()</code> against
-a gsDesign reference. Further applied vignettes work the simulation trio
-through nonproportional-hazards, correlated multiple-endpoint, and
-multiregional settings.</p>
+a gsDesign reference. Further applied vignettes work the simulation
+functions through nonproportional-hazards, correlated multiple-endpoint,
+multi-arm, multiregional, and treatment-switching settings, and
+<em>Using your own data generator</em> analyzes data generated outside
+the package with the same functions.</p>
 </div>
 <div id="references" class="section level1">
 <h1>References</h1>

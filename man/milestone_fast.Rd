@@ -46,7 +46,8 @@ one of \code{"wald"}, \code{"loglog"}, or \code{"mover"}.}
 
 \item{presorted}{Logical. If \code{TRUE} the input is assumed to be sorted
 by \code{time} in ascending order and the internal sort is skipped. This
-is intended for repeated calls inside simulation loops.}
+is intended for repeated calls inside simulation loops.
+The order is checked, and an error is given when it does not hold.}
 }
 \value{
 An object of class \code{"milestone_fast"}, a list with the
@@ -61,7 +62,10 @@ methods are provided. The \code{"wald"} method uses the unpooled Greenwood
 variance directly. The \code{"loglog"} and \code{"mover"} methods build the
 confidence interval for the difference with the method of variance estimates
 recovery (MOVER), recovering the variance from the one-sample complementary
-log-log and log transformed confidence intervals respectively. See Tang
+log-log and log transformed confidence intervals respectively. When the
+estimate of a group is 0 or 1 at \code{tau}, its one-sample interval
+degenerates to the estimate, so the interval of the difference is still
+given; the \code{"loglog"} test statistic is then \code{NA}. See Tang
 (2021) for the MOVER difference interval and Tang (2022) for the use of
 milestone survival in trial design.
 }

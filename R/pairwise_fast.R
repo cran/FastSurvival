@@ -8,7 +8,7 @@
 #' a Bonferroni-adjusted p-value across the contrasts.
 #'
 #' @details
-#' Two timing regimes are supported, exactly one of which must be requested.
+#' Three timing regimes are supported, exactly one of which must be requested.
 #'
 #' With \code{time.looks}, every contrast is analyzed at the same fixed calendar
 #' time or times, so all contrasts share the same data cutoff by construction.
@@ -21,8 +21,19 @@
 #' reproduces the standard design in which the primary event-driven analysis
 #' fixes a single data cutoff at which all comparisons are performed. For a
 #' simulation in which the primary event target is not reached at a look, that
-#' look is marked with \code{reached = FALSE} and \code{NA} statistics for every
-#' contrast.
+#' look is marked with \code{reached = FALSE}, and its counts and statistics are
+#' \code{NA} for every contrast. The shared cutoffs are computed by \code{\link{cutoff_fast}} on the
+#' events of the control and primary arms.
+#'
+#' With \code{cutoff.looks}, every contrast is analyzed at the supplied
+#' per-simulation calendar cutoffs, for example those returned by
+#' \code{\link{cutoff_fast}} for a combination of event and calendar-time rules.
+#' A look that is not reached in a simulation (\code{NA} cutoff) is marked with
+#' \code{reached = FALSE} and \code{NA} counts and statistics, as in the
+#' event-driven regime. This differs from \code{\link{analysis_fast}}, which
+#' analyzes the full data at an unreached look; in
+#' \code{\link{simsummary_fast}} an unreached look of \code{pairwise_fast}
+#' output therefore never crosses a boundary.
 #'
 #' The Bonferroni option multiplies each p-value by the number of contrasts and
 #' caps it at one, controlling the family-wise error rate across the
@@ -42,13 +53,19 @@
 #'   by \code{\link{simdata_fast}}.
 #' @param control The group label of the control arm.
 #' @param event.looks A numeric vector of target cumulative event counts for the
-#'   primary contrast, one per look. Mutually exclusive with \code{time.looks};
-#'   requires \code{primary}.
+#'   primary contrast, one per look. Mutually exclusive with \code{time.looks}
+#'   and \code{cutoff.looks}; requires \code{primary}.
 #' @param time.looks A numeric vector of calendar times, one per look. Mutually
-#'   exclusive with \code{event.looks}.
+#'   exclusive with \code{event.looks} and \code{cutoff.looks}.
+#' @param cutoff.looks A numeric matrix of per-simulation calendar cutoffs with
+#'   one row per simulated trial and one column per look, as returned by
+#'   \code{\link{cutoff_fast}}. Mutually exclusive with \code{event.looks} and
+#'   \code{time.looks}. See \code{\link{analysis_fast}} for how the rows are
+#'   matched to the simulations.
 #' @param primary The group label of the experimental arm whose control-versus-arm
 #'   comparison defines the shared calendar cutoff. Required with
-#'   \code{event.looks} and ignored with \code{time.looks}.
+#'   \code{event.looks} and ignored with \code{time.looks} and
+#'   \code{cutoff.looks}.
 #' @param arms A vector of experimental arm labels to compare against the control.
 #'   Defaults to every group other than \code{control}.
 #' @param stat The test statistic passed to \code{\link{analysis_fast}} (for
@@ -91,7 +108,8 @@
 #'                      stat = "logrank", side = 1, adjust = "bonferroni")
 #' head(pw2)
 #'
-#' @seealso \code{\link{simdata_fast}}, \code{\link{analysis_fast}}
+#' @seealso \code{\link{simdata_fast}}, \code{\link{analysis_fast}},
+#'   \code{\link{cutoff_fast}}
 #'
 #' @export
 pairwise_fast <- function(data, control,
@@ -99,7 +117,7 @@ pairwise_fast <- function(data, control,
                           primary = NULL, arms = NULL,
                           stat = "logrank",
                           adjust = c("none", "bonferroni"),
-                          p.col = NULL, ...) {
+                          p.col = NULL, cutoff.looks = NULL, ...) {
   adjust <- match.arg(adjust)
   dots <- list(...)
   if (isTRUE(dots$by.subgroup)) {
@@ -113,10 +131,12 @@ pairwise_fast <- function(data, control,
          "columns, as produced by simdata_fast().")
   }
 
-  has_event <- !is.null(event.looks)
-  has_time  <- !is.null(time.looks)
-  if (has_event == has_time) {
-    stop("Supply exactly one of 'event.looks' or 'time.looks'.")
+  has_event  <- !is.null(event.looks)
+  has_time   <- !is.null(time.looks)
+  has_cutoff <- !is.null(cutoff.looks)
+  if (has_event + has_time + has_cutoff != 1L) {
+    stop("Supply exactly one of 'event.looks', 'time.looks', or ",
+         "'cutoff.looks'.")
   }
 
   groups <- sort(unique(data$group))
@@ -179,80 +199,36 @@ pairwise_fast <- function(data, control,
   }
 
   # ---- Event-driven: the primary contrast defines the shared cutoff ---------
-  if (is.null(primary)) {
-    stop("With 'event.looks', 'primary' must name the experimental arm whose ",
-         "event-driven analysis defines the shared calendar cutoff.")
-  }
-  if (length(primary) != 1L || !primary %in% arms) {
-    stop("'primary' must be a single experimental arm listed in 'arms'.")
-  }
-
-  sims_all <- sort(unique(data$sim))
-  nsim     <- length(sims_all)
-  L        <- length(event.looks)
-
-  prim_sub <- data[data$group %in% c(control, primary), , drop = FALSE]
-  prim_res <- analysis_fast(prim_sub, control = control,
-                            event.looks = event.looks, stat = stat, ...)
-  # analysis_fast orders rows (sim outer, look inner), so a byrow fill recovers
-  # the per-simulation-by-look cutoff and reached matrices.
-  A_mat <- matrix(prim_res$cutoff,  nrow = nsim, ncol = L, byrow = TRUE)
-  R_mat <- matrix(prim_res$reached, nrow = nsim, ncol = L, byrow = TRUE)
-  finiteA <- A_mat[is.finite(A_mat)]
-  big     <- if (length(finiteA)) max(finiteA) + 1 else 1
-
-  id_cols <- c("arm", "sim", "look", "look.value", "cutoff", "reached")
-
-  blocks <- vector("list", length(arms) * L)
-  b <- 0L
-  for (j in arms) {
-    sub     <- data[data$group %in% c(control, j), , drop = FALSE]
-    row_sim <- match(sub$sim, sims_all)
-    for (l in seq_len(L)) {
-      A_sim   <- A_mat[, l]
-      reached <- R_mat[, l]
-      # Simulations that did not reach the target keep all subjects (cutoff set
-      # to 'big') so every simulation stays present for a clean row alignment;
-      # their statistics are blanked afterward.
-      A_use <- ifelse(is.finite(A_sim), A_sim, big)
-      A_row <- A_use[row_sim]
-
-      enrolled <- sub$accrual_time <= A_row
-      ended    <- sub$accrual_time + sub$tte <= A_row
-      # Data cut at the per-simulation cutoff; the other columns (for example
-      # subgroup columns used as 'strata') are carried along unchanged.
-      cut_dat       <- sub
-      cut_dat$tte   <- pmin(sub$tte, A_row - sub$accrual_time)
-      cut_dat$event <- sub$event * as.integer(ended)
-      cut_dat       <- cut_dat[enrolled, , drop = FALSE]
-      # Dropouts before the cutoff, counted on the uncut data: after the cut
-      # every administratively censored subject would look like a dropout.
-      n_drop <- tabulate(match(sub$sim[enrolled & ended & sub$event == 0],
-                               sims_all), nbins = nsim)
-
-      res <- analysis_fast(cut_dat, control = control, time.looks = big,
-                           stat = stat, ...)
-      # Align the one-row-per-simulation result to the full simulation set.
-      res <- res[match(sims_all, res$sim), , drop = FALSE]
-      res$sim        <- sims_all
-      res$n.dropout  <- ifelse(is.na(res$n.enrolled), NA_integer_, n_drop)
-      res$n.pipeline <- res$n.enrolled - res$n.event - res$n.dropout
-
-      res$look       <- l
-      res$look.value <- event.looks[l]
-      res$cutoff     <- A_sim
-      res$reached    <- reached
-
-      out_j <- cbind(arm = j, res)
-      if (any(!reached)) {
-        blank_cols <- setdiff(names(out_j), id_cols)
-        out_j[!reached, blank_cols] <- NA
-      }
-
-      b <- b + 1L
-      blocks[[b]] <- out_j
+  if (has_event) {
+    if (is.null(primary)) {
+      stop("With 'event.looks', 'primary' must name the experimental arm whose ",
+           "event-driven analysis defines the shared calendar cutoff.")
     }
+    if (length(primary) != 1L || !primary %in% arms) {
+      stop("'primary' must be a single experimental arm listed in 'arms'.")
+    }
+    # Calendar time of each target event of the primary contrast (control plus
+    # primary arm), per simulation; NA where the target is not reached.
+    cutoff.looks <- cutoff_fast(
+      data, event.looks = event.looks,
+      event.subset = data$group %in% c(control, primary)
+    )
   }
+
+  # ---- Per-simulation cutoffs shared by every contrast ----------------------
+  id_cols <- c("arm", "sim", "look", "look.value", "cutoff", "reached")
+  blocks <- lapply(arms, function(j) {
+    sub <- data[data$group %in% c(control, j), , drop = FALSE]
+    res <- analysis_fast(sub, control = control, cutoff.looks = cutoff.looks,
+                         stat = stat, ...)
+    out_j <- cbind(arm = j, res)
+    # A look whose shared trigger was not met carries no statistics.
+    if (any(!out_j$reached)) {
+      blank_cols <- setdiff(names(out_j), id_cols)
+      out_j[!out_j$reached, blank_cols] <- NA
+    }
+    out_j
+  })
   out <- do.call(rbind, blocks)
   out <- out[order(out$look, out$arm, out$sim), , drop = FALSE]
   rownames(out) <- NULL

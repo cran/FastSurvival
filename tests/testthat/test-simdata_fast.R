@@ -419,3 +419,94 @@ test_that("simdata_fast: group-specific prevalence must have matching factor lev
                                    treatment = list(c(0.3, 0.3, 0.4), c(0.5, 0.5)))),
     "levels per factor")
 })
+
+test_that("simdata_fast: stream gives reproducible and distinct batches", {
+  args <- list(nsim = 5, n = c(50, 50), a.time = c(0, 6), a.rate = 100 / 6,
+               e.median = list(10, 12), seed = 77)
+  b1  <- do.call(simdata_fast, c(args, list(stream = 1)))
+  b2  <- do.call(simdata_fast, c(args, list(stream = 2)))
+  b1b <- do.call(simdata_fast, c(args, list(stream = 1)))
+  # Same stream, same data, whatever was generated in between.
+  expect_identical(b1b, b1)
+  expect_false(isTRUE(all.equal(b1$surv_time, b2$surv_time)))
+  # Without 'stream' the historical seeding is unchanged.
+  expect_identical(do.call(simdata_fast, args),
+                   do.call(simdata_fast, c(args, list(stream = NULL))))
+  # The illness-death and multi-arm modes use the same stream mechanism.
+  id_args <- list(nsim = 3, n = c(40, 40), a.time = c(0, 6), a.rate = 80 / 6,
+                  h01.hazard = list(0.10, 0.07), h02.hazard = list(0.05, 0.04),
+                  seed = 5)
+  expect_identical(do.call(simdata_fast, c(id_args, list(stream = 3))),
+                   do.call(simdata_fast, c(id_args, list(stream = 3))))
+  k_args <- list(nsim = 3, n = c(40, 40, 40), a.time = c(0, 6),
+                 a.rate = 120 / 6, e.median = list(10, 12, 14), seed = 6)
+  k1 <- do.call(simdata_fast, c(k_args, list(stream = 1)))
+  k2 <- do.call(simdata_fast, c(k_args, list(stream = 2)))
+  expect_false(isTRUE(all.equal(k1$surv_time, k2$surv_time)))
+
+  expect_error(simdata_fast(nsim = 2, n = 20, a.time = c(0, 6),
+                            a.rate = 20 / 6, e.median = 10, stream = 1),
+               "requires 'seed'")
+  expect_error(do.call(simdata_fast, c(args, list(stream = -1))),
+               "non-negative whole number")
+  expect_error(do.call(simdata_fast, c(args, list(stream = 1.5))),
+               "non-negative whole number")
+})
+
+test_that("simdata_fast: a subject without a finite event or dropout time is censored", {
+  # Cure model: zero hazard after month 24 and no dropout.
+  df <- simdata_fast(nsim = 20, n = c(100, 100), a.time = c(0, 12),
+                     a.rate = 200 / 12, e.hazard = list(c(0.1, 0), c(0.1, 0)),
+                     e.time = c(0, 24, Inf), seed = 5)
+  never <- !is.finite(df$surv_time)
+  expect_true(any(never))
+  expect_true(all(df$surv_time[!never] <= 24))
+  expect_lt(abs(mean(never) - exp(-0.1 * 24)), 0.02)
+  expect_equal(df$event, as.integer(!never))
+  expect_true(all(df$tte[never] == Inf))
+
+  # Event-driven looks count only finite events, and an unreached look keeps
+  # the never-event subjects in follow-up (not counted as dropouts).
+  n_ev <- tapply(df$event, df$sim, sum)
+  looks <- c(min(n_ev), max(n_ev) + 1)
+  res <- analysis_fast(df, control = 1, event.looks = looks)
+  l1 <- res$look == 1
+  expect_true(all(res$reached[l1]) && all(is.finite(res$cutoff[l1])))
+  expect_true(all(!res$reached[!l1]) && all(is.na(res$cutoff[!l1])))
+  expect_true(all(res$n.dropout[!l1] == 0))
+  cut <- cutoff_fast(df, event.looks = looks)
+  expect_equal(unname(cut[, 1]), res$cutoff[l1])
+  expect_true(all(is.na(cut[, 2])))
+})
+
+test_that("simdata_fast: a single-level prevalence gives its subgroup column", {
+  args <- list(nsim = 3, n = c(20, 20), a.time = c(0, 6), a.rate = 40 / 6,
+               e.median = list(12, 18), seed = 3)
+  a <- do.call(simdata_fast, c(args, list(prevalence = 1)))
+  b <- do.call(simdata_fast, args)
+  expect_true("subgroup" %in% names(a))
+  expect_true(all(a$subgroup == 1L))
+  # A single cell consumes no random numbers.
+  expect_identical(a[names(b)], b)
+  res <- analysis_fast(a, control = 1, time.looks = 12, by.subgroup = TRUE)
+  expect_setequal(unique(res$population), c("overall", "subgroup_1"))
+})
+
+test_that("simdata_fast: 'n' must contain positive whole numbers", {
+  base <- list(nsim = 2, a.time = c(0, 6), a.rate = 40 / 6,
+               e.median = list(12, 18))
+  for (bad in list(c(20, 20.5), c(20, 0), c(-20, 60), c(20, NA), 0, 10.5,
+                   "20")) {
+    expect_error(do.call(simdata_fast, c(base, list(n = bad))),
+                 "positive whole numbers")
+  }
+})
+
+test_that("simdata_fast: stream = 0 gives the same data as no stream", {
+  args <- list(nsim = 3, n = c(30, 30), a.time = c(0, 6), a.rate = 10,
+               e.median = list(12, 18), seed = 11)
+  expect_identical(do.call(simdata_fast, c(args, list(stream = 0))),
+                   do.call(simdata_fast, args))
+  expect_false(identical(do.call(simdata_fast, c(args, list(stream = 1))),
+                         do.call(simdata_fast, args)))
+})

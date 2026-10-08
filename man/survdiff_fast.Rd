@@ -40,7 +40,8 @@ statistic (Z^2).}
 and \code{group} (and \code{strata} when supplied) are assumed to be
 already sorted in the required order, and the internal \code{order()} call
 is skipped. If \code{FALSE} (default), sorting is handled internally. See
-Details for the required order in the stratified case.}
+Details for the required order in the stratified case.
+The order is checked, and an error is given when it does not hold.}
 
 \item{strata}{An optional vector of stratum labels aligned with \code{time}.
 If \code{NULL} (default), the ordinary log-rank test is computed and the
@@ -219,7 +220,7 @@ if (requireNamespace("microbenchmark", quietly = TRUE)) {
 }
 \references{
 Gehan, E. A. (1965). A generalized Wilcoxon test for comparing arbitrarily
-single-censored samples. \emph{Biometrika}, \emph{52}, 203-223.
+singly-censored samples. \emph{Biometrika}, \emph{52}, 203-223.
 
 Mantel, N. (1966). Evaluation of survival data and two new rank order
 statistics arising in its consideration. \emph{Cancer Chemotherapy

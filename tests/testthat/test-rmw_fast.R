@@ -204,3 +204,10 @@ test_that("zero component variance yields an NA result", {
   expect_true(is.na(as.numeric(fit)[1L]))
   expect_true(is.na(as.numeric(fit)[2L]))
 })
+
+test_that("rmw_fast: presorted = TRUE checks the order", {
+  time  <- c(3, 1, 2, 4, 6, 5)
+  event <- c(1, 1, 0, 1, 1, 0)
+  group <- c(0, 1, 0, 1, 0, 1)
+  expect_error(rmw_fast(time, event, group, control = 0, presorted = TRUE), "presorted = FALSE")
+})

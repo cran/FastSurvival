@@ -90,6 +90,7 @@
 #'   already sorted in the required order, and the internal \code{order()} call
 #'   is skipped. If \code{FALSE} (default), sorting is handled internally. See
 #'   Details for the required order in the stratified case.
+#'   The order is checked, and an error is given when it does not hold.
 #' @param strata An optional vector of stratum labels aligned with \code{time}.
 #'   If \code{NULL} (default), the ordinary log-rank test is computed and the
 #'   behavior is identical to earlier versions of this function. If supplied,
@@ -192,7 +193,7 @@
 #'
 #' @references
 #' Gehan, E. A. (1965). A generalized Wilcoxon test for comparing arbitrarily
-#' single-censored samples. \emph{Biometrika}, \emph{52}, 203-223.
+#' singly-censored samples. \emph{Biometrika}, \emph{52}, 203-223.
 #'
 #' Mantel, N. (1966). Evaluation of survival data and two new rank order
 #' statistics arising in its consideration. \emph{Cancer Chemotherapy
@@ -269,6 +270,7 @@ survdiff_fast <- function(time, event, group, control, side = 2,
         j          <- j[ord]
         strata_int <- strata_int[ord]
       } else {
+        check_presorted(time, strata_int)
         event <- as.integer(event)
       }
       # C++ core: per-stratum weighted scan, totals summed -> c(O1, U, V)
@@ -282,6 +284,7 @@ survdiff_fast <- function(time, event, group, control, side = 2,
         event <- as.integer(event[ord])
         j     <- j[ord]
       } else {
+        check_presorted(time)
         event <- as.integer(event)
       }
       # C++ core: single scan (two passes for mwlrt) -> c(O1, U, V)
@@ -338,6 +341,7 @@ survdiff_fast <- function(time, event, group, control, side = 2,
       j          <- j[ord]
       strata_int <- strata_int[ord]
     } else {
+      check_presorted(time, strata_int)
       event <- as.integer(event)
     }
 
@@ -386,6 +390,7 @@ survdiff_fast <- function(time, event, group, control, side = 2,
     event <- as.integer(event[ord])
     j     <- j[ord]
   } else {
+    check_presorted(time)
     event <- as.integer(event)
   }
 

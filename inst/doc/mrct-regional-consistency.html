@@ -356,8 +356,9 @@ probability</em>: the chance that the regional criterion is met, often
 evaluated conditional on the overall test being significant.</p>
 <p>Closed-form formulas for these probabilities exist for continuous
 endpoints and have been extended to other endpoint types under a normal
-approximation of the treatment effect. Those formulas are convenient but
-they assume a fixed design, a single final analysis, and balanced,
+approximation of the treatment effect (Teng et al., 2018; see Homma,
+2024, for binary outcomes). Those formulas are convenient but they
+assume a fixed design, a single final analysis, and balanced,
 simultaneous accrual across regions. Real oncology MRCTs routinely break
 those assumptions: the design is group-sequential with interim looks,
 and one region (here, Japan) starts enrolling later than the others, so
@@ -365,25 +366,25 @@ its information accrues on a different calendar. When the assumptions
 behind the closed-form formulas no longer hold, simulation is the
 natural way to obtain the consistency probabilities.</p>
 <p>FastSurvival does not provide a regional-consistency function, and it
-is not meant to: three-or-more-region designs and consistency criteria
-are outside its scope. What it does provide are fast, validated building
-blocks. This vignette shows that the existing simulation trio,
-<code>simdata_fast()</code>, <code>analysis_fast()</code>, and
-<code>simsummary_fast()</code>, can be composed to evaluate the
-conditional regional consistency probabilities of Method 1 and Method 2
-at every interim and final analysis, under a group-sequential design
-with a late-enrolling region. The only piece written by hand is a short
-post-processing layer in base R that applies the consistency criteria to
-the per-region estimates the trio returns.</p>
+is not meant to: consistency criteria are outside its scope. What it
+does provide are fast, validated building blocks. This vignette shows
+that the existing simulation trio, <code>simdata_fast()</code>,
+<code>analysis_fast()</code>, and <code>simsummary_fast()</code>, can be
+composed to evaluate the conditional regional consistency probabilities
+of Method 1 and Method 2 at every interim and final analysis, under a
+group-sequential design with a late-enrolling region. The only piece
+written by hand is a short post-processing layer in base R that applies
+the consistency criteria to the per-region estimates the trio
+returns.</p>
 </div>
 <div id="the-two-criteria" class="section level2">
 <h2>The two criteria</h2>
 <p>Write the estimated treatment effect on the hazard-reduction scale,
 that is <code>1 - HR</code> for the entire trial population and
 <code>1 - HR_s</code> for region <code>s</code>, where a positive value
-indicates benefit (this is the survival-endpoint formulation of Teng et
-al., 2018). The region of interest is region 1, and <code>pi</code> is
-the effect-retention fraction, conventionally <code>0.5</code>.</p>
+indicates benefit. The region of interest is region 1, and
+<code>pi</code> is the effect-retention fraction, conventionally
+<code>0.5</code>.</p>
 <p>Method 1 asks that region 1 retain at least a fraction
 <code>pi</code> of the overall effect,
 <code>(1 - HR_1) &gt; pi * (1 - HR)</code>. Method 2 asks that the
@@ -432,11 +433,12 @@ a negative <code>Z</code>; in practice they would come from
 the whole call, so a region-specific delay is expressed by generating
 each region with its own accrual window and stacking the results. Region
 1 accrues uniformly over <code>[a_delay, a]</code>; the other regions
-over <code>[0, a]</code>. Each region is generated from an independent
-stream (<code>seed + k</code>), which is the right model for independent
-regional subpopulations. A <code>subgroup</code> column tags the region,
-and the shared <code>sim</code> index links the regional blocks into one
-trial per simulation.</p>
+over <code>[0, a]</code>. Each region is generated from its own
+<code>dqrng</code> stream (<code>seed = SEED, stream = k</code>), which
+is the right model for independent regional subpopulations. A
+<code>subgroup</code> column tags the region, and the shared
+<code>sim</code> index links the regional blocks into one trial per
+simulation.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>K      <span class="ot">&lt;-</span> <span class="fu">length</span>(N.T)</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>blocks <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">seq_len</span>(K), <span class="cf">function</span>(k) {</span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  a.time_k <span class="ot">&lt;-</span> <span class="cf">if</span> (k <span class="sc">==</span> <span class="dv">1</span><span class="dt">L</span>) <span class="fu">c</span>(a_delay, a) <span class="cf">else</span> <span class="fu">c</span>(<span class="dv">0</span>, a)</span>
@@ -446,27 +448,28 @@ trial per simulation.</p>
 <span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>    <span class="at">a.time   =</span> a.time_k,</span>
 <span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>    <span class="at">a.prop   =</span> <span class="dv">1</span>,</span>
 <span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>    <span class="at">e.median =</span> <span class="fu">list</span>(mst.C, mst.T),</span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>    <span class="at">seed     =</span> SEED <span class="sc">+</span> k</span>
-<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  )</span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  dat<span class="sc">$</span>subgroup <span class="ot">&lt;-</span> k</span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>  dat</span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>})</span>
-<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>data_all <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, blocks)</span>
-<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="fu">head</span>(data_all)</span>
-<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt;   sim group accrual_time surv_time dropout_time       tte event calendar_time</span></span>
-<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; 1   1     1     8.314255  1.589398          Inf  1.589398     1      9.903652</span></span>
-<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt; 2   1     1    10.349985  1.604216          Inf  1.604216     1     11.954201</span></span>
-<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt; 3   1     1     5.726526  3.582047          Inf  3.582047     1      9.308573</span></span>
-<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt; 4   1     1     7.179403  3.952740          Inf  3.952740     1     11.132143</span></span>
-<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt; 5   1     1     5.562820  1.644677          Inf  1.644677     1      7.207497</span></span>
-<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt; 6   1     1     9.503599 15.446380          Inf 15.446380     1     24.949980</span></span>
-<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt;   subgroup</span></span>
-<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt; 1        1</span></span>
-<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co">#&gt; 2        1</span></span>
-<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a><span class="co">#&gt; 3        1</span></span>
-<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a><span class="co">#&gt; 4        1</span></span>
-<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a><span class="co">#&gt; 5        1</span></span>
-<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a><span class="co">#&gt; 6        1</span></span></code></pre></div>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>    <span class="at">seed     =</span> SEED,</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>    <span class="at">stream   =</span> k</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  )</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>  dat<span class="sc">$</span>subgroup <span class="ot">&lt;-</span> k</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>  dat</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>})</span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>data_all <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, blocks)</span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="fu">head</span>(data_all)</span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt;   sim group accrual_time surv_time dropout_time       tte event calendar_time</span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt; 1   1     1     7.415786 1.4732658          Inf 1.4732658     1      8.889052</span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt; 2   1     1     5.068686 2.5622552          Inf 2.5622552     1      7.630941</span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt; 3   1     1     9.505610 1.9087414          Inf 1.9087414     1     11.414352</span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt; 4   1     1     5.947479 3.4319259          Inf 3.4319259     1      9.379405</span></span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt; 5   1     1     5.850993 0.5569163          Inf 0.5569163     1      6.407910</span></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt; 6   1     1     5.822094 0.9798946          Inf 0.9798946     1      6.801988</span></span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt;   subgroup</span></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co">#&gt; 1        1</span></span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a><span class="co">#&gt; 2        1</span></span>
+<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a><span class="co">#&gt; 3        1</span></span>
+<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a><span class="co">#&gt; 4        1</span></span>
+<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a><span class="co">#&gt; 5        1</span></span>
+<span id="cb4-31"><a href="#cb4-31" tabindex="-1"></a><span class="co">#&gt; 6        1</span></span></code></pre></div>
 </div>
 <div id="step-2-one-event-driven-by-subgroup-analysis-pass" class="section level2">
 <h2>Step 2: one event-driven, by-subgroup analysis pass</h2>
@@ -487,13 +490,13 @@ ratio for the consistency criteria.</p>
 <span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="at">by.subgroup =</span> <span class="cn">TRUE</span></span>
 <span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>)</span>
 <span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="fu">head</span>(res[, <span class="fu">c</span>(<span class="st">&quot;sim&quot;</span>, <span class="st">&quot;look&quot;</span>, <span class="st">&quot;population&quot;</span>, <span class="st">&quot;n.event&quot;</span>, <span class="st">&quot;logrank.z&quot;</span>, <span class="st">&quot;cox.hr&quot;</span>)])</span>
-<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt;   sim look population n.event  logrank.z    cox.hr</span></span>
-<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; 1   1    1    overall     142 -3.0436565 0.5972385</span></span>
-<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; 2   1    1 subgroup_1       8 -0.4331669 0.7349631</span></span>
-<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; 3   1    1 subgroup_2      67 -3.1712365 0.4562756</span></span>
-<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; 4   1    1 subgroup_3      67 -1.1504671 0.7525491</span></span>
-<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; 5   1    2    overall     248 -3.2091304 0.6647287</span></span>
-<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt; 6   1    2 subgroup_1      23 -1.0162204 0.6336266</span></span></code></pre></div>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt;   sim look population n.event logrank.z    cox.hr</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; 1   1    1    overall     142 -3.032779 0.5984187</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; 2   1    1 subgroup_1       7 -2.071416 0.1455994</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; 3   1    1 subgroup_2      77 -2.026667 0.6272952</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; 4   1    1 subgroup_3      58 -1.549859 0.6640957</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; 5   1    2    overall     248 -3.678632 0.6250666</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt; 6   1    2 subgroup_1      22 -2.766921 0.2995078</span></span></code></pre></div>
 <p>The output is in long form: for each <code>(sim, look)</code> there
 is one <code>overall</code> row and one row per region
 (<code>subgroup_1</code>, <code>subgroup_2</code>,
@@ -591,13 +594,13 @@ of an efficacy stop together with consistency.</p>
 <span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a>)</span>
 <span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a>consistency</span>
 <span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt;   look Info.Fraction Events Analysis_time Efficacy cum.power    CON_M1 JOI_M1</span></span>
-<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt; 1    1     0.4011299    142      8.725212   0.0000    0.0000        NA 0.0000</span></span>
-<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt; 2    2     0.7005650    248     12.163791   0.4708    0.4708 0.6973237 0.3283</span></span>
-<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt; 3    3     1.0000000    354     16.139324   0.3278    0.7986 0.6751068 0.2213</span></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt; 1    1     0.4011299    142       8.72734   0.0000    0.0000        NA 0.0000</span></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt; 2    2     0.7005650    248      12.16650   0.4711    0.4711 0.7115262 0.3352</span></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt; 3    3     1.0000000    354      16.14337   0.3300    0.8011 0.6954545 0.2295</span></span>
 <span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="co">#&gt;      CON_M2 JOI_M2</span></span>
 <span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="co">#&gt; 1        NA 0.0000</span></span>
-<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="co">#&gt; 2 0.8166950 0.3845</span></span>
-<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a><span class="co">#&gt; 3 0.7757779 0.2543</span></span></code></pre></div>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="co">#&gt; 2 0.8240289 0.3882</span></span>
+<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a><span class="co">#&gt; 3 0.7948485 0.2623</span></span></code></pre></div>
 <p>The first look is futility-only (<code>eff.bound[1] = NA</code>), so
 no trial can stop for efficacy there. The efficacy-conditional
 quantities are therefore degenerate at look 1: the joint probabilities
@@ -607,17 +610,17 @@ are undefined (<code>NA</code>, a zero-over-zero ratio).
 <code>Analysis_time</code> is the mean calendar time of the look itself,
 taken over all trials, and so is reported at every look. At the later
 looks the table gives, per analysis, the conditional regional
-consistency probability for each method. Method 2 is the looser
-criterion and so its conditional probability runs higher than Method 1’s
-at both efficacy looks. For each method the conditional consistency is
-comparable at the two efficacy looks, if anything slightly higher at the
-interim, because the trials that cross the stringent interim efficacy
-boundary are enriched for a strong overall effect, which also makes the
-regional criteria more likely to be met. This calendar-driven behavior,
-together with the late-starting region 1 whose events accrue on a
-different schedule, is exactly what the closed-form formulas, which
-assume a single final analysis and simultaneous accrual, cannot
-capture.</p>
+consistency probability for each method. Neither criterion implies the
+other; in this design the conditional probability of Method 2 is higher
+than that of Method 1 at both efficacy looks. For each method the
+conditional consistency is comparable at the two efficacy looks, if
+anything slightly higher at the interim, because the trials that cross
+the stringent interim efficacy boundary are enriched for a strong
+overall effect, which also makes the regional criteria more likely to be
+met. This calendar-driven behavior, together with the late-starting
+region 1 whose events accrue on a different schedule, is exactly what
+the closed-form formulas, which assume a single final analysis and
+simultaneous accrual, cannot capture.</p>
 </div>
 <div id="tying-back-to-the-trio-standard-operating-characteristics" class="section level2">
 <h2>Tying back to the trio: standard operating characteristics</h2>
@@ -639,25 +642,25 @@ on the efficacy column above.</p>
 <span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt; Stopping Boundaries: Look by Look</span></span>
 <span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Events (s) Sample (n) Efficacy Z Futility Z Cum. Cross. Eff.</span></span>
 <span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt;     1        0.40      142.0      344.8         NA     0.3810           0.0000</span></span>
-<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt;     2        0.70      248.0      485.5    -2.4370         NA           0.4708</span></span>
-<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt;     3        1.00      354.0      500.0    -2.0000    -2.0000           0.7986</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt;     2        0.70      248.0      485.5    -2.4370         NA           0.4711</span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt;     3        1.00      354.0      500.0    -2.0000    -2.0000           0.8011</span></span>
 <span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt; Events, Sample Size, Dropouts, Pipeline and Analysis Times: Look by Look</span></span>
 <span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Sample (n) Events (s) Dropouts (d) Pipeline Analysis Time</span></span>
 <span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt;     1        0.40      344.8      142.0          0.0    202.8          8.73</span></span>
-<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt;     2        0.70      485.5      248.0          0.0    237.5         12.16</span></span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt;     2        0.70      485.5      248.0          0.0    237.5         12.17</span></span>
 <span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt;     3        1.00      500.0      354.0          0.0    146.0         16.14</span></span>
 <span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt;  Cross. Eff. Cross. Fut.</span></span>
-<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt;       0.0000      0.0146</span></span>
-<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt;       0.4708      0.0000</span></span>
-<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt;       0.3278      0.1868</span></span>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt;       0.0000      0.0134</span></span>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt;       0.4711      0.0000</span></span>
+<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt;       0.3300      0.1855</span></span>
 <span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="co">#&gt; Overall</span></span>
-<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="co">#&gt;   Rejection rate (efficacy):      0.7986</span></span>
-<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="co">#&gt;   Futility-stop rate:             0.2014</span></span>
-<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="co">#&gt;   Expected events at stop:        301.0</span></span>
-<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a><span class="co">#&gt;   Expected sample size at stop:   491.1</span></span>
-<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a><span class="co">#&gt;   Expected analysis time at stop: 14.15</span></span></code></pre></div>
+<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="co">#&gt;   Rejection rate (efficacy):      0.8011</span></span>
+<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="co">#&gt;   Futility-stop rate:             0.1989</span></span>
+<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="co">#&gt;   Expected events at stop:        301.2</span></span>
+<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a><span class="co">#&gt;   Expected sample size at stop:   491.3</span></span>
+<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a><span class="co">#&gt;   Expected analysis time at stop: 14.16</span></span></code></pre></div>
 <p>The per-look <code>prob.stop.efficacy</code> from
 <code>simsummary_fast()</code> matches the <code>Efficacy</code> column
 computed by hand, and its <code>overall</code> row gives the cumulative
@@ -666,8 +669,8 @@ power and the expected information and calendar time at stopping.</p>
 <div id="notes-and-extensions" class="section level2">
 <h2>Notes and extensions</h2>
 <p>The hazard ratio used for the consistency criteria is the Cox
-estimate from <code>coxph_fast()</code>. To use the log-scale criterion
-of Teng et al. (2018) instead, replace <code>cox.hr</code> with
+estimate from <code>coxph_fast()</code>. To use a criterion on the log
+hazard ratio scale instead, replace <code>cox.hr</code> with
 <code>cox.coef</code> and test
 <code>cox.coef_1 &lt; PI * cox.coef_overall</code> for Method 1 and
 <code>cox.coef_s &lt; 0</code> for all regions for Method 2. The

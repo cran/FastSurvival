@@ -37,6 +37,7 @@
 #' @param presorted Logical; set to \code{TRUE} when \code{time}, \code{event}
 #'   and \code{group} are already sorted in ascending order of \code{time}, to
 #'   skip the internal sort. Defaults to \code{FALSE}.
+#'   The order is checked, and an error is given when it does not hold.
 #'
 #' @return A named numeric vector of class \code{"wmst_fast"}. For a single
 #'   group the elements are the WMST, its standard error and confidence limits.
@@ -131,6 +132,7 @@ wmst_fast <- function(time, event, group = NULL, control = NULL,
   }
 
   if (presorted) {
+    check_presorted(time)
     s_time <- as.numeric(time)
     s_event <- as.integer(event)
     s_grp <- as.integer(gcode)

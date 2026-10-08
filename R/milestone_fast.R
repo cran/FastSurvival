@@ -7,7 +7,10 @@
 #' variance directly. The \code{"loglog"} and \code{"mover"} methods build the
 #' confidence interval for the difference with the method of variance estimates
 #' recovery (MOVER), recovering the variance from the one-sample complementary
-#' log-log and log transformed confidence intervals respectively. See Tang
+#' log-log and log transformed confidence intervals respectively. When the
+#' estimate of a group is 0 or 1 at \code{tau}, its one-sample interval
+#' degenerates to the estimate, so the interval of the difference is still
+#' given; the \code{"loglog"} test statistic is then \code{NA}. See Tang
 #' (2021) for the MOVER difference interval and Tang (2022) for the use of
 #' milestone survival in trial design.
 #'
@@ -33,6 +36,7 @@
 #' @param presorted Logical. If \code{TRUE} the input is assumed to be sorted
 #'   by \code{time} in ascending order and the internal sort is skipped. This
 #'   is intended for repeated calls inside simulation loops.
+#'   The order is checked, and an error is given when it does not hold.
 #'
 #' @return An object of class \code{"milestone_fast"}, a list with the
 #'   per-group milestone survival estimates and standard errors, the difference
@@ -70,10 +74,12 @@ milestone_fast <- function(time, event, group, control, side = 2,
   if (anyNA(time) || anyNA(group)) {
     stop("'time' and 'group' must not contain missing values.")
   }
-  event <- as.integer(event)
-  if (any(is.na(event)) || any(!event %in% c(0L, 1L))) {
+  if (any(time < 0)) stop("'time' must be non-negative.")
+  # Validate before converting, so that a value such as 0.7 is not truncated.
+  if (anyNA(event) || !all(event == 0 | event == 1)) {
     stop("'event' must contain only 0 (censored) and 1 (event).")
   }
+  event <- as.integer(event)
   if (length(tau) != 1L || !is.finite(tau) || tau <= 0) {
     stop("'tau' must be a single positive number.")
   }
@@ -97,6 +103,7 @@ milestone_fast <- function(time, event, group, control, side = 2,
   trt <- lev[as.character(lev) != as.character(control)]
   grp01 <- as.integer(as.character(group) != as.character(control))
   check_tau_follow_up(as.numeric(time), grp01, tau)
+  if (presorted) check_presorted(time)
 
   core <- milestone_core(as.numeric(time), event, grp01,
                          as.numeric(tau), as.logical(presorted))
@@ -116,7 +123,9 @@ milestone_fast <- function(time, event, group, control, side = 2,
     if (method == "wald") {
       return(c(surv - z * se, surv + z * se))
     }
-    if (surv <= 0 || surv >= 1) return(c(NA_real_, NA_real_))
+    # An estimate of 0 or 1 has zero Greenwood variance, and its interval
+    # degenerates to the estimate.
+    if (surv <= 0 || surv >= 1) return(c(surv, surv))
     if (method == "mover") {
       # log transform: var(log surv) = se^2 / surv^2
       g_se <- se / surv

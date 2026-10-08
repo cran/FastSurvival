@@ -303,3 +303,15 @@ test_that("ahr_fast warns when a supplied tau exceeds the observed follow-up", {
   expect_warning(ahr_fast(tt, ee, gg, control = 0, tau = lim + 1), "exceeds")
   expect_warning(ahr_fast(tt, ee, gg, control = 0), NA)
 })
+
+test_that("ahr_fast: presorted = TRUE checks the order", {
+  time  <- c(3, 1, 2, 4, 6, 5)
+  event <- c(1, 1, 0, 1, 1, 0)
+  group <- c(0, 1, 0, 1, 0, 1)
+  expect_error(ahr_fast(time, event, group, control = 0, tau = 3, presorted = TRUE), "presorted = FALSE")
+})
+
+test_that("ahr_fast: event values are validated before conversion", {
+  expect_error(ahr_fast(c(1, 2, 3, 4), c(1, 0.7, 0, 1), c(0, 0, 1, 1),
+                        control = 0), "0 or 1")
+})

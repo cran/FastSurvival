@@ -35,7 +35,8 @@ blocks <- lapply(seq_len(K), function(k) {
     a.time   = a.time_k,
     a.prop   = 1,
     e.median = list(mst.C, mst.T),
-    seed     = SEED + k
+    seed     = SEED,
+    stream   = k
   )
   dat$subgroup <- k
   dat

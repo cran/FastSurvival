@@ -1,3 +1,240 @@
+# FastSurvival 1.1.0
+
+## New features
+
+* New `cutoff_fast()` computes the calendar time of each analysis look in
+  every simulated trial in a single C++ pass, from a target number of events, a
+  planned calendar time, a maximum calendar time, a minimum time after the
+  previous look, and a minimum follow-up after a given number of enrolled
+  subjects, combined as `min(max(...), maximum time)` as in
+  `simtrial::get_analysis_date()`. Events can be counted on a subset of the
+  subjects (for example the control group) or on another endpoint (for example
+  the PFS columns of an illness-death simulation), and the event targets can be
+  given per simulated trial.
+
+* `analysis_fast()` gains a `cutoff.looks` argument, a matrix of per-simulation
+  calendar cutoffs (such as the output of `cutoff_fast()`), as an alternative
+  to `event.looks` and `time.looks`. This analyzes an endpoint at cutoffs
+  determined by another endpoint, by a subset of the subjects, or by combined
+  trigger rules, within the same fused C++ loop.
+
+* `pairwise_fast()` gains a `cutoff.looks` argument, and its event-driven mode
+  now computes the shared cutoffs with `cutoff_fast()` and analyzes every
+  contrast through `cutoff.looks` instead of re-cutting the data in R. The
+  results are unchanged.
+
+* New `switch_fast()` applies treatment switching to simulated data, changing
+  only the outcomes after each subject's switch: at the intermediate event of
+  an illness-death simulation (for example progression), at an opening time
+  after an interim analysis (crossover at a milestone, optionally only in the
+  simulated trials selected by an interim decision), or at the later of the
+  two. The remaining time to the terminal event is multiplied by an
+  acceleration factor (the causal model of the RPSFT method) or redrawn from a
+  new (piecewise) exponential hazard. Outcomes observed before the opening
+  time are unchanged, so an interim analysis is unaffected by the switching.
+
+* `analysis_fast()` gains an `mc.alpha` argument, the nominal levels at which
+  the `"maxcombo"` p-values are compared. The p-value is then integrated only
+  when the Bonferroni bounds `p_min <= p <= K * p_min` do not decide the
+  comparison with the level; otherwise the bound on the same side of the level
+  is reported. The decisions at the levels (for example in
+  `simsummary_fast(p.col = "maxcombo.p", alpha = mc.alpha)`) are those of the
+  exact p-values, and a `maxcombo.p.exact` column marks the integrated rows.
+  The default (`NULL`) computes every p-value as before.
+
+* The illness-death model of `simdata_fast()` now supports subgroups through
+  `prevalence` and `fixed.alloc` (#3, suggested by Isaac Gravestock). The
+  transition hazards, `switch.prop`, and the dropout specification accept
+  per-group and per-cell nested lists with the same rules as `e.hazard`, for
+  example `h01.hazard = list(list(0.10, 0.06), 0.05)`, so a mixture of
+  illness-death models is simulated in one call. All subjects share one
+  accrual process and the subgroups are assigned after accrual, so they enroll
+  over the same calendar in proportion to their prevalence. Without
+  `prevalence` the results are unchanged.
+
+* `simdata_fast()` gains a `stream` argument that selects an independent
+  `dqrng` random-number stream for the given `seed`, so that a large
+  simulation can be generated in reproducible batches, sequentially or in
+  parallel. Without `stream` the results are unchanged.
+
+## Bug fixes
+
+* `analysis_fast()` with `stat = "maxcombo"`, `side = 2`, and two or three
+  weights failed with "TVPACK either needs all(lower == -Inf) or all(upper ==
+  Inf)", because the two-sided rectangle was passed to the TVPACK algorithm,
+  which handles only half-spaces. It now uses the GenzBretz algorithm in that
+  case, as `maxcombo_fast()` does.
+
+* `wkm_fast()` and `stat = "wkm"` of `analysis_fast()` divided the variance
+  terms by the selected weight instead of the Pepe-Fleming weight, which is
+  the censoring factor of the variance whatever weight is used. The results
+  with `weight = "PF"` (the default) are unchanged. With `"sqrtPF"` and
+  `"constant"` the standard error was too small and the test anti-conservative;
+  for the constant weight under uniform censoring, the empirical standard
+  deviation of the weighted difference was about 1.15 times the mean standard
+  error. The error dates from version 0.2.0.
+
+* `simdata_fast()` recorded a subject with neither a finite survival time nor
+  a finite dropout time (possible with a zero hazard in the last piece, such
+  as a cure fraction, and no dropout) as an event at an infinite time, so an
+  event-driven look of `analysis_fast()` could be reached at an infinite
+  cutoff. Such a subject now has `tte = Inf` and `event = 0`, in the
+  single-endpoint and illness-death models and in `switch_fast()`, and is
+  counted as in follow-up, not as a dropout, at an unreached look of
+  `analysis_fast()`. A zero hazard no longer gives `NaN` when the draw equals
+  the cumulative hazard at the last breakpoint.
+
+* In the illness-death model of `simdata_fast()`, a switch through
+  `switch.prop` could occur at an intermediate event after dropout, which is
+  not observed. A switch now requires the intermediate event on or before
+  dropout. The observed columns are unchanged; only the latent terminal time,
+  `switched`, and `switch_time` of the affected subjects (who have dropped out
+  before the intermediate event) change. The column `intermediate` describes
+  the latent process, as the documentation now states.
+
+* `milestone_fast()` and `stat = "milestone"` with `method = "loglog"` or
+  `"mover"` returned missing confidence limits when the Kaplan-Meier estimate
+  of a group was 0 or 1 at `tau`. The one-sample interval of that group now
+  degenerates to the estimate, so the interval of the difference is reported;
+  the `"loglog"` test statistic remains `NA` in that case.
+
+* `simdata_fast()` with a single-level prevalence (for example
+  `prevalence = 1`) did not output the subgroup column.
+
+* `analysis_fast()` converted an `event.looks` target beyond the integer range
+  to an undefined integer in C++. Such a target is now capped, as in
+  `cutoff_fast()`, and is never reached.
+
+* `switch_fast()` matched a named `cutoff` vector by position. The names are
+  now matched to `data$sim`, as in the `cutoff.looks` argument of
+  `analysis_fast()`.
+
+## Input validation
+
+* With `presorted = TRUE`, `survdiff_fast()`, `coxph_fast()`, `rmst_fast()`,
+  `wmst_fast()`, `milestone_fast()`, `medsurv_fast()`, `maxcombo_fast()`,
+  `rmw_fast()`, `wkm_fast()`, `ahsw_fast()`, and `ahr_fast()` now check the
+  order in a single pass (with strata, also that the rows of each stratum are
+  contiguous) and give an error for unsorted input instead of a wrong result,
+  as `survfit_fast()` already did. The fused kernel of `analysis_fast()` is not
+  affected.
+
+* `simdata_fast()` checks that `n` contains positive whole numbers.
+
+* `milestone_fast()`, `ahr_fast()`, and `kmcurve_fast()` check the event
+  indicator before converting it to integer, so a value such as 0.7 is an
+  error rather than a censoring, and `kmcurve_fast()` also rejects missing
+  values. Negative times are rejected by `milestone_fast()`,
+  `kmcurve_fast()`, and the functions that share the internal time and event
+  check.
+
+* `cutoff_fast()` warns when the cutoff of a look precedes that of the
+  previous look in some simulated trials, for example when only the later look
+  has a calendar cap.
+
+## Documentation
+
+* New vignette "Treatment switching and crossover after an interim analysis"
+  simulates crossover after a positive PFS analysis and switching at
+  progression, and checks the switching model with the RPSFT estimator of the
+  rpsftm package, which is added to Suggests and used only when it is
+  installed.
+
+* The correlated PFS and OS vignette now analyzes OS at the PFS-driven cutoffs
+  with `cutoff_fast()` and `cutoff.looks`.
+
+* The validation vignette compares `cutoff_fast()` with
+  `simtrial::get_analysis_date()` and the survival times generated by
+  `switch_fast()` with their analytic distribution. It no longer states a
+  reproduction of published p-values that the package sources do not contain,
+  and it describes the p-values of `nph::logrank.maxtest()` correctly (they are
+  two-sided).
+
+* New vignette "Using your own data generator" analyzes trials generated
+  outside the package (Weibull survival with a cure fraction) with
+  `cutoff_fast()`, `analysis_fast()`, `switch_fast()`, and
+  `simsummary_fast()`, and lists the columns each function reads.
+
+* The group sequential design vignette is now evaluated when it is built
+  instead of showing static output. The closed-form reference is computed with
+  `gsDesign::gsProbability()` and the expected-event curve, and the
+  non-proportional hazards example compares the log-rank and max-combo tests
+  with `mc.alpha`. The rpact package is no longer used and is removed from
+  Suggests.
+
+* In the correlated PFS and OS vignette, the hierarchical rule now claims OS at
+  the first look, from the PFS claim onward, at which OS crosses its boundary
+  (Glimm, Maurer, and Bretz, 2010). The previous code used only the first OS
+  crossing, so an OS crossing before the PFS claim prevented a later OS claim
+  and the hierarchical OS power was understated. A duplicated row of the power
+  table is removed.
+
+* The multi-arm vignette computes the global-null error rates with
+  `pairwise_fast()`, the multiregional vignette generates the regions from
+  `dqrng` streams, and the Freidlin and Korn vignette draws the scenario with
+  `gen_scenario_fast()` and uses `mc.alpha` for the max-combo test.
+
+* The convergence statement of `coxph_fast()` (help page and README) is
+  corrected. The residual error of the Pike-Halley Estimator is of the order
+  of the cube of the error of the Pike anchor; it is negligible near the null
+  hypothesis, but at a fixed hazard ratio away from 1 the Pike anchor keeps a
+  bias that does not vanish with the sample size, so the residual error levels
+  off at a small value rather than decreasing at the rate O_p(n^{-3/2})
+  stated before.
+
+* Help pages corrected or completed: the eligibility condition of
+  `switch_fast()` for single-endpoint data includes dropout; the rules of
+  `cutoff_fast()` for a look with only `max.time`, after an unreached look, and
+  for looks out of order; the treatment of an unreached look in
+  `analysis_fast()`, `pairwise_fast()`, and `simsummary_fast()`; the meaning of
+  `intermediate` and `switched` in `simdata_fast()`; the scale of `std.err` in
+  `survfit_fast()` compared with `survival::survfit()`; the `side` argument of
+  `coxph_fast()`, whose return value has no p-value; the tests of
+  `rmst_fast()` and `ahsw_fast()`, which follow `side`; and the description of
+  `kmcurve_fast()` in the package overview, which has no risk table.
+
+* The validation vignette compares `coxph_fast()` with `coxph()` using
+  `ties = "breslow"`, the partial likelihood that the Pike-Halley Estimator
+  approximates, and reports the difference from the computed values.
+
+* The correlated PFS and OS vignette corrects the description of the events
+  shared by the two endpoints and states that the OS information fractions are
+  planning values and that the family-wise error rate is not evaluated there.
+
+* Other vignette corrections: the Freidlin and Korn vignette describes the
+  FH(0,1) weights correctly (bounded, but close to zero for early events); the
+  multiregional vignette no longer attributes the hazard-reduction criterion
+  to Teng et al. (2018), states the comparison of Method 1 and Method 2 as an
+  observation, and removes a statement on scope that its three-region example
+  contradicted; the multi-arm vignette reports the family-wise error rate with
+  its Monte Carlo standard error and its normal approximation; the
+  compare-logrank-rmst vignette draws the Kaplan-Meier curves of the data
+  censored at the analysis; the speed comparison states the measurement
+  conditions; and references listed but not cited are now cited in the text.
+
+* README: the nominal levels of the workflow example are now those of the
+  Lan-DeMets O'Brien-Fleming-type spending at 300 and 450 events; the return
+  values of `milestone_fast()` and `ahr_fast()` are lists; and the agreement of
+  `medsurv_fast(method = "nph")` with the nph package is stated for coinciding
+  Kaplan-Meier and Nelson-Aalen medians.
+
+## Tests
+
+* New tests for `gen_scenario_fast()`, `plot.scenario_fast()`, and the print
+  methods that had none, and for the `mc.alpha` shortcut of `analysis_fast()`.
+
+* New tests for the fixes above: the variance of `wkm_fast()` for every weight
+  against an independent reference and a calibration of its standard error by
+  simulation; data with infinite latent times; switching and dropout in the
+  illness-death model; degenerate milestone intervals; the order check of
+  `presorted = TRUE`; and the input checks.
+
+* New tests for subgroups in the illness-death model: a single cell
+  reproduces the data without subgroups, each cell follows its own transition
+  hazards, a subgroup matches its separate simulation with the accrual rate
+  scaled by the prevalence, and the output works with `analysis_fast()`,
+  `cutoff_fast()`, and `switch_fast()`.
+
 # FastSurvival 1.0.0
 
 ## New features

@@ -43,7 +43,8 @@ is not estimated beyond that time.}
 
 \item{presorted}{A logical value. If \code{TRUE}, the inputs are assumed to
 be sorted in ascending order of \code{time}. If \code{FALSE} (default),
-sorting is handled internally.}
+sorting is handled internally.
+The order is checked, and an error is given when it does not hold.}
 }
 \value{
 An object of class \code{"rmst_fast"}, a named numeric vector. In
@@ -66,7 +67,8 @@ returns the RMST with its Greenwood-type standard error and a Wald
 confidence interval. When a \code{group} is supplied, it additionally
 returns the two-group contrasts: the RMST difference (treatment minus
 control) and the RMST ratio (treatment over control), each with a standard
-error, confidence interval, and two-sided test. The C++ backend integrates
+error, confidence interval, and test (one- or two-sided, following
+\code{side}). The C++ backend integrates
 the survival step function in a single scan and is reused once per group, so
 the function is suitable for simulation loops with \code{presorted = TRUE}.
 }

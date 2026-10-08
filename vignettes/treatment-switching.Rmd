@@ -1,0 +1,278 @@
+---
+title: "Treatment switching and crossover after an interim analysis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Treatment switching and crossover after an interim analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+library(FastSurvival)
+has_rpsftm <- requireNamespace("rpsftm", quietly = TRUE) &&
+  requireNamespace("survival", quietly = TRUE)
+```
+
+## Overview
+
+In many oncology trials the control patients may switch to the experimental
+treatment, either at disease progression or after an interim analysis has shown
+a benefit on progression-free survival (PFS). Switching leaves the outcomes
+observed before the switch unchanged and alters only what happens afterward,
+typically prolonging the remaining overall survival (OS) of the switchers and
+diluting the intention-to-treat comparison of OS.
+
+The TrialSimulator package (Zhang, 2026) expresses such designs with `regimen()` (a switching
+rule fixed at enrollment) and `crossover()` (a switch that opens at a milestone),
+and runs the simulated trials one at a time. Because a switch never rewrites
+the history before it, the same designs can also be simulated with the whole
+set of trials at once. `switch_fast()` modifies the simulated data after their
+generation, and `cutoff_fast()` provides the per-trial calendar time at which
+crossover opens:
+
+1. `simdata_fast()` generates PFS and OS for all trials from an illness-death
+   model;
+2. `cutoff_fast()` finds the calendar time of the PFS analysis in each trial;
+3. `analysis_fast()` analyzes PFS at that time, and the trials in which PFS is
+   significant are selected;
+4. `switch_fast()` lets the control patients of those trials switch, changing
+   only their outcomes after the switch;
+5. the OS analysis is run on the modified data.
+
+The interim analysis is unaffected by step 4 by construction, which is checked
+below.
+
+## Design
+
+The trial randomizes 300 patients per group over 18 months. Progression,
+death without progression, and death after progression follow an
+illness-death model with exponential transition times, and patients drop out at
+5 percent per year. PFS is analyzed once, at 380 PFS events. OS is analyzed at
+350 deaths. Both tests are one-sided at level 0.025.
+
+```{r design}
+nsim <- 1000
+seed <- 20261007
+
+df <- simdata_fast(
+  nsim       = nsim,
+  n          = c(300, 300),
+  a.time     = c(0, 18),
+  a.rate     = 600 / 18,
+  h01.median = list(8, 12),    # progression
+  h02.median = list(30, 36),   # death without progression
+  h12.median = list(12, 12),   # death after progression
+  d.hazard   = -log(1 - 0.05) / 12,
+  seed       = seed
+)
+
+# Single-endpoint view of PFS (k = 1) or OS (k = 2) for analysis_fast().
+ep <- function(d, k) {
+  data.frame(
+    sim          = d$sim,
+    group        = d$group,
+    accrual_time = d$accrual_time,
+    tte          = d[[paste0("e", k, "_tte")]],
+    event        = d[[paste0("e", k, "_event")]]
+  )
+}
+```
+
+## PFS analysis and the crossover decision
+
+`cutoff_fast()` counts the PFS events (the columns `e1_tte` and `e1_event`) to
+find the analysis time of each trial, and `analysis_fast()` analyzes PFS at
+those times.
+
+```{r pfs}
+pfs_cut <- cutoff_fast(df, event.looks = 380,
+                       tte.col = "e1_tte", event.col = "e1_event")
+pfs_res <- analysis_fast(ep(df, 1), control = 1, cutoff.looks = pfs_cut,
+                         side = 1)
+pfs_pos <- (pfs_res$reached & pfs_res$logrank.p <= 0.025) %in% TRUE
+
+c(PFS_power = mean(pfs_pos),
+  mean_PFS_analysis_month = mean(pfs_cut[, 1], na.rm = TRUE))
+```
+
+## Switching scenarios
+
+Three scenarios are compared with the trial without switching.
+
+- Crossover after a positive PFS analysis: in the trials with a significant PFS
+  result, control patients who are alive and on study switch at progression,
+  but not before the PFS analysis (`when = "later"`, the rule of the worked
+  example of the milestone crossover in TrialSimulator). Their remaining survival
+  time is multiplied by 1.3.
+- The same crossover opened in every trial, regardless of the PFS result.
+- Switching at progression from the start of the trial (`when =
+  "intermediate"`), for half of the control patients who progress, with a
+  post-progression median survival of 18 months instead of 12.
+
+```{r switching}
+sw_gated <- switch_fast(df, group = 1, when = "later", cutoff = pfs_cut,
+                        sims = pfs_pos, aft.factor = 1.3)
+sw_all   <- switch_fast(df, group = 1, when = "later", cutoff = pfs_cut,
+                        aft.factor = 1.3)
+sw_prog  <- switch_fast(df, group = 1, prob = 0.5, when = "intermediate",
+                        median = 18)
+```
+
+The OS analysis at the time of the PFS analysis is the same with and without
+switching, because every switch happens after that time.
+
+```{r invariance}
+os_ia0 <- analysis_fast(ep(df, 2), control = 1, cutoff.looks = pfs_cut,
+                        side = 1)
+os_ia1 <- analysis_fast(ep(sw_gated, 2), control = 1, cutoff.looks = pfs_cut,
+                        side = 1)
+all.equal(os_ia0, os_ia1)
+```
+
+## Overall survival at the final analysis
+
+The OS analysis is triggered by 350 deaths in the modified data, since
+switching delays deaths and therefore the analysis.
+
+```{r os-final}
+os_final <- function(d) {
+  cut <- cutoff_fast(d, event.looks = 350,
+                     tte.col = "e2_tte", event.col = "e2_event")
+  analysis_fast(ep(d, 2), control = 1, cutoff.looks = cut,
+                stat = c("logrank", "coxph"), side = 1)
+}
+
+scen <- list(
+  "no switching"                   = df,
+  "crossover after positive PFS"   = sw_gated,
+  "crossover after PFS, all trials" = sw_all,
+  "50% switch at progression"      = sw_prog
+)
+tab <- do.call(rbind, lapply(names(scen), function(nm) {
+  d <- scen[[nm]]
+  r <- os_final(d)
+  data.frame(
+    scenario         = nm,
+    control_switched = round(mean(d$switched[d$group == 1] == 1), 3),
+    OS_power         = round(mean(r$logrank.p <= 0.025, na.rm = TRUE), 3),
+    mean_HR          = round(exp(mean(r$cox.coef, na.rm = TRUE)), 3),
+    mean_OS_month    = round(mean(r$cutoff, na.rm = TRUE), 1)
+  )
+}))
+tab
+```
+
+Switching pulls the intention-to-treat hazard ratio for OS toward one and lowers
+the power of the OS test. The two crossover scenarios differ only in the trials
+where PFS was not significant, in which crossover is opened in the second
+scenario but not in the first, so opening crossover in every trial dilutes the
+OS comparison more.
+
+## Computing time
+
+The whole study, from data generation to the OS analysis of one scenario, runs
+in a few seconds.
+
+```{r timing}
+system.time({
+  d0  <- simdata_fast(nsim = nsim, n = c(300, 300), a.time = c(0, 18),
+                      a.rate = 600 / 18,
+                      h01.median = list(8, 12), h02.median = list(30, 36),
+                      h12.median = list(12, 12),
+                      d.hazard = -log(1 - 0.05) / 12, seed = seed)
+  pc  <- cutoff_fast(d0, event.looks = 380,
+                     tte.col = "e1_tte", event.col = "e1_event")
+  pr  <- analysis_fast(ep(d0, 1), control = 1, cutoff.looks = pc, side = 1)
+  pos <- (pr$reached & pr$logrank.p <= 0.025) %in% TRUE
+  d1  <- switch_fast(d0, group = 1, when = "later", cutoff = pc, sims = pos,
+                     aft.factor = 1.3)
+  r1  <- os_final(d1)
+})
+```
+
+## A check with the rank-preserving structural failure time model
+
+The acceleration factor of `switch_fast()` is the causal model of the
+rank-preserving structural failure time (RPSFT) method of Robins and Tsiatis
+(1991). If the experimental treatment multiplies the time spent on it by a
+factor `f`, both from randomization in the experimental group and after the
+switch in the control group, the RPSFT estimate of `psi = -log(f)` should be
+close to the true value. The check below simulates 10 large trials in which the
+experimental group has all transition hazards divided by `f` (an accelerated
+failure time effect of `f`), lets 60 percent of the control patients who
+progress switch with the same factor, and estimates `psi` in each trial with
+the rpsftm package (Allison, White, and Bond, 2017), ignoring censoring.
+
+```{r rpsft, eval = has_rpsftm}
+f   <- 1.5
+h01 <- log(2) / 8
+h02 <- log(2) / 30
+h12 <- log(2) / 12
+n_rep <- 10
+big <- simdata_fast(
+  nsim = n_rep, n = c(2000, 2000), a.time = c(0, 12), a.rate = 4000 / 12,
+  h01.hazard = list(h01, h01 / f), h02.hazard = list(h02, h02 / f),
+  h12.hazard = list(h12, h12 / f), seed = 7
+)
+big <- switch_fast(big, group = 1, prob = 0.6, when = "intermediate",
+                   aft.factor = f, seed = 8)
+
+suppressWarnings(suppressPackageStartupMessages({
+  library(survival)
+  library(rpsftm)
+}))
+psi_hat <- vapply(seq_len(n_rep), function(s) {
+  one <- big[big$sim == s, ]
+  rp_dat <- data.frame(
+    time   = one$e2_surv_time,
+    status = 1,
+    arm    = one$group - 1,
+    cens   = 1e6
+  )
+  # Proportion of the observed time spent on the experimental treatment.
+  rp_dat$rx <- ifelse(rp_dat$arm == 1, 1,
+                      ifelse(one$switched == 1,
+                             (one$e2_surv_time - one$switch_time) /
+                               one$e2_surv_time, 0))
+  fit <- tryCatch(
+    rpsftm(Surv(time, status) ~ rand(arm, rx), data = rp_dat,
+           censor_time = cens),
+    error = function(e) NULL
+  )
+  if (is.null(fit)) NA_real_ else unname(fit$psi)
+}, numeric(1))
+
+round(c(true_psi = -log(f), mean_estimate = mean(psi_hat, na.rm = TRUE),
+        sd_estimate = sd(psi_hat, na.rm = TRUE),
+        se_of_mean = sd(psi_hat, na.rm = TRUE) / sqrt(sum(!is.na(psi_hat)))), 4)
+```
+
+The mean of the estimates is close to the true value relative to its standard
+error, so the RPSFT method recovers the acceleration factor used to generate
+the switched survival times.
+
+## Remarks
+
+`switch_fast()` covers switching rules whose timing is a function of the
+patient's own outcomes (progression), of an opening time per trial, or of both,
+with an effect on the remaining time to the terminal event given by an
+acceleration factor or by a new hazard. Designs in which an interim decision
+changes the enrollment or the randomization itself, such as dropping an arm and
+re-randomizing new patients, change the data-generating process and are outside
+this approach.
+
+## References
+
+Allison, A., White, I. R., & Bond, S. (2017). rpsftm: an R package for rank
+preserving structural failure time models. *The R Journal*, 9(2), 342-353.
+
+Robins, J. M. and Tsiatis, A. A. (1991). Correcting for non-compliance in
+randomized trials using rank preserving structural failure time models.
+*Communications in Statistics - Theory and Methods*, 20(8), 2609-2631.
+
+Zhang, H. (2026). TrialSimulator: Clinical Trial Simulator. R package version
+1.35.8. https://CRAN.R-project.org/package=TrialSimulator

@@ -133,3 +133,11 @@ test_that("rmst_fast warns when tau exceeds the observed follow-up", {
   expect_warning(rmst_fast(tt, ee, group = gg, control = 0, tau = lim), NA)
   expect_warning(rmst_fast(tt, ee, tau = max(tt) + 1), "exceeds")
 })
+
+test_that("rmst_fast: presorted = TRUE checks the order", {
+  time  <- c(3, 1, 2, 4, 6, 5)
+  event <- c(1, 1, 0, 1, 1, 0)
+  group <- c(0, 1, 0, 1, 0, 1)
+  expect_error(rmst_fast(time, event, tau = 3, presorted = TRUE), "presorted = FALSE")
+  expect_error(rmst_fast(time, event, group, control = 0, tau = 3, presorted = TRUE), "presorted = FALSE")
+})

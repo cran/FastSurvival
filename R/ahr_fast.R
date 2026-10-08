@@ -54,6 +54,7 @@
 #' @param presorted if \code{TRUE}, assume \code{time} is already sorted in
 #'   ascending order so that each group's observations are also ascending; this
 #'   skips the internal sort (default \code{FALSE})
+#'   The order is checked, and an error is given when it does not hold.
 #' @return An object of class \code{"ahr_fast"}, a list with elements
 #'   \code{ahr} (the average hazard ratio, comparison vs reference),
 #'   \code{log.ahr}, \code{se.loghr}, \code{lower}, \code{upper},
@@ -89,7 +90,6 @@ ahr_fast <- function(time, event, group, control, side = 2,
 
   # Input validation
   if (!is.numeric(time)) stop("'time' must be numeric.")
-  event <- as.integer(event)
   if (!side %in% c(1L, 2L)) {
     stop("'side' must be either 1 (one-sided) or 2 (two-sided).")
   }
@@ -99,8 +99,11 @@ ahr_fast <- function(time, event, group, control, side = 2,
   if (anyNA(time) || anyNA(event) || anyNA(group)) {
     stop("'time', 'event' and 'group' must not contain missing values.")
   }
-  if (any(!(event %in% c(0L, 1L)))) stop("'event' must be 0 or 1.")
+  # Validate before converting, so that a value such as 0.7 is not truncated.
+  if (!all(event == 0 | event == 1)) stop("'event' must be 0 or 1.")
+  event <- as.integer(event)
   if (any(time < 0)) stop("'time' must be non-negative.")
+  if (presorted) check_presorted(time)
   if (!is.numeric(null.ahr) || length(null.ahr) != 1 || null.ahr <= 0) {
     stop("'null.ahr' must be a single positive number.")
   }

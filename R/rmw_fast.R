@@ -64,6 +64,7 @@
 #'   and \code{group} are assumed to be already sorted by ascending \code{time},
 #'   and the internal \code{order()} call is skipped. If \code{FALSE} (default),
 #'   sorting is handled internally.
+#'   The order is checked, and an error is given when it does not hold.
 #'
 #' @return An object of class \code{"rmw_fast"}, a length-two numeric vector
 #'   \code{c(statistic, p.value)} with attributes \code{z} (the named component
@@ -140,6 +141,7 @@ rmw_fast <- function(time, event, group, control, side = 2,
     event <- as.integer(event[ord])
     j     <- j[ord]
   } else {
+    check_presorted(time)
     event <- as.integer(event)
   }
 

@@ -8,7 +8,8 @@
 #' on the Kaplan-Meier estimate. The function returns the per-group average
 #' hazard, the ratio of average hazards (RAH, treatment over control) on the log
 #' scale, and the difference of average hazards (DAH, treatment minus control)
-#' on the identity scale, each with a confidence interval and a two-sided test.
+#' on the identity scale, each with a confidence interval and a test (one- or
+#' two-sided, following \code{side}).
 #' The C++ backend walks the pooled sorted data once per group, so the function
 #' is suitable for simulation loops with \code{presorted = TRUE}.
 #'
@@ -32,7 +33,7 @@
 #' the asymptotic variance of Uno and Horiguchi, computed from the Nelson-Aalen
 #' increments, the running restricted mean survival time and the at-risk
 #' fraction. The confidence interval for RAH is exponentiated from the log
-#' scale, and the two-sided p-values are based on the normal approximation.
+#' scale, and the p-values are based on the normal approximation.
 #'
 #' When \code{presorted = TRUE}, the inputs are assumed to be sorted in
 #' ascending order of \code{time}, so the internal \code{order()} call is
@@ -60,6 +61,7 @@
 #'   and \code{group} are assumed to be sorted in ascending order of
 #'   \code{time}, and the internal \code{order()} call is skipped. If
 #'   \code{FALSE} (default), sorting is handled internally.
+#'   The order is checked, and an error is given when it does not hold.
 #'
 #' @return An object of class \code{"ahsw_fast"}, a named numeric vector
 #'   containing the per-group average hazards (\code{ah.ctrl}, \code{ah.trt}),
@@ -133,6 +135,7 @@ ahsw_fast <- function(time, event, group, control, side = 2,
     event <- as.integer(event[ord])
     j     <- j[ord]
   } else {
+    check_presorted(time)
     event <- as.integer(event)
   }
 

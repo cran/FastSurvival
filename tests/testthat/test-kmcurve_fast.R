@@ -174,3 +174,10 @@ test_that("plot and print methods run for both single and two-group objects", {
   expect_error(plot(fit1, rmst = TRUE, tau = 18, conf.type = "plain"), NA)
   expect_warning(plot(fit1, hr = TRUE))   # hazard ratio ignored for one group
 })
+
+test_that("kmcurve_fast: time and event are validated", {
+  expect_error(kmcurve_fast(c(1, NA, 3), c(1, 0, 1)), "missing")
+  expect_error(kmcurve_fast(c(1, 2, 3), c(1, 2, 1)), "0 \\(censored\\)")
+  expect_error(kmcurve_fast(c(1, 2, 3), c(1, 0.7, 1)), "0 \\(censored\\)")
+  expect_error(kmcurve_fast(c(-1, 2, 3), c(1, 0, 1)), "non-negative")
+})

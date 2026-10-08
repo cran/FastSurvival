@@ -182,3 +182,10 @@ test_that("wmst_fast warns when a supplied tau2 exceeds the observed follow-up",
                  "exceeds")
   expect_warning(wmst_fast(tt, ee, group = gg, control = 0), NA)
 })
+
+test_that("wmst_fast: presorted = TRUE checks the order", {
+  time  <- c(3, 1, 2, 4, 6, 5)
+  event <- c(1, 1, 0, 1, 1, 0)
+  group <- c(0, 1, 0, 1, 0, 1)
+  expect_error(wmst_fast(time, event, group, control = 0, tau1 = 1, tau2 = 3, presorted = TRUE), "presorted = FALSE")
+})

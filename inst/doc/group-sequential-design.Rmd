@@ -10,9 +10,9 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment  = "#>",
-  eval     = FALSE
+  comment  = "#>"
 )
+has_gsd <- requireNamespace("gsDesign", quietly = TRUE)
 ```
 
 # Purpose
@@ -21,18 +21,16 @@ This vignette demonstrates the three simulation functions working together on
 a real phase 3 trial: `simdata_fast()` generates the trial data,
 `analysis_fast()` performs the interim and final analyses, and
 `simsummary_fast()` aggregates the operating characteristics. We reproduce the
-group sequential design of the innovaTV 301 trial and check that the simulated
-operating characteristics match the closed-form values from
-[gsDesign](https://cran.r-project.org/package=gsDesign) and
-[rpact](https://cran.r-project.org/package=rpact).
+group sequential design of the innovaTV 301 trial and compare the simulated
+operating characteristics with the closed-form values computed with
+[gsDesign](https://cran.r-project.org/package=gsDesign).
 
 The point is not that simulation replaces the closed-form calculation under
-proportional hazards, where gsDesign and rpact are exact, but that once the
-simulation agrees on a case they can handle, the same machinery can be trusted
-for cases they cannot, such as non-proportional hazards or data-dependent
-analysis timing. The benchmark code is shown but not executed when the vignette
-is built, because the simulation uses many replicates; the printed results are
-those obtained from an interactive run.
+proportional hazards, where gsDesign and similar packages are accurate, but
+that once the simulation agrees on a case they can handle, the same machinery
+can be trusted for cases they cannot, such as non-proportional hazards or
+data-dependent analysis timing. The whole vignette, with 10,000 simulated
+trials for the main design, runs in a few seconds.
 
 ```{r load}
 library(FastSurvival)
@@ -59,16 +57,19 @@ and a 5% annual dropout rate in each group.
 `simdata_fast()` generates the survival, censoring, and entry times for all
 replicates in one fused C++ pass. We specify the two group sizes, the accrual
 window, the per-group event medians, and a per-group dropout hazard
-corresponding to 5% per 12 months.
+corresponding to 5% per 12 months. Group 1 is the tisotumab vedotin group and
+group 2 the chemotherapy group.
 
 ```{r simulate}
+nsim <- 10000
+eta  <- -log(1 - 0.05) / 12
 df <- simdata_fast(
-  nsim     = 10000,
+  nsim     = nsim,
   n        = c(241, 241),
   a.time   = c(0, 23),
   a.prop   = 1,
   e.median = list(12.9, 9.0),
-  d.hazard = list(-log(1 - 0.05) / 12, -log(1 - 0.05) / 12),
+  d.hazard = list(eta, eta),
   seed     = 1
 )
 ```
@@ -94,15 +95,13 @@ planned information fractions. We obtain it from gsDesign and convert the upper
 Z boundaries to two-sided nominal p-value boundaries, which is the scale
 `simsummary_fast()` consumes through its `p.col` argument.
 
-```{r boundaries}
-library(gsDesign)
-
-gsd <- gsDesign(
-  k      = 2,
-  timing = c(252, 336) / 336,
-  alpha  = 0.025,
-  beta   = 0.1,
-  sfu    = sfLDOF,
+```{r boundaries, eval = has_gsd}
+gsd <- gsDesign::gsDesign(
+  k         = 2,
+  timing    = c(252, 336) / 336,
+  alpha     = 0.025,
+  beta      = 0.1,
+  sfu       = gsDesign::sfLDOF,
   test.type = 1
 )
 
@@ -116,81 +115,81 @@ spend_alpha
 log-rank p-values and aggregates the crossing probabilities, expected events,
 expected sample size, and expected analysis time across the looks.
 
-```{r summary}
-simsummary_fast(
-  res,
-  p.col     = "logrank.p",
-  alpha     = spend_alpha,
-  direction = "lower"
-)
-```
-
-The interactive run produces the following output.
-
-```
-Group-Sequential Operating Characteristics (simsummary_fast)
-  Simulations: 10000
-  Boundaries: nominal p-value on 'logrank.p'
-
-Stopping Boundaries: Look by Look
- Look Info. Frac. Events (s) Sample (n) Nominal p Cum. Cross. Eff.
-    1        0.75      252.0      482.0    0.0193           0.6881
-    2        1.00      336.0      482.0    0.0442           0.9000
-
-Overall
-  Rejection rate (efficacy):    0.9000
-  Expected events at stop:      278.2
-  Expected sample size at stop: 482.0
-  Expected analysis time at stop:27.31
+```{r summary, eval = has_gsd}
+oc <- simsummary_fast(res, p.col = "logrank.p", alpha = spend_alpha)
+oc
 ```
 
 # Comparison with the closed-form design
 
-For an independent closed-form reference we recompute the same design with rpact
-and read off the operating characteristics. The full rpact output is long, so we
-extract only the quantities needed for the comparison.
+The closed-form reference uses the usual large-sample approximation for the
+log-rank statistic (Schoenfeld, 1983): with 1:1 allocation and `d` events, the
+standardized statistic is approximately normal with mean
+`log(HR) * sqrt(d) / 2` in absolute value and unit variance, and the statistics
+at the two looks have correlation `sqrt(252 / 336)`. `gsDesign::gsProbability()`
+gives the crossing probabilities for this drift. The expected calendar time of
+each look is the time at which the expected number of deaths, under uniform
+accrual, exponential survival, and exponential dropout, reaches the event
+target.
 
-```{r rpact}
-library(rpact)
+```{r closed-form, eval = has_gsd}
+looks <- c(252, 336)
+theta <- log(12.9 / 9.0) / 2
+gp <- gsDesign::gsProbability(k = 2, theta = theta, n.I = looks,
+                              a = rep(-20, 2), b = gsd$upper$bound)
+p_cross <- gp$upper$prob[, 1]
 
-design <- getDesignGroupSequential(
-  kMax = 2,
-  alpha = 0.05,
-  beta  = 0.1,
-  sided = 2,
-  typeOfDesign = "asOF",
-  informationRates = c(252, 336) / 336
+# Expected number of deaths by calendar time t: uniform accrual of 482
+# subjects over 23 months, exponential survival and dropout in each group.
+lam <- log(2) / c(12.9, 9.0)
+exp_events <- function(t, n_tot = 482, r_acc = 23) {
+  a_end <- min(t, r_acc)
+  sum(vapply(lam, function(l) {
+    cc <- l + eta
+    (n_tot / 2) / r_acc * l / cc *
+      (a_end - (exp(-cc * (t - a_end)) - exp(-cc * t)) / cc)
+  }, numeric(1)))
+}
+t_look <- vapply(looks, function(d) {
+  stats::uniroot(function(t) exp_events(t) - d, c(1, 200))$root
+}, numeric(1))
+
+sim_val <- function(lk, col) as.numeric(oc[oc$look == lk, col])
+z1 <- -res$logrank.z[res$look == 1]
+cmp <- data.frame(
+  quantity = c("Mean log-rank Z at the interim",
+               "Probability of crossing at the interim",
+               "Overall power",
+               "Expected number of events at stop",
+               "Expected analysis time at stop (months)"),
+  simulation = c(mean(z1),
+                 sim_val("1", "prob.stop.efficacy"),
+                 sim_val("overall", "cum.reject"),
+                 sim_val("overall", "n.event.mean"),
+                 sim_val("overall", "cutoff.mean")),
+  closed_form = c(theta * sqrt(looks[1]),
+                  p_cross[1],
+                  sum(p_cross),
+                  sum(looks * c(p_cross[1], 1 - p_cross[1])),
+                  sum(t_look * c(p_cross[1], 1 - p_cross[1])))
 )
-
-results <- getPowerSurvival(
-  design,
-  maxNumberOfEvents   = 336,
-  median1             = 12.9,
-  median2             = 9.0,
-  maxNumberOfSubjects = 482,
-  accrualTime         = c(0, 23),
-  dropoutRate1        = -log(1 - 0.05),
-  dropoutRate2        = -log(1 - 0.05),
-  allocationRatioPlanned = 1
-)
+knitr::kable(cmp, digits = 3,
+             col.names = c("Quantity",
+                           paste0("FastSurvival (", nsim, " trials)"),
+                           "Closed form"))
 ```
 
-The simulated and closed-form operating characteristics agree closely. The
-efficacy boundaries are the spending boundaries fed into the simulation, so they
-match by construction; the crossing probabilities, expected events, and expected
-timing are estimated independently by simulation and line up with the analytic
-values.
-
-| Quantity | FastSurvival (10,000 sims) | gsDesign / rpact |
-|----------|----------------------------|------------------|
-| Interim efficacy boundary (two-sided nominal p) | 0.0193 | 0.0193 |
-| Final efficacy boundary (two-sided nominal p) | 0.0442 | 0.0442 |
-| Probability of crossing at the interim | 0.688 | 0.698 |
-| Overall power | 0.900 | 0.905 |
-| Expected number of events at stop | 278 | 277 |
-| Expected analysis time at stop (months) | 27.3 | 27.3 |
-
-Remaining differences are Monte Carlo error and shrink as `nsim` increases.
+The efficacy boundaries are the spending boundaries fed into the simulation, so
+they match by construction. The crossing probabilities, expected events, and
+expected timing are estimated independently by simulation. The Monte Carlo
+standard error of a probability near 0.7 from `r format(nsim, big.mark = ",")`
+trials is about `r round(sqrt(0.7 * 0.3 / nsim), 3)`, and that of the mean of
+the interim statistic is about `r round(1 / sqrt(nsim), 3)`. The closed form
+also relies on the large-sample approximation for the log-rank statistic, whose
+accuracy the first row shows, so the remaining differences reflect both sources
+of error. The expected
+analysis time of the closed form is evaluated at the expected number of events,
+whereas the simulation averages the realized analysis times.
 
 # Beyond proportional hazards
 
@@ -198,28 +197,57 @@ The value of the simulation trio is that nothing in the workflow assumes
 proportional hazards. To study a delayed treatment effect, replace the constant
 event hazard with a piecewise specification through `e.hazard` and `e.time` and
 keep everything else the same. The log-rank statistic loses power under a
-delayed effect, and a weighted or max-combo statistic can be substituted at the
-`analysis_fast()` step to recover it. Because gsDesign and rpact cannot evaluate
-these cases in closed form, the validated simulation machinery becomes the tool
-of choice.
+delayed effect, and a weighted or max-combo statistic (Lin et al., 2020) can be
+substituted at the `analysis_fast()` step. Analytic approximations exist for
+some non-proportional hazards settings and some of these tests, but simulation
+evaluates any combination of data-generating model, test, and analysis timing
+in the same way, and it checks such approximations.
 
-```{r nph}
+The max-combo p-value requires a multivariate normal integral for every
+simulated trial and look, which dominates the computing time. When only the
+decisions at the nominal levels are needed, `mc.alpha` computes the integral
+only for the p-values that the Bonferroni bounds do not already place on one
+side of the level; the decisions are the same as with every p-value integrated.
+The nominal levels below are those of the log-rank design and are used for
+illustration only: the correlation between the max-combo statistics at the two
+looks differs from that of the log-rank statistic, so a formal design would
+derive its boundaries for the max-combo statistic itself.
+
+```{r nph, eval = has_gsd}
+nsim_nph <- 2000
 df_delay <- simdata_fast(
-  nsim     = 10000,
+  nsim     = nsim_nph,
   n        = c(241, 241),
   a.time   = c(0, 23),
   a.prop   = 1,
   e.hazard = list(c(0.077, 0.045), c(0.077, 0.077)),
   e.time   = c(0, 3, Inf),
-  d.hazard = list(-log(1 - 0.05) / 12, -log(1 - 0.05) / 12),
+  d.hazard = list(eta, eta),
   seed     = 1
 )
 
+set.seed(1)
 res_delay <- analysis_fast(
   df_delay, control = 2,
-  event.looks = c(252, 336),
-  stat = "maxcombo", side = 2
+  event.looks = looks,
+  stat = c("logrank", "maxcombo"), side = 2,
+  mc.alpha = spend_alpha
 )
+
+oc_lr <- simsummary_fast(res_delay, p.col = "logrank.p",  alpha = spend_alpha)
+oc_mc <- simsummary_fast(res_delay, p.col = "maxcombo.p", alpha = spend_alpha)
+data.frame(
+  test  = c("Log-rank", "Max-combo"),
+  power = round(c(oc_lr[oc_lr$look == "overall", "cum.reject"],
+                  oc_mc[oc_mc$look == "overall", "cum.reject"]), 3)
+)
+```
+
+```{r nph-share, eval = has_gsd, echo = FALSE, results = "asis"}
+cat("Of the ", format(2 * nsim_nph, big.mark = ","),
+    " max-combo p-values (two looks per simulated trial), ",
+    round(100 * mean(res_delay$maxcombo.p.exact, na.rm = TRUE)),
+    "% required the multivariate normal integral.\n", sep = "")
 ```
 
 # References
@@ -233,6 +261,9 @@ clinical trials. *Biometrics*, 35(3), 549-556.
 
 Lan, K. K. G., & DeMets, D. L. (1983). Discrete sequential boundaries for
 clinical trials. *Biometrika*, 70(3), 659-663.
+
+Schoenfeld, D. A. (1983). Sample-size formula for the proportional-hazards
+regression model. *Biometrics*, 39(2), 499-503.
 
 Lin, R. S., Lin, J., Roychoudhury, S., et al. (2020). Alternative analysis
 methods for time to event endpoints under nonproportional hazards: a

@@ -30,7 +30,7 @@ cat("This vignette computes the sample size with the gsDesign package.",
 
 This vignette uses the simulation trio (`simdata_fast`, `analysis_fast`, and `simsummary_fast`) to compare the power of the log-rank test and the restricted mean survival time (RMST) at a single fixed analysis, under three survival patterns: proportional hazards, a delayed treatment effect, and crossing hazards. Along the way it shows the two plotting layers of the package, the design-stage scenario plot from `gen_scenario_fast` and the analysis-stage Kaplan-Meier plot from `kmcurve_fast`.
 
-The log-rank test is the most efficient test when hazards are proportional, but its power can fall under nonproportional hazards because it weights all event times equally. RMST contrasts the area under the survival curves up to a truncation time and summarizes a difference in survival rather than a hazard ratio, so it behaves differently when the treatment effect is concentrated late or reverses over time. The three scenarios below are chosen to make those differences visible at a common sample size.
+The log-rank test is the most efficient test when hazards are proportional, but its power can fall under nonproportional hazards because it weights all event times equally. RMST contrasts the area under the survival curves up to a truncation time and summarizes a difference in survival rather than a hazard ratio (Royston and Parmar, 2013; Uno et al., 2014), so it behaves differently when the treatment effect is concentrated late or reverses over time. The three scenarios below are chosen to make those differences visible at a common sample size.
 
 ## Design and sample size
 
@@ -99,7 +99,7 @@ plot(scn, tmax = study_dur, mfrow = c(1, 3))
 
 ## A single simulated trial
 
-Passing each scenario object to `simdata_fast` generates the data, here `nsim` replicates per scenario. The Kaplan-Meier plot below uses one replicate of the crossing scenario and adds the smoothed time-varying hazard ratio and the RMST shading up to the truncation time, which makes the early reversal of the effect visible in a single realized trial.
+Passing each scenario object to `simdata_fast` generates the data, here `nsim` replicates per scenario. The Kaplan-Meier plot below uses one replicate of the crossing scenario, administratively censored at the time of the analysis as in `analysis_fast`, and adds the smoothed time-varying hazard ratio and the RMST shading up to the truncation time, which makes the early reversal of the effect visible in a single realized trial.
 
 ```{r simulate}
 scenarios <- scn$scenarios
@@ -132,7 +132,13 @@ for (i in seq_along(scenarios)) {
     RMST     = s_rmst[s_rmst$look == "overall", "cum.reject"],
     stringsAsFactors = FALSE
   ))
-  examples[[i]] <- dat[dat$sim == 1L, c("tte", "event", "group")]
+  # One replicate, administratively censored at the analysis (calendar time
+  # study_dur), as analysis_fast() does; every subject is enrolled by then.
+  ex1 <- dat[dat$sim == 1L, c("accrual_time", "tte", "event", "group")]
+  fu  <- study_dur - ex1$accrual_time
+  ex1$event <- as.integer(ex1$event == 1L & ex1$tte <= fu)
+  ex1$tte   <- pmin(ex1$tte, fu)
+  examples[[i]] <- ex1[, c("tte", "event", "group")]
 }
 ```
 

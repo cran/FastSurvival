@@ -39,7 +39,8 @@ component and the test reduces to the ordinary log-rank test.}
 \item{presorted}{A logical value. If \code{TRUE}, \code{time}, \code{event},
 and \code{group} are assumed to be already sorted by ascending \code{time},
 and the internal \code{order()} call is skipped. If \code{FALSE} (default),
-sorting is handled internally.}
+sorting is handled internally.
+The order is checked, and an error is given when it does not hold.}
 }
 \value{
 An object of class \code{"rmw_fast"}, a length-two numeric vector

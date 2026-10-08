@@ -48,6 +48,8 @@ static void draw_accrual_det(double* out, int nsim, int n,
 // rpiece_exp_cpp: one unit exponential per subject mapped through the inverse
 // cumulative hazard. The piecewise pre-computations (fin_time, cum_haz) are
 // supplied by the caller.
+// A zero hazard in the last piece (or a zero single hazard) gives an infinite
+// time when the target exceeds the cumulative hazard reached before it.
 static void draw_exp(double* out, int n,
                      const std::vector<double>& hazard,
                      const std::vector<double>& fin_time,
@@ -56,7 +58,7 @@ static void draw_exp(double* out, int n,
   NumericVector target = dqrng::dqrexp(n, 1.0);
   if (n_int == 1) {
     const double rate = hazard[0];
-    for (int i = 0; i < n; ++i) out[i] = target[i] / rate;
+    for (int i = 0; i < n; ++i) out[i] = (rate > 0.0) ? target[i] / rate : R_PosInf;
     return;
   }
   for (int i = 0; i < n; ++i) {
@@ -68,8 +70,16 @@ static void draw_exp(double* out, int n,
     }
     int k = lo;
     if (cum_haz[k] > tgt && k > 0) --k;
-    out[i] = fin_time[k] + (tgt - cum_haz[k]) / hazard[k];
+    out[i] = (hazard[k] > 0.0) ? fin_time[k] + (tgt - cum_haz[k]) / hazard[k]
+                               : R_PosInf;
   }
+}
+
+// Event indicator of the observed time min(sv, dr): the survival time comes
+// first (ties count as events), and a subject with neither a finite survival
+// time nor a finite dropout time is censored rather than an event at Inf.
+static inline int event_first(double sv, double dr) {
+  return (sv < dr || (sv == dr && std::isfinite(sv))) ? 1 : 0;
 }
 
 // Categorical subgroup-cell assignment: one dqrunif draw per subject mapped to
@@ -159,8 +169,15 @@ static void simulate_group_into(
       const double dr = dro_col[base + i];
       const double tt = (sv <= dr) ? sv : dr;
       tte_col[base + i] = tt;
-      evt_col[base + i] = (sv <= dr) ? 1 : 0;
+      evt_col[base + i] = event_first(sv, dr);
       cal_col[base + i] = acc_col[base + i] + tt;
+    }
+    // A single subgroup cell (for example prevalence = 1) consumes no draws
+    // but still gives its subgroup columns.
+    const int n_fac1 = (int) sub_cols.size();
+    for (int f = 0; f < n_fac1; ++f) {
+      int* dst = sub_cols[f];
+      for (int i = 0; i < total_n; ++i) dst[base + i] = level_table(0, f);
     }
     return;
   }
@@ -227,7 +244,7 @@ static void simulate_group_into(
     const double dr = dro_col[base + i];
     const double tt = (sv <= dr) ? sv : dr;
     tte_col[base + i] = tt;
-    evt_col[base + i] = (sv <= dr) ? 1 : 0;
+    evt_col[base + i] = event_first(sv, dr);
     cal_col[base + i] = acc_col[base + i] + tt;
   }
 
@@ -295,7 +312,9 @@ DataFrame simdata_core_full(
   const std::vector<int> fcc(fixed_counts_c.begin(), fixed_counts_c.end());
   const std::vector<int> fct(fixed_counts_t.begin(), fixed_counts_t.end());
 
-  const int n_fac = (n_cell > 1) ? level_table_c.ncol() : 0;
+  // Subgroup columns are produced whenever a prevalence is supplied (the R
+  // wrapper passes a zero-column table otherwise), also for a single cell.
+  const int n_fac = level_table_c.ncol();
 
   if (n_groups == 1) {
     const int n0 = n_grp[0];

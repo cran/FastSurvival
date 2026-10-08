@@ -198,3 +198,41 @@ test_that("milestone_fast rejects missing times and groups", {
   expect_error(milestone_fast(c(1, 2, 3, 4), c(1, 1, 0, 1), c(0, NA, 1, 1),
                               control = 0, tau = 2), "missing")
 })
+
+test_that("milestone_fast: an estimate of 1 gives a degenerate one-sample interval", {
+  set.seed(3)
+  # No control event before tau = 5, so the control estimate is 1.
+  time  <- c(runif(40, 10, 20), rexp(40, 0.1))
+  event <- rep(1L, 80)
+  group <- rep(0:1, each = 40)
+  d <- data.frame(sim = 1L, group = group + 1L, accrual_time = 0,
+                  tte = time, event = event)
+  for (m in c("mover", "loglog")) {
+    r <- milestone_fast(time, event, group, control = 0, tau = 5, method = m)
+    expect_equal(unname(r$surv[1]), 1)
+    expect_equal(unname(c(r$surv.lower[1], r$surv.upper[1])), c(1, 1))
+    expect_true(is.finite(r$diff.lower) && is.finite(r$diff.upper))
+    expect_true(r$diff.lower <= r$diff && r$diff <= r$diff.upper)
+    a <- analysis_fast(d, control = 1, time.looks = 1000, stat = "milestone",
+                       tau = 5, ms.method = m)
+    expect_equal(a$milestone.diff.lower, r$diff.lower)
+    expect_equal(a$milestone.diff.upper, r$diff.upper)
+  }
+  expect_true(is.finite(milestone_fast(time, event, group, control = 0,
+                                       tau = 5, method = "mover")$statistic))
+  expect_true(is.na(milestone_fast(time, event, group, control = 0,
+                                   tau = 5, method = "loglog")$statistic))
+})
+
+test_that("milestone_fast: event values are validated before conversion", {
+  expect_error(milestone_fast(1:4, c(1, 0.7, 0, 1), c(0, 0, 1, 1),
+                              control = 0, tau = 2), "only 0")
+  expect_error(milestone_fast(c(-1, 2, 3, 4), c(1, 1, 0, 1), c(0, 0, 1, 1),
+                              control = 0, tau = 2), "non-negative")
+})
+
+test_that("milestone_fast: presorted = TRUE checks the order", {
+  expect_error(milestone_fast(c(3, 1, 2, 4), c(1, 1, 0, 1), c(0, 1, 0, 1),
+                              control = 0, tau = 2, presorted = TRUE),
+               "presorted = FALSE")
+})

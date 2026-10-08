@@ -217,3 +217,12 @@ test_that("stratified coxph_fast validates strata", {
   expect_error(coxph_fast(tt, ee, gg, control = 1, presorted = TRUE,
                           strata = c(1, 2, 1, 2, 1, 2)), "contiguous")
 })
+
+test_that("coxph_fast: presorted = TRUE checks the order", {
+  time  <- c(3, 1, 2, 4, 6, 5)
+  event <- c(1, 1, 0, 1, 1, 0)
+  group <- c(0, 1, 0, 1, 0, 1)
+  expect_error(coxph_fast(time, event, group, control = 0, presorted = TRUE), "presorted = FALSE")
+  expect_error(coxph_fast(time, event, group, control = 0, presorted = TRUE, strata = c(1, 1, 1, 2, 2, 2)), "presorted = FALSE")
+  expect_error(coxph_fast(c(1, 3, 2, 4, 5, 6), event, group, control = 0, presorted = TRUE, strata = c(1, 2, 1, 2, 1, 2)), "presorted = FALSE")
+})

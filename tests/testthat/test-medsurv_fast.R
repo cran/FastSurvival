@@ -190,3 +190,10 @@ test_that("the median follows the survfit convention on a flat stretch at 0.5", 
   # Times 1..5: S drops from 0.6 to 0.4 at t = 3, so the median is 3.
   expect_equal(unname(medsurv_fast(1:5, rep(1L, 5))["median"]), 3)
 })
+
+test_that("medsurv_fast: presorted = TRUE checks the order", {
+  time  <- c(3, 1, 2, 4, 6, 5)
+  event <- c(1, 1, 0, 1, 1, 0)
+  group <- c(0, 1, 0, 1, 0, 1)
+  expect_error(medsurv_fast(time, event, group, control = 0, presorted = TRUE), "presorted = FALSE")
+})

@@ -2,7 +2,10 @@
 # built from survfit and approxfun. This mirrors the algorithm of
 # nphsim::wkm.Stat and provides an independent validation axis for wkm_core.
 # event: 1 = event, 0 = censoring; grp: 1 = treatment, 0 = control.
-wkm_reference <- function(time, event, grp) {
+# The selected weight enters the numerator and the weighted area; the variance
+# always divides by the Pepe-Fleming weight, the censoring factor of the
+# variance of the two Kaplan-Meier estimates (Pepe and Fleming, 1989).
+wkm_reference <- function(time, event, grp, weight = "PF") {
   n <- length(time)
   n1 <- sum(grp == 1)
   n2 <- sum(grp == 0)
@@ -39,7 +42,8 @@ wkm_reference <- function(time, event, grp) {
   }
   g1 <- g1_fun(grid)
   g2 <- g2_fun(grid)
-  wt <- ifelse(g1 + g2 == 0, 0, (n * g1 * g2) / (n1 * g1 + n2 * g2))
+  pf <- ifelse(g1 + g2 == 0, 0, (n * g1 * g2) / (n1 * g1 + n2 * g2))
+  wt <- switch(weight, PF = pf, sqrtPF = sqrt(pf), constant = rep(1, n))
 
   num_raw <- sum(wt * (km_s1 - km_s2) * width)
 
@@ -51,8 +55,8 @@ wkm_reference <- function(time, event, grp) {
   a_rem <- a_seq[n] - a_seq
   sp_next <- c(sp[-1], min(fp$surv))
   d_sm <- sp_next - sp
-  keep <- wt > 0 & sp > 0
-  variance <- -sum((a_rem[keep]^2 / (sp[keep]^2 * wt[keep])) * d_sm[keep])
+  keep <- pf > 0 & sp > 0
+  variance <- -sum((a_rem[keep]^2 / (sp[keep]^2 * pf[keep])) * d_sm[keep])
 
   num <- sqrt(n1 * n2 / n) * num_raw
   z <- num / sqrt(variance)
@@ -169,4 +173,53 @@ test_that("type I error is approximately controlled under the null", {
     if (is.finite(res["p"]) && res["p"] < 0.05) reject <- reject + 1L
   }
   expect_lt(reject / nsim, 0.12)
+})
+
+test_that("wkm_fast matches the survfit-based reference for every weight", {
+  skip_if_not_installed("survival")
+  set.seed(12)
+  n_per <- 150
+  g <- rep(0:1, each = n_per)
+  tt <- c(rexp(n_per, log(2) / 12), rexp(n_per, log(2) / 16))
+  cc <- pmin(runif(2 * n_per, 12, 36), rexp(2 * n_per, rate = 0.02))
+  time <- pmin(tt, cc)
+  event <- as.integer(tt <= cc)
+  for (w in c("PF", "sqrtPF", "constant")) {
+    fast <- wkm_fast(time, event, group = g, control = 0, side = 1, weight = w)
+    ref  <- wkm_reference(time, event, g, weight = w)
+    expect_equal(unname(fast["wdiff"]), ref$num_raw, tolerance = 1e-8)
+    expect_equal(unname(fast["z"]), ref$z, tolerance = 1e-6)
+  }
+})
+
+test_that("wkm_fast: the standard error is calibrated for every weight", {
+  # Under the null, the empirical SD of the weighted difference over repeated
+  # trials should match the mean estimated SE. With the weight-specific
+  # divisor of versions up to 1.1.0 the ratio was about 1.15 for the constant
+  # weight in this setting (independent Python simulation).
+  set.seed(2026)
+  nsim <- 600
+  wts  <- c("PF", "sqrtPF", "constant")
+  est  <- matrix(NA_real_, nsim, 3, dimnames = list(NULL, wts))
+  se   <- est
+  for (s in seq_len(nsim)) {
+    g  <- rep(0:1, each = 150)
+    tt <- rexp(300, log(2) / 12)
+    cc <- pmin(runif(300, 12, 36), rexp(300, rate = 0.02))
+    time  <- pmin(tt, cc)
+    event <- as.integer(tt <= cc)
+    for (w in wts) {
+      r <- wkm_fast(time, event, group = g, control = 0, weight = w)
+      est[s, w] <- r[["wdiff"]]
+      se[s, w]  <- r[["se"]]
+    }
+  }
+  ratio <- apply(est, 2, sd) / colMeans(se)
+  expect_true(all(abs(ratio - 1) < 0.08), info = paste(round(ratio, 3),
+                                                       collapse = ", "))
+})
+
+test_that("wkm_fast: presorted = TRUE checks the order", {
+  expect_error(wkm_fast(c(3, 1, 2, 4), c(1, 1, 0, 1), c(0, 1, 0, 1),
+                        control = 0, presorted = TRUE), "presorted = FALSE")
 })

@@ -47,6 +47,7 @@ package documentation, namely an experimental hazard ratio of 16 for the first
 ```{r scenarios}
 e_time <- c(0, 0.1, Inf)         # change point at 0.1 year
 cut    <- 5                      # analysis at 5 years
+N_HALF <- 1000L                  # subjects per arm
 
 scenarios <- list(
   equal = list(
@@ -65,32 +66,21 @@ modestly lower hazard afterwards never lets them catch up. The hazard ratio,
 however, falls below one after the first 0.1 year, and it is this late region
 that late-emphasis tests reward.
 
-```{r scenario-figure, echo = FALSE, fig.width = 5, fig.height = 4}
-pe_cumhaz <- function(t, haz, e_time) {
-  ch <- numeric(length(t))
-  for (j in seq_along(haz)) {
-    ch <- ch + haz[j] * pmax(0, pmin(t, e_time[j + 1]) - e_time[j])
-  }
-  ch
-}
-pe_surv <- function(t, haz, e_time) exp(-pe_cumhaz(t, haz, e_time))
-
-col_control <- "#1b9e77"
-col_treat   <- "#d95f02"
-scn <- scenarios$strong
-tt  <- seq(0, cut, length.out = 601)
-
-plot(tt, pe_surv(tt, scn$haz_c, e_time), type = "l", col = col_control, lwd = 2,
-     ylim = c(0, 1), xlab = "Time (years)", ylab = "Survival probability",
-     main = "Survival (strong null)")
-lines(tt, pe_surv(tt, scn$haz_e, e_time), col = col_treat, lwd = 2)
-legend("topright", bty = "n", cex = 0.85,
-       legend = c("Control", "Experimental"),
-       col = c(col_control, col_treat), lwd = 2)
+```{r scenario-figure, fig.width = 5, fig.height = 4}
+scn_strong <- gen_scenario_fast(
+  list("Strong null" = list(
+    e.hazard = list(scenarios$strong$haz_c, scenarios$strong$haz_e),
+    e.time   = e_time)),
+  shared = list(n = c(N_HALF, N_HALF), a.time = c(0, 1e-4), a.prop = 1)
+)
+plot(scn_strong, tmax = cut, hr_max = 2, xlab = "Time (years)")
 ```
 
-The experimental arm is worse at every time point on the survival scale, even
-though its hazard is lower than the control hazard after the first 0.1 year.
+The design-stage plot of `gen_scenario_fast()` draws the two survival curves and
+the hazard ratio (dashed, right axis); the hazard ratio of 16 during the first
+0.1 year lies above the plotted range. The experimental arm is worse at every
+time point on the survival scale, even though its hazard is lower than the
+control hazard after the first 0.1 year.
 
 ## Methods compared
 
@@ -106,11 +96,15 @@ intended to prevent exactly the kind of spurious rejection at issue here.
 A single simulated data set is reused across the methods. The weighted log-rank
 tests each occupy the `logrank.*` columns, so they are obtained from separate
 `analysis_fast` calls; the analysis is a calendar-time cut at 5 years and
-testing is one-sided in the direction of experimental benefit.
+testing is one-sided in the direction of experimental benefit. Only the
+decision at the 2.5% level is needed from the MaxCombo test, so
+`mc.alpha = ALPHA` evaluates the multivariate normal integral only for the
+p-values that the Bonferroni bounds do not place on one side of that level; the
+decisions are the same as with every p-value integrated.
 
 ```{r design}
 NSIM    <- 2000L     # raise (e.g. 5000) for tighter Monte Carlo error
-N_TOTAL <- 2000L
+N_TOTAL <- 2L * N_HALF
 ALPHA   <- 0.025
 SIDE    <- 1L
 T_STAR  <- 0.5       # modestly-weighted log-rank delay (years)
@@ -119,7 +113,7 @@ SEED    <- 20240601L
 run_one_scenario <- function(scn) {
   dataset <- simdata_fast(
     nsim     = NSIM,
-    n        = rep(N_TOTAL %/% 2L, 2L),
+    n        = c(N_HALF, N_HALF),
     a.time   = c(0, 1e-4),       # near-instantaneous enrollment
     a.prop   = 1,
     e.hazard = list(scn$haz_c, scn$haz_e),
@@ -135,10 +129,11 @@ run_one_scenario <- function(scn) {
   res_mb   <- analysis_fast(dataset, control = 1, time.looks = cut,
                             stat = "logrank", weight = "mwlrt",
                             t_star = T_STAR, side = SIDE)
+  set.seed(SEED)
   res_mc   <- analysis_fast(dataset, control = 1, time.looks = cut,
                             stat = "maxcombo",
                             mc.rho = c(0, 0, 1, 1), mc.gamma = c(0, 1, 0, 1),
-                            side = SIDE)
+                            side = SIDE, mc.alpha = ALPHA)
 
   reject_in_favor <- function(res, pcol) {
     ok <- res$reached
@@ -163,7 +158,6 @@ well above 2.5% means the test is declaring a harmful treatment beneficial.
 ```{r run-all}
 rates <- vapply(scenarios, run_one_scenario, numeric(4L))
 colnames(rates) <- vapply(scenarios, function(s) s$label, character(1L))
-round(rates, 3)
 ```
 
 ```{r results-table, echo = FALSE}
@@ -190,9 +184,12 @@ the evidence of harm and lets the late region drive the result. This is the
 behavior Freidlin and Korn (2019) warn against: a statistically significant
 result in favor of a treatment that is, by construction, never better on the
 survival scale. The modestly-weighted log-rank test of Magirr and Burman (2019)
-behaves like the log-rank test here, since capping the weights prevents the late
-region from dominating, which is why it remains a useful member of the weighted
-family even when unbounded late-emphasis tests do not.
+behaves like the log-rank test here. Its weights start at one, never fall below
+that value, and are capped, so the early events keep their full weight and the
+late region cannot dominate. The FH(0,1) weights, by contrast, lie between zero
+and one but are close to zero for the early events. This is why the
+modestly-weighted test remains a useful member of the weighted family even when
+tests that give the early events almost no weight do not.
 
 None of this means that emphasizing late events is never appropriate. Freidlin
 and Korn (2019) note that a test down-weighting early events can be justified

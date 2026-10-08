@@ -43,7 +43,8 @@ used for the Z statistic and p-value (default 1)}
 
 \item{presorted}{if \code{TRUE}, assume \code{time} is already sorted in
 ascending order so that each group's observations are also ascending; this
-skips the internal sort (default \code{FALSE})}
+skips the internal sort (default \code{FALSE})
+The order is checked, and an error is given when it does not hold.}
 }
 \value{
 An object of class \code{"ahr_fast"}, a list with elements

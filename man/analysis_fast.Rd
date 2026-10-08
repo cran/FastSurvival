@@ -30,7 +30,9 @@ analysis_fast(
   medsurv.bw = NULL,
   wkm.weight = c("PF", "sqrtPF", "constant"),
   wmst.tau1 = 0,
-  wmst.tau2 = NULL
+  wmst.tau2 = NULL,
+  cutoff.looks = NULL,
+  mc.alpha = NULL
 )
 }
 \arguments{
@@ -42,10 +44,11 @@ trial, containing at least \code{sim}, \code{group}, \code{accrual_time},
 represents the control group.}
 
 \item{event.looks}{A vector of positive whole numbers, the target cumulative
-event counts, one per look. Mutually exclusive with \code{time.looks}.}
+event counts, one per look. Mutually exclusive with \code{time.looks} and
+\code{cutoff.looks}.}
 
 \item{time.looks}{A numeric vector of calendar times, one per look.
-Mutually exclusive with \code{event.looks}.}
+Mutually exclusive with \code{event.looks} and \code{cutoff.looks}.}
 
 \item{stat}{A character vector naming the statistics to compute. Any subset
 of \code{"logrank"}, \code{"coxph"}, \code{"rmst"}, \code{"km"},
@@ -134,8 +137,8 @@ p-value. Defaults to 1e-5.}
 
 \item{maxpts}{A single positive integer, the maximum number of function
 evaluations for the quasi-Monte-Carlo integration used by the
-\code{"maxcombo"} p-value when four or more weights are supplied. Defaults
-to 25000.}
+\code{"maxcombo"} p-value with four or more weights or with a two-sided
+test (see Details). Defaults to 25000.}
 
 \item{medsurv.method}{A character string naming the variance method for the
 \code{"medsurv"} statistic, one of \code{"km"} (default) or \code{"nph"}.
@@ -157,6 +160,24 @@ for the \code{"wmst"} statistic. Defaults to 0.}
 the \code{"wmst"} statistic, which must exceed \code{wmst.tau1}. \code{NULL}
 (default) falls back to \code{tau}. Required (through either argument) only
 when \code{"wmst"} is requested.}
+
+\item{cutoff.looks}{A numeric matrix of per-simulation calendar cutoffs with
+one row per simulated trial and one column per look, such as the output of
+\code{\link{cutoff_fast}}. When the matrix has row names they are matched
+to the values of \code{data$sim}; otherwise the rows are taken in the
+order of the sorted distinct values of \code{data$sim}. A numeric vector
+is treated as a single look. \code{NA} or \code{Inf} marks a look that is
+not reached. The \code{look.value} column of the output is taken from the
+\code{"look.value"} attribute of the matrix when it is present, and is
+\code{NA} otherwise. Mutually exclusive with \code{event.looks} and
+\code{time.looks}.}
+
+\item{mc.alpha}{An optional numeric vector of nominal levels in (0, 1), one
+per look or a single value for all looks, at which the \code{"maxcombo"}
+p-value is compared. When supplied, the p-value is computed by
+integration only when the Bonferroni bounds do not decide the comparison
+(see Details), and the output gains a logical column
+\code{maxcombo.p.exact}. \code{NULL} (default) computes every p-value.}
 }
 \value{
 A data frame. When \code{by.subgroup = FALSE}, it has
@@ -164,8 +185,9 @@ A data frame. When \code{by.subgroup = FALSE}, it has
   \code{nsim * length(looks) * (1 + total subgroup levels)} rows and an
   extra \code{population} column placed after \code{look.value}. The common
   columns are \code{sim}, \code{look} (1-based look index),
-  \code{look.value} (the requested event count or calendar time), optionally \code{population}, \code{cutoff} (the
-  calendar time used, \code{NA} when an event target was not reached),
+  \code{look.value} (the requested event count or calendar time, or the
+  \code{"look.value"} attribute of \code{cutoff.looks}), optionally \code{population}, \code{cutoff} (the
+  calendar time used, \code{NA} when the look was not reached),
   \code{reached}, \code{n.enrolled}, \code{n.event}, \code{n.dropout} (the
   number of enrolled subjects whose dropout occurred on or before the cutoff)
   and \code{n.pipeline} (\code{n.enrolled - n.event - n.dropout}, the
@@ -179,7 +201,8 @@ A data frame. When \code{by.subgroup = FALSE}, it has
   \code{rmst.diff.lower}, \code{rmst.diff.upper}, \code{rmst.z}, and
   \code{rmst.p} for \code{"rmst"}; \code{km.surv.ctrl} and
   \code{km.surv.trt} for \code{"km"}; \code{maxcombo.stat} and
-  \code{maxcombo.p} for \code{"maxcombo"}; and \code{ahsw.ah.ctrl},
+  \code{maxcombo.p} (and \code{maxcombo.p.exact} when \code{mc.alpha} is
+  supplied) for \code{"maxcombo"}; and \code{ahsw.ah.ctrl},
   \code{ahsw.ah.trt}, \code{ahsw.rah}, \code{ahsw.rah.lower},
   \code{ahsw.rah.upper}, \code{ahsw.p.rah}, \code{ahsw.dah},
   \code{ahsw.dah.lower}, \code{ahsw.dah.upper}, and \code{ahsw.p.dah} for
@@ -203,8 +226,10 @@ A data frame. When \code{by.subgroup = FALSE}, it has
 \description{
 Performs interim or sequential analyses of simulated two-group
 time-to-event data at one or more analysis times ("looks"). Each look is
-defined either by a target cumulative number of events
-(information-based timing) or by a calendar time (calendar-based timing).
+defined by a target cumulative number of events (information-based timing),
+by a calendar time (calendar-based timing), or by a calendar cutoff given
+separately for every simulated trial (for example by
+\code{\link{cutoff_fast}}).
 At every look the data are administratively censored at the corresponding
 calendar cutoff, and the requested statistics are computed for each
 simulated trial by reusing \code{\link{survdiff_fast}},
@@ -243,7 +268,21 @@ calendar time and \code{reached} is always \code{TRUE}. In both cases the
 cutoff is determined once on the whole population and then used for the
 overall analysis and for every subgroup analysis at that look.
 
-Exactly one of \code{event.looks} and \code{time.looks} must be supplied.
+When \code{cutoff.looks} is supplied, the calendar cutoff of each look is
+given separately for every simulated trial, typically by
+\code{\link{cutoff_fast}}. This analyzes an endpoint at cutoffs determined
+by another endpoint (for example overall survival at the event-driven looks
+of progression-free survival), by a subset of the subjects, or by a
+combination of event and calendar-time rules. A missing or infinite entry
+marks a look whose trigger was not met in that simulation: as for an
+unreached \code{event.looks} target, the full data are used, \code{reached}
+is \code{FALSE}, and \code{cutoff} is \code{NA}. In contrast,
+\code{\link{pairwise_fast}} reports \code{NA} counts and statistics for an
+unreached look, because its contrasts share one cutoff and have no common
+final data.
+
+Exactly one of \code{event.looks}, \code{time.looks}, and
+\code{cutoff.looks} must be supplied.
 
 The statistics are selected with \code{stat}, which may name one or more of
 \code{"logrank"}, \code{"coxph"}, \code{"rmst"}, \code{"km"},
@@ -277,7 +316,31 @@ The \code{"maxcombo"} statistic is the max-combo test of \code{mc.rho} and
 most extreme component (\code{min} of the component Z-scores when
 \code{side = 1}, so that a negative value favors treatment, and the maximum
 absolute component when \code{side = 2}), and \code{maxcombo.p} is the joint
-multivariate-normal p-value, which already follows \code{side}.
+multivariate-normal p-value, which already follows \code{side}. As in
+\code{\link{maxcombo_fast}}, the p-value of a one-sided test with two or
+three weights is computed by the deterministic TVPACK algorithm, and
+otherwise by the randomized quasi-Monte-Carlo GenzBretz algorithm of
+mvtnorm, which uses R's random-number generator; call \code{set.seed()}
+beforehand for p-values that are reproducible to the last digit.
+
+The multivariate normal integration dominates the computing time of the
+\code{"maxcombo"} statistic in a large simulation. When only the decision
+at a nominal level matters, \code{mc.alpha} avoids most of these
+integrals. With \code{K} weights and \code{p_min} the smallest
+component p-value (\code{pnorm(m)} for \code{side = 1} and
+\code{2 * pnorm(-m)} for \code{side = 2}, where \code{m} is
+\code{maxcombo.stat}), the max-combo p-value satisfies
+\code{p_min <= p <= min(1, K * p_min)} (the Bonferroni inequality). When
+\code{p_min > mc.alpha}, \code{p_min} is reported; when
+\code{K * p_min <= mc.alpha}, \code{K * p_min} is reported; otherwise the
+p-value is computed by integration. The reported value is therefore on the
+same side of \code{mc.alpha} as the exact p-value, so the rejection
+decision \code{maxcombo.p <= mc.alpha} (as in \code{\link{simsummary_fast}}
+with \code{alpha = mc.alpha}) is the same as with exact p-values, but the
+reported value is a bound unless \code{maxcombo.p.exact} is \code{TRUE}.
+Use exact p-values (the default \code{mc.alpha = NULL}) when the p-values
+themselves, or decisions at other levels such as Bonferroni-adjusted levels,
+are needed.
 
 The \code{"ahsw"} statistic is the average hazard with survival weight of Uno
 and Horiguchi on the window from 0 to \code{tau}. It reports the per-group
@@ -297,7 +360,10 @@ is a positive difference (higher treatment survival). For \code{"wald"} and
 \code{"mover"} a positive Z favors treatment; for \code{"loglog"} the
 statistic is the difference of the complementary log-log transforms, so a
 negative Z favors treatment, and the one-sided p-value is the lower tail as
-in \code{\link{milestone_fast}}.
+in \code{\link{milestone_fast}}. When the Kaplan-Meier estimate of a group
+is 0 or 1 at \code{tau}, its one-sample interval degenerates to the
+estimate, so the interval of the difference is still reported, while the
+\code{"loglog"} statistic is \code{NA}.
 
 The \code{"rmw"} statistic is the robust modestly-weighted log-rank test of
 Magirr and Ohrn, the maximum of the standard log-rank component and a single
@@ -399,5 +465,6 @@ head(res5)
   \code{\link{ahsw_fast}}, \code{\link{milestone_fast}},
   \code{\link{rmw_fast}}, \code{\link{ahr_fast}},
   \code{\link{medsurv_fast}}, \code{\link{wkm_fast}},
-  \code{\link{wmst_fast}}.
+  \code{\link{wmst_fast}}, \code{\link{cutoff_fast}},
+  \code{\link{pairwise_fast}}, \code{\link{switch_fast}}.
 }

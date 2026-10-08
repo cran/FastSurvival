@@ -349,16 +349,15 @@ together on a real phase 3 trial: <code>simdata_fast()</code> generates
 the trial data, <code>analysis_fast()</code> performs the interim and
 final analyses, and <code>simsummary_fast()</code> aggregates the
 operating characteristics. We reproduce the group sequential design of
-the innovaTV 301 trial and check that the simulated operating
-characteristics match the closed-form values from <a href="https://cran.r-project.org/package=gsDesign">gsDesign</a> and <a href="https://cran.r-project.org/package=rpact">rpact</a>.</p>
+the innovaTV 301 trial and compare the simulated operating
+characteristics with the closed-form values computed with <a href="https://cran.r-project.org/package=gsDesign">gsDesign</a>.</p>
 <p>The point is not that simulation replaces the closed-form calculation
-under proportional hazards, where gsDesign and rpact are exact, but that
-once the simulation agrees on a case they can handle, the same machinery
-can be trusted for cases they cannot, such as non-proportional hazards
-or data-dependent analysis timing. The benchmark code is shown but not
-executed when the vignette is built, because the simulation uses many
-replicates; the printed results are those obtained from an interactive
-run.</p>
+under proportional hazards, where gsDesign and similar packages are
+accurate, but that once the simulation agrees on a case they can handle,
+the same machinery can be trusted for cases they cannot, such as
+non-proportional hazards or data-dependent analysis timing. The whole
+vignette, with 10,000 simulated trials for the main design, runs in a
+few seconds.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(FastSurvival)</span></code></pre></div>
 </div>
 <div id="the-innovatv-301-trial" class="section level1">
@@ -383,16 +382,19 @@ dropout rate in each group.</p>
 <p><code>simdata_fast()</code> generates the survival, censoring, and
 entry times for all replicates in one fused C++ pass. We specify the two
 group sizes, the accrual window, the per-group event medians, and a
-per-group dropout hazard corresponding to 5% per 12 months.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="at">nsim     =</span> <span class="dv">10000</span>,</span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="at">n        =</span> <span class="fu">c</span>(<span class="dv">241</span>, <span class="dv">241</span>),</span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">a.time   =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">23</span>),</span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">a.prop   =</span> <span class="dv">1</span>,</span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">e.median =</span> <span class="fu">list</span>(<span class="fl">12.9</span>, <span class="fl">9.0</span>),</span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">d.hazard =</span> <span class="fu">list</span>(<span class="sc">-</span><span class="fu">log</span>(<span class="dv">1</span> <span class="sc">-</span> <span class="fl">0.05</span>) <span class="sc">/</span> <span class="dv">12</span>, <span class="sc">-</span><span class="fu">log</span>(<span class="dv">1</span> <span class="sc">-</span> <span class="fl">0.05</span>) <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="at">seed     =</span> <span class="dv">1</span></span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>)</span></code></pre></div>
+per-group dropout hazard corresponding to 5% per 12 months. Group 1 is
+the tisotumab vedotin group and group 2 the chemotherapy group.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>nsim <span class="ot">&lt;-</span> <span class="dv">10000</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>eta  <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fu">log</span>(<span class="dv">1</span> <span class="sc">-</span> <span class="fl">0.05</span>) <span class="sc">/</span> <span class="dv">12</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">nsim     =</span> nsim,</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">n        =</span> <span class="fu">c</span>(<span class="dv">241</span>, <span class="dv">241</span>),</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">a.time   =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">23</span>),</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">a.prop   =</span> <span class="dv">1</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="at">e.median =</span> <span class="fu">list</span>(<span class="fl">12.9</span>, <span class="fl">9.0</span>),</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  <span class="at">d.hazard =</span> <span class="fu">list</span>(eta, eta),</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  <span class="at">seed     =</span> <span class="dv">1</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>)</span></code></pre></div>
 </div>
 <div id="interim-and-final-analyses" class="section level1">
 <h1>Interim and final analyses</h1>
@@ -413,19 +415,18 @@ function at the planned information fractions. We obtain it from
 gsDesign and convert the upper Z boundaries to two-sided nominal p-value
 boundaries, which is the scale <code>simsummary_fast()</code> consumes
 through its <code>p.col</code> argument.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">library</span>(gsDesign)</span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a></span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>gsd <span class="ot">&lt;-</span> <span class="fu">gsDesign</span>(</span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">k      =</span> <span class="dv">2</span>,</span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">timing =</span> <span class="fu">c</span>(<span class="dv">252</span>, <span class="dv">336</span>) <span class="sc">/</span> <span class="dv">336</span>,</span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">alpha  =</span> <span class="fl">0.025</span>,</span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">beta   =</span> <span class="fl">0.1</span>,</span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="at">sfu    =</span> sfLDOF,</span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="at">test.type =</span> <span class="dv">1</span></span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>)</span>
-<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a></span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>spend_alpha <span class="ot">&lt;-</span> <span class="dv">2</span> <span class="sc">*</span> <span class="fu">pnorm</span>(gsd<span class="sc">$</span>upper<span class="sc">$</span>bound, <span class="at">lower.tail =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>spend_alpha</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>gsd <span class="ot">&lt;-</span> gsDesign<span class="sc">::</span><span class="fu">gsDesign</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">k         =</span> <span class="dv">2</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">timing    =</span> <span class="fu">c</span>(<span class="dv">252</span>, <span class="dv">336</span>) <span class="sc">/</span> <span class="dv">336</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">alpha     =</span> <span class="fl">0.025</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">beta      =</span> <span class="fl">0.1</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">sfu       =</span> gsDesign<span class="sc">::</span>sfLDOF,</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">test.type =</span> <span class="dv">1</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>)</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>spend_alpha <span class="ot">&lt;-</span> <span class="dv">2</span> <span class="sc">*</span> <span class="fu">pnorm</span>(gsd<span class="sc">$</span>upper<span class="sc">$</span>bound, <span class="at">lower.tail =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>spend_alpha</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt; [1] 0.01929865 0.04424346</span></span></code></pre></div>
 </div>
 <div id="operating-characteristics" class="section level1">
 <h1>Operating characteristics</h1>
@@ -433,104 +434,139 @@ through its <code>p.col</code> argument.</p>
 to the simulated log-rank p-values and aggregates the crossing
 probabilities, expected events, expected sample size, and expected
 analysis time across the looks.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">simsummary_fast</span>(</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  res,</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">p.col     =</span> <span class="st">&quot;logrank.p&quot;</span>,</span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">alpha     =</span> spend_alpha,</span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="at">direction =</span> <span class="st">&quot;lower&quot;</span></span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>)</span></code></pre></div>
-<p>The interactive run produces the following output.</p>
-<pre><code>Group-Sequential Operating Characteristics (simsummary_fast)
-  Simulations: 10000
-  Boundaries: nominal p-value on &#39;logrank.p&#39;
-
-Stopping Boundaries: Look by Look
- Look Info. Frac. Events (s) Sample (n) Nominal p Cum. Cross. Eff.
-    1        0.75      252.0      482.0    0.0193           0.6881
-    2        1.00      336.0      482.0    0.0442           0.9000
-
-Overall
-  Rejection rate (efficacy):    0.9000
-  Expected events at stop:      278.2
-  Expected sample size at stop: 482.0
-  Expected analysis time at stop:27.31</code></pre>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>oc <span class="ot">&lt;-</span> <span class="fu">simsummary_fast</span>(res, <span class="at">p.col =</span> <span class="st">&quot;logrank.p&quot;</span>, <span class="at">alpha =</span> spend_alpha)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>oc</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt; Group-Sequential Operating Characteristics (simsummary_fast)</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt;   Simulations: 10000</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt;   Boundaries: nominal p-value on &#39;logrank.p&#39;</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; Stopping Boundaries: Look by Look</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Events (s) Sample (n) Nominal p Cum. Cross. Eff.</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt;     1        0.75      252.0      482.0    0.0193           0.6881</span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt;     2        1.00      336.0      482.0    0.0442           0.9000</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; Events, Sample Size, Dropouts, Pipeline and Analysis Times: Look by Look</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Sample (n) Events (s) Dropouts (d) Pipeline Analysis Time</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt;     1        0.75      482.0      252.0         16.7    213.3         24.83</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt;     2        1.00      482.0      336.0         22.3    123.7         32.86</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt;  Cross. Eff.</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt;       0.6881</span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt;       0.2119</span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt; Overall</span></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">#&gt;   Rejection rate (efficacy):      0.9000</span></span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">#&gt;   Expected events at stop:        278.2</span></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="co">#&gt;   Expected sample size at stop:   482.0</span></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt;   Expected analysis time at stop: 27.31</span></span></code></pre></div>
 </div>
 <div id="comparison-with-the-closed-form-design" class="section level1">
 <h1>Comparison with the closed-form design</h1>
-<p>For an independent closed-form reference we recompute the same design
-with rpact and read off the operating characteristics. The full rpact
-output is long, so we extract only the quantities needed for the
-comparison.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">library</span>(rpact)</span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a></span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">getDesignGroupSequential</span>(</span>
-<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">kMax =</span> <span class="dv">2</span>,</span>
-<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="at">alpha =</span> <span class="fl">0.05</span>,</span>
-<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>  <span class="at">beta  =</span> <span class="fl">0.1</span>,</span>
-<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>  <span class="at">sided =</span> <span class="dv">2</span>,</span>
-<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>  <span class="at">typeOfDesign =</span> <span class="st">&quot;asOF&quot;</span>,</span>
-<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>  <span class="at">informationRates =</span> <span class="fu">c</span>(<span class="dv">252</span>, <span class="dv">336</span>) <span class="sc">/</span> <span class="dv">336</span></span>
-<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>)</span>
-<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a></span>
-<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">getPowerSurvival</span>(</span>
-<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>  design,</span>
-<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>  <span class="at">maxNumberOfEvents   =</span> <span class="dv">336</span>,</span>
-<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>  <span class="at">median1             =</span> <span class="fl">12.9</span>,</span>
-<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a>  <span class="at">median2             =</span> <span class="fl">9.0</span>,</span>
-<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>  <span class="at">maxNumberOfSubjects =</span> <span class="dv">482</span>,</span>
-<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a>  <span class="at">accrualTime         =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">23</span>),</span>
-<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a>  <span class="at">dropoutRate1        =</span> <span class="sc">-</span><span class="fu">log</span>(<span class="dv">1</span> <span class="sc">-</span> <span class="fl">0.05</span>),</span>
-<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a>  <span class="at">dropoutRate2        =</span> <span class="sc">-</span><span class="fu">log</span>(<span class="dv">1</span> <span class="sc">-</span> <span class="fl">0.05</span>),</span>
-<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a>  <span class="at">allocationRatioPlanned =</span> <span class="dv">1</span></span>
-<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a>)</span></code></pre></div>
-<p>The simulated and closed-form operating characteristics agree
-closely. The efficacy boundaries are the spending boundaries fed into
-the simulation, so they match by construction; the crossing
-probabilities, expected events, and expected timing are estimated
-independently by simulation and line up with the analytic values.</p>
+<p>The closed-form reference uses the usual large-sample approximation
+for the log-rank statistic (Schoenfeld, 1983): with 1:1 allocation and
+<code>d</code> events, the standardized statistic is approximately
+normal with mean <code>log(HR) * sqrt(d) / 2</code> in absolute value
+and unit variance, and the statistics at the two looks have correlation
+<code>sqrt(252 / 336)</code>. <code>gsDesign::gsProbability()</code>
+gives the crossing probabilities for this drift. The expected calendar
+time of each look is the time at which the expected number of deaths,
+under uniform accrual, exponential survival, and exponential dropout,
+reaches the event target.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>looks <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">252</span>, <span class="dv">336</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>theta <span class="ot">&lt;-</span> <span class="fu">log</span>(<span class="fl">12.9</span> <span class="sc">/</span> <span class="fl">9.0</span>) <span class="sc">/</span> <span class="dv">2</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>gp <span class="ot">&lt;-</span> gsDesign<span class="sc">::</span><span class="fu">gsProbability</span>(<span class="at">k =</span> <span class="dv">2</span>, <span class="at">theta =</span> theta, <span class="at">n.I =</span> looks,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>                              <span class="at">a =</span> <span class="fu">rep</span>(<span class="sc">-</span><span class="dv">20</span>, <span class="dv">2</span>), <span class="at">b =</span> gsd<span class="sc">$</span>upper<span class="sc">$</span>bound)</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>p_cross <span class="ot">&lt;-</span> gp<span class="sc">$</span>upper<span class="sc">$</span>prob[, <span class="dv">1</span>]</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co"># Expected number of deaths by calendar time t: uniform accrual of 482</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co"># subjects over 23 months, exponential survival and dropout in each group.</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>lam <span class="ot">&lt;-</span> <span class="fu">log</span>(<span class="dv">2</span>) <span class="sc">/</span> <span class="fu">c</span>(<span class="fl">12.9</span>, <span class="fl">9.0</span>)</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>exp_events <span class="ot">&lt;-</span> <span class="cf">function</span>(t, <span class="at">n_tot =</span> <span class="dv">482</span>, <span class="at">r_acc =</span> <span class="dv">23</span>) {</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>  a_end <span class="ot">&lt;-</span> <span class="fu">min</span>(t, r_acc)</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>  <span class="fu">sum</span>(<span class="fu">vapply</span>(lam, <span class="cf">function</span>(l) {</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>    cc <span class="ot">&lt;-</span> l <span class="sc">+</span> eta</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>    (n_tot <span class="sc">/</span> <span class="dv">2</span>) <span class="sc">/</span> r_acc <span class="sc">*</span> l <span class="sc">/</span> cc <span class="sc">*</span></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>      (a_end <span class="sc">-</span> (<span class="fu">exp</span>(<span class="sc">-</span>cc <span class="sc">*</span> (t <span class="sc">-</span> a_end)) <span class="sc">-</span> <span class="fu">exp</span>(<span class="sc">-</span>cc <span class="sc">*</span> t)) <span class="sc">/</span> cc)</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>  }, <span class="fu">numeric</span>(<span class="dv">1</span>)))</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>}</span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>t_look <span class="ot">&lt;-</span> <span class="fu">vapply</span>(looks, <span class="cf">function</span>(d) {</span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>  stats<span class="sc">::</span><span class="fu">uniroot</span>(<span class="cf">function</span>(t) <span class="fu">exp_events</span>(t) <span class="sc">-</span> d, <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">200</span>))<span class="sc">$</span>root</span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>}, <span class="fu">numeric</span>(<span class="dv">1</span>))</span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a></span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a>sim_val <span class="ot">&lt;-</span> <span class="cf">function</span>(lk, col) <span class="fu">as.numeric</span>(oc[oc<span class="sc">$</span>look <span class="sc">==</span> lk, col])</span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a>z1 <span class="ot">&lt;-</span> <span class="sc">-</span>res<span class="sc">$</span>logrank.z[res<span class="sc">$</span>look <span class="sc">==</span> <span class="dv">1</span>]</span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a>cmp <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a>  <span class="at">quantity =</span> <span class="fu">c</span>(<span class="st">&quot;Mean log-rank Z at the interim&quot;</span>,</span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a>               <span class="st">&quot;Probability of crossing at the interim&quot;</span>,</span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a>               <span class="st">&quot;Overall power&quot;</span>,</span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a>               <span class="st">&quot;Expected number of events at stop&quot;</span>,</span>
+<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a>               <span class="st">&quot;Expected analysis time at stop (months)&quot;</span>),</span>
+<span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a>  <span class="at">simulation =</span> <span class="fu">c</span>(<span class="fu">mean</span>(z1),</span>
+<span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a>                 <span class="fu">sim_val</span>(<span class="st">&quot;1&quot;</span>, <span class="st">&quot;prob.stop.efficacy&quot;</span>),</span>
+<span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a>                 <span class="fu">sim_val</span>(<span class="st">&quot;overall&quot;</span>, <span class="st">&quot;cum.reject&quot;</span>),</span>
+<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a>                 <span class="fu">sim_val</span>(<span class="st">&quot;overall&quot;</span>, <span class="st">&quot;n.event.mean&quot;</span>),</span>
+<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a>                 <span class="fu">sim_val</span>(<span class="st">&quot;overall&quot;</span>, <span class="st">&quot;cutoff.mean&quot;</span>)),</span>
+<span id="cb6-35"><a href="#cb6-35" tabindex="-1"></a>  <span class="at">closed_form =</span> <span class="fu">c</span>(theta <span class="sc">*</span> <span class="fu">sqrt</span>(looks[<span class="dv">1</span>]),</span>
+<span id="cb6-36"><a href="#cb6-36" tabindex="-1"></a>                  p_cross[<span class="dv">1</span>],</span>
+<span id="cb6-37"><a href="#cb6-37" tabindex="-1"></a>                  <span class="fu">sum</span>(p_cross),</span>
+<span id="cb6-38"><a href="#cb6-38" tabindex="-1"></a>                  <span class="fu">sum</span>(looks <span class="sc">*</span> <span class="fu">c</span>(p_cross[<span class="dv">1</span>], <span class="dv">1</span> <span class="sc">-</span> p_cross[<span class="dv">1</span>])),</span>
+<span id="cb6-39"><a href="#cb6-39" tabindex="-1"></a>                  <span class="fu">sum</span>(t_look <span class="sc">*</span> <span class="fu">c</span>(p_cross[<span class="dv">1</span>], <span class="dv">1</span> <span class="sc">-</span> p_cross[<span class="dv">1</span>])))</span>
+<span id="cb6-40"><a href="#cb6-40" tabindex="-1"></a>)</span>
+<span id="cb6-41"><a href="#cb6-41" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(cmp, <span class="at">digits =</span> <span class="dv">3</span>,</span>
+<span id="cb6-42"><a href="#cb6-42" tabindex="-1"></a>             <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;Quantity&quot;</span>,</span>
+<span id="cb6-43"><a href="#cb6-43" tabindex="-1"></a>                           <span class="fu">paste0</span>(<span class="st">&quot;FastSurvival (&quot;</span>, nsim, <span class="st">&quot; trials)&quot;</span>),</span>
+<span id="cb6-44"><a href="#cb6-44" tabindex="-1"></a>                           <span class="st">&quot;Closed form&quot;</span>))</span></code></pre></div>
 <table>
+<colgroup>
+<col width="50%" />
+<col width="35%" />
+<col width="15%" />
+</colgroup>
 <thead>
 <tr class="header">
-<th>Quantity</th>
-<th>FastSurvival (10,000 sims)</th>
-<th>gsDesign / rpact</th>
+<th align="left">Quantity</th>
+<th align="right">FastSurvival (10000 trials)</th>
+<th align="right">Closed form</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Interim efficacy boundary (two-sided nominal p)</td>
-<td>0.0193</td>
-<td>0.0193</td>
+<td align="left">Mean log-rank Z at the interim</td>
+<td align="right">2.844</td>
+<td align="right">2.857</td>
 </tr>
 <tr class="even">
-<td>Final efficacy boundary (two-sided nominal p)</td>
-<td>0.0442</td>
-<td>0.0442</td>
+<td align="left">Probability of crossing at the interim</td>
+<td align="right">0.688</td>
+<td align="right">0.698</td>
 </tr>
 <tr class="odd">
-<td>Probability of crossing at the interim</td>
-<td>0.688</td>
-<td>0.698</td>
+<td align="left">Overall power</td>
+<td align="right">0.900</td>
+<td align="right">0.905</td>
 </tr>
 <tr class="even">
-<td>Overall power</td>
-<td>0.900</td>
-<td>0.905</td>
+<td align="left">Expected number of events at stop</td>
+<td align="right">278.200</td>
+<td align="right">277.395</td>
 </tr>
 <tr class="odd">
-<td>Expected number of events at stop</td>
-<td>278</td>
-<td>277</td>
-</tr>
-<tr class="even">
-<td>Expected analysis time at stop (months)</td>
-<td>27.3</td>
-<td>27.3</td>
+<td align="left">Expected analysis time at stop (months)</td>
+<td align="right">27.314</td>
+<td align="right">27.286</td>
 </tr>
 </tbody>
 </table>
-<p>Remaining differences are Monte Carlo error and shrink as
-<code>nsim</code> increases.</p>
+<p>The efficacy boundaries are the spending boundaries fed into the
+simulation, so they match by construction. The crossing probabilities,
+expected events, and expected timing are estimated independently by
+simulation. The Monte Carlo standard error of a probability near 0.7
+from 10,000 trials is about 0.005, and that of the mean of the interim
+statistic is about 0.01. The closed form also relies on the large-sample
+approximation for the log-rank statistic, whose accuracy the first row
+shows, so the remaining differences reflect both sources of error. The
+expected analysis time of the closed form is evaluated at the expected
+number of events, whereas the simulation averages the realized analysis
+times.</p>
 </div>
 <div id="beyond-proportional-hazards" class="section level1">
 <h1>Beyond proportional hazards</h1>
@@ -539,26 +575,54 @@ assumes proportional hazards. To study a delayed treatment effect,
 replace the constant event hazard with a piecewise specification through
 <code>e.hazard</code> and <code>e.time</code> and keep everything else
 the same. The log-rank statistic loses power under a delayed effect, and
-a weighted or max-combo statistic can be substituted at the
-<code>analysis_fast()</code> step to recover it. Because gsDesign and
-rpact cannot evaluate these cases in closed form, the validated
-simulation machinery becomes the tool of choice.</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>df_delay <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(</span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="at">nsim     =</span> <span class="dv">10000</span>,</span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="at">n        =</span> <span class="fu">c</span>(<span class="dv">241</span>, <span class="dv">241</span>),</span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="at">a.time   =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">23</span>),</span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="at">a.prop   =</span> <span class="dv">1</span>,</span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  <span class="at">e.hazard =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="fl">0.077</span>, <span class="fl">0.045</span>), <span class="fu">c</span>(<span class="fl">0.077</span>, <span class="fl">0.077</span>)),</span>
-<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>  <span class="at">e.time   =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">3</span>, <span class="cn">Inf</span>),</span>
-<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>  <span class="at">d.hazard =</span> <span class="fu">list</span>(<span class="sc">-</span><span class="fu">log</span>(<span class="dv">1</span> <span class="sc">-</span> <span class="fl">0.05</span>) <span class="sc">/</span> <span class="dv">12</span>, <span class="sc">-</span><span class="fu">log</span>(<span class="dv">1</span> <span class="sc">-</span> <span class="fl">0.05</span>) <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>  <span class="at">seed     =</span> <span class="dv">1</span></span>
-<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>)</span>
-<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a></span>
-<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a>res_delay <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(</span>
-<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a>  df_delay, <span class="at">control =</span> <span class="dv">2</span>,</span>
-<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>  <span class="at">event.looks =</span> <span class="fu">c</span>(<span class="dv">252</span>, <span class="dv">336</span>),</span>
-<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>  <span class="at">stat =</span> <span class="st">&quot;maxcombo&quot;</span>, <span class="at">side =</span> <span class="dv">2</span></span>
-<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a>)</span></code></pre></div>
+a weighted or max-combo statistic (Lin et al., 2020) can be substituted
+at the <code>analysis_fast()</code> step. Analytic approximations exist
+for some non-proportional hazards settings and some of these tests, but
+simulation evaluates any combination of data-generating model, test, and
+analysis timing in the same way, and it checks such approximations.</p>
+<p>The max-combo p-value requires a multivariate normal integral for
+every simulated trial and look, which dominates the computing time. When
+only the decisions at the nominal levels are needed,
+<code>mc.alpha</code> computes the integral only for the p-values that
+the Bonferroni bounds do not already place on one side of the level; the
+decisions are the same as with every p-value integrated. The nominal
+levels below are those of the log-rank design and are used for
+illustration only: the correlation between the max-combo statistics at
+the two looks differs from that of the log-rank statistic, so a formal
+design would derive its boundaries for the max-combo statistic
+itself.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>nsim_nph <span class="ot">&lt;-</span> <span class="dv">2000</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>df_delay <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="at">nsim     =</span> nsim_nph,</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">n        =</span> <span class="fu">c</span>(<span class="dv">241</span>, <span class="dv">241</span>),</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="at">a.time   =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">23</span>),</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>  <span class="at">a.prop   =</span> <span class="dv">1</span>,</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>  <span class="at">e.hazard =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="fl">0.077</span>, <span class="fl">0.045</span>), <span class="fu">c</span>(<span class="fl">0.077</span>, <span class="fl">0.077</span>)),</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>  <span class="at">e.time   =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">3</span>, <span class="cn">Inf</span>),</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>  <span class="at">d.hazard =</span> <span class="fu">list</span>(eta, eta),</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>  <span class="at">seed     =</span> <span class="dv">1</span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>)</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>res_delay <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(</span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>  df_delay, <span class="at">control =</span> <span class="dv">2</span>,</span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a>  <span class="at">event.looks =</span> looks,</span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>  <span class="at">stat =</span> <span class="fu">c</span>(<span class="st">&quot;logrank&quot;</span>, <span class="st">&quot;maxcombo&quot;</span>), <span class="at">side =</span> <span class="dv">2</span>,</span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a>  <span class="at">mc.alpha =</span> spend_alpha</span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a>)</span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a></span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a>oc_lr <span class="ot">&lt;-</span> <span class="fu">simsummary_fast</span>(res_delay, <span class="at">p.col =</span> <span class="st">&quot;logrank.p&quot;</span>,  <span class="at">alpha =</span> spend_alpha)</span>
+<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a>oc_mc <span class="ot">&lt;-</span> <span class="fu">simsummary_fast</span>(res_delay, <span class="at">p.col =</span> <span class="st">&quot;maxcombo.p&quot;</span>, <span class="at">alpha =</span> spend_alpha)</span>
+<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a>  <span class="at">test  =</span> <span class="fu">c</span>(<span class="st">&quot;Log-rank&quot;</span>, <span class="st">&quot;Max-combo&quot;</span>),</span>
+<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a>  <span class="at">power =</span> <span class="fu">round</span>(<span class="fu">c</span>(oc_lr[oc_lr<span class="sc">$</span>look <span class="sc">==</span> <span class="st">&quot;overall&quot;</span>, <span class="st">&quot;cum.reject&quot;</span>],</span>
+<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a>                  oc_mc[oc_mc<span class="sc">$</span>look <span class="sc">==</span> <span class="st">&quot;overall&quot;</span>, <span class="st">&quot;cum.reject&quot;</span>]), <span class="dv">3</span>)</span>
+<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a>)</span>
+<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a><span class="co">#&gt;        test power</span></span>
+<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a><span class="co">#&gt; 1  Log-rank 0.924</span></span>
+<span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a><span class="co">#&gt; 2 Max-combo 0.959</span></span></code></pre></div>
+<p>Of the 4,000 max-combo p-values (two looks per simulated trial), 10%
+required the multivariate normal integral.</p>
 </div>
 <div id="references" class="section level1">
 <h1>References</h1>
@@ -570,6 +634,9 @@ cervical cancer. <em>New England Journal of Medicine</em>, 391(1),
 procedure for clinical trials. <em>Biometrics</em>, 35(3), 549-556.</p>
 <p>Lan, K. K. G., &amp; DeMets, D. L. (1983). Discrete sequential
 boundaries for clinical trials. <em>Biometrika</em>, 70(3), 659-663.</p>
+<p>Schoenfeld, D. A. (1983). Sample-size formula for the
+proportional-hazards regression model. <em>Biometrics</em>, 39(2),
+499-503.</p>
 <p>Lin, R. S., Lin, J., Roychoudhury, S., et al. (2020). Alternative
 analysis methods for time to event endpoints under nonproportional
 hazards: a comparative analysis. <em>Statistics in Biopharmaceutical

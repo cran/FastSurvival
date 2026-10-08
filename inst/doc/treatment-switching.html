@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Treatment switching and crossover after an interim analysis</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Treatment switching and crossover after an
+interim analysis</h1>
+
+
+
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>In many oncology trials the control patients may switch to the
+experimental treatment, either at disease progression or after an
+interim analysis has shown a benefit on progression-free survival (PFS).
+Switching leaves the outcomes observed before the switch unchanged and
+alters only what happens afterward, typically prolonging the remaining
+overall survival (OS) of the switchers and diluting the
+intention-to-treat comparison of OS.</p>
+<p>The TrialSimulator package (Zhang, 2026) expresses such designs with
+<code>regimen()</code> (a switching rule fixed at enrollment) and
+<code>crossover()</code> (a switch that opens at a milestone), and runs
+the simulated trials one at a time. Because a switch never rewrites the
+history before it, the same designs can also be simulated with the whole
+set of trials at once. <code>switch_fast()</code> modifies the simulated
+data after their generation, and <code>cutoff_fast()</code> provides the
+per-trial calendar time at which crossover opens:</p>
+<ol style="list-style-type: decimal">
+<li><code>simdata_fast()</code> generates PFS and OS for all trials from
+an illness-death model;</li>
+<li><code>cutoff_fast()</code> finds the calendar time of the PFS
+analysis in each trial;</li>
+<li><code>analysis_fast()</code> analyzes PFS at that time, and the
+trials in which PFS is significant are selected;</li>
+<li><code>switch_fast()</code> lets the control patients of those trials
+switch, changing only their outcomes after the switch;</li>
+<li>the OS analysis is run on the modified data.</li>
+</ol>
+<p>The interim analysis is unaffected by step 4 by construction, which
+is checked below.</p>
+</div>
+<div id="design" class="section level2">
+<h2>Design</h2>
+<p>The trial randomizes 300 patients per group over 18 months.
+Progression, death without progression, and death after progression
+follow an illness-death model with exponential transition times, and
+patients drop out at 5 percent per year. PFS is analyzed once, at 380
+PFS events. OS is analyzed at 350 deaths. Both tests are one-sided at
+level 0.025.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>nsim <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>seed <span class="ot">&lt;-</span> <span class="dv">20261007</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>  <span class="at">nsim       =</span> nsim,</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>  <span class="at">n          =</span> <span class="fu">c</span>(<span class="dv">300</span>, <span class="dv">300</span>),</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>  <span class="at">a.time     =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">18</span>),</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>  <span class="at">a.rate     =</span> <span class="dv">600</span> <span class="sc">/</span> <span class="dv">18</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>  <span class="at">h01.median =</span> <span class="fu">list</span>(<span class="dv">8</span>, <span class="dv">12</span>),    <span class="co"># progression</span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>  <span class="at">h02.median =</span> <span class="fu">list</span>(<span class="dv">30</span>, <span class="dv">36</span>),   <span class="co"># death without progression</span></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>  <span class="at">h12.median =</span> <span class="fu">list</span>(<span class="dv">12</span>, <span class="dv">12</span>),   <span class="co"># death after progression</span></span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a>  <span class="at">d.hazard   =</span> <span class="sc">-</span><span class="fu">log</span>(<span class="dv">1</span> <span class="sc">-</span> <span class="fl">0.05</span>) <span class="sc">/</span> <span class="dv">12</span>,</span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>  <span class="at">seed       =</span> seed</span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a>)</span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a><span class="co"># Single-endpoint view of PFS (k = 1) or OS (k = 2) for analysis_fast().</span></span>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a>ep <span class="ot">&lt;-</span> <span class="cf">function</span>(d, k) {</span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a>  <span class="fu">data.frame</span>(</span>
+<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a>    <span class="at">sim          =</span> d<span class="sc">$</span>sim,</span>
+<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a>    <span class="at">group        =</span> d<span class="sc">$</span>group,</span>
+<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a>    <span class="at">accrual_time =</span> d<span class="sc">$</span>accrual_time,</span>
+<span id="cb1-22"><a href="#cb1-22" tabindex="-1"></a>    <span class="at">tte          =</span> d[[<span class="fu">paste0</span>(<span class="st">&quot;e&quot;</span>, k, <span class="st">&quot;_tte&quot;</span>)]],</span>
+<span id="cb1-23"><a href="#cb1-23" tabindex="-1"></a>    <span class="at">event        =</span> d[[<span class="fu">paste0</span>(<span class="st">&quot;e&quot;</span>, k, <span class="st">&quot;_event&quot;</span>)]]</span>
+<span id="cb1-24"><a href="#cb1-24" tabindex="-1"></a>  )</span>
+<span id="cb1-25"><a href="#cb1-25" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="pfs-analysis-and-the-crossover-decision" class="section level2">
+<h2>PFS analysis and the crossover decision</h2>
+<p><code>cutoff_fast()</code> counts the PFS events (the columns
+<code>e1_tte</code> and <code>e1_event</code>) to find the analysis time
+of each trial, and <code>analysis_fast()</code> analyzes PFS at those
+times.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>pfs_cut <span class="ot">&lt;-</span> <span class="fu">cutoff_fast</span>(df, <span class="at">event.looks =</span> <span class="dv">380</span>,</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>                       <span class="at">tte.col =</span> <span class="st">&quot;e1_tte&quot;</span>, <span class="at">event.col =</span> <span class="st">&quot;e1_event&quot;</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>pfs_res <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(<span class="fu">ep</span>(df, <span class="dv">1</span>), <span class="at">control =</span> <span class="dv">1</span>, <span class="at">cutoff.looks =</span> pfs_cut,</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>                         <span class="at">side =</span> <span class="dv">1</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>pfs_pos <span class="ot">&lt;-</span> (pfs_res<span class="sc">$</span>reached <span class="sc">&amp;</span> pfs_res<span class="sc">$</span>logrank.p <span class="sc">&lt;=</span> <span class="fl">0.025</span>) <span class="sc">%in%</span> <span class="cn">TRUE</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="fu">c</span>(<span class="at">PFS_power =</span> <span class="fu">mean</span>(pfs_pos),</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="at">mean_PFS_analysis_month =</span> <span class="fu">mean</span>(pfs_cut[, <span class="dv">1</span>], <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt;               PFS_power mean_PFS_analysis_month </span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt;                 0.93900                21.55091</span></span></code></pre></div>
+</div>
+<div id="switching-scenarios" class="section level2">
+<h2>Switching scenarios</h2>
+<p>Three scenarios are compared with the trial without switching.</p>
+<ul>
+<li>Crossover after a positive PFS analysis: in the trials with a
+significant PFS result, control patients who are alive and on study
+switch at progression, but not before the PFS analysis
+(<code>when = &quot;later&quot;</code>, the rule of the worked example of the
+milestone crossover in TrialSimulator). Their remaining survival time is
+multiplied by 1.3.</li>
+<li>The same crossover opened in every trial, regardless of the PFS
+result.</li>
+<li>Switching at progression from the start of the trial
+(<code>when = &quot;intermediate&quot;</code>), for half of the control patients
+who progress, with a post-progression median survival of 18 months
+instead of 12.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>sw_gated <span class="ot">&lt;-</span> <span class="fu">switch_fast</span>(df, <span class="at">group =</span> <span class="dv">1</span>, <span class="at">when =</span> <span class="st">&quot;later&quot;</span>, <span class="at">cutoff =</span> pfs_cut,</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>                        <span class="at">sims =</span> pfs_pos, <span class="at">aft.factor =</span> <span class="fl">1.3</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>sw_all   <span class="ot">&lt;-</span> <span class="fu">switch_fast</span>(df, <span class="at">group =</span> <span class="dv">1</span>, <span class="at">when =</span> <span class="st">&quot;later&quot;</span>, <span class="at">cutoff =</span> pfs_cut,</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>                        <span class="at">aft.factor =</span> <span class="fl">1.3</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>sw_prog  <span class="ot">&lt;-</span> <span class="fu">switch_fast</span>(df, <span class="at">group =</span> <span class="dv">1</span>, <span class="at">prob =</span> <span class="fl">0.5</span>, <span class="at">when =</span> <span class="st">&quot;intermediate&quot;</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>                        <span class="at">median =</span> <span class="dv">18</span>)</span></code></pre></div>
+<p>The OS analysis at the time of the PFS analysis is the same with and
+without switching, because every switch happens after that time.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>os_ia0 <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(<span class="fu">ep</span>(df, <span class="dv">2</span>), <span class="at">control =</span> <span class="dv">1</span>, <span class="at">cutoff.looks =</span> pfs_cut,</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>                        <span class="at">side =</span> <span class="dv">1</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>os_ia1 <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(<span class="fu">ep</span>(sw_gated, <span class="dv">2</span>), <span class="at">control =</span> <span class="dv">1</span>, <span class="at">cutoff.looks =</span> pfs_cut,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>                        <span class="at">side =</span> <span class="dv">1</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="fu">all.equal</span>(os_ia0, os_ia1)</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+</div>
+<div id="overall-survival-at-the-final-analysis" class="section level2">
+<h2>Overall survival at the final analysis</h2>
+<p>The OS analysis is triggered by 350 deaths in the modified data,
+since switching delays deaths and therefore the analysis.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>os_final <span class="ot">&lt;-</span> <span class="cf">function</span>(d) {</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  cut <span class="ot">&lt;-</span> <span class="fu">cutoff_fast</span>(d, <span class="at">event.looks =</span> <span class="dv">350</span>,</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>                     <span class="at">tte.col =</span> <span class="st">&quot;e2_tte&quot;</span>, <span class="at">event.col =</span> <span class="st">&quot;e2_event&quot;</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="fu">analysis_fast</span>(<span class="fu">ep</span>(d, <span class="dv">2</span>), <span class="at">control =</span> <span class="dv">1</span>, <span class="at">cutoff.looks =</span> cut,</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>                <span class="at">stat =</span> <span class="fu">c</span>(<span class="st">&quot;logrank&quot;</span>, <span class="st">&quot;coxph&quot;</span>), <span class="at">side =</span> <span class="dv">1</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>}</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>scen <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  <span class="st">&quot;no switching&quot;</span>                   <span class="ot">=</span> df,</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>  <span class="st">&quot;crossover after positive PFS&quot;</span>   <span class="ot">=</span> sw_gated,</span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>  <span class="st">&quot;crossover after PFS, all trials&quot;</span> <span class="ot">=</span> sw_all,</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>  <span class="st">&quot;50% switch at progression&quot;</span>      <span class="ot">=</span> sw_prog</span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>)</span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>tab <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, <span class="fu">lapply</span>(<span class="fu">names</span>(scen), <span class="cf">function</span>(nm) {</span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>  d <span class="ot">&lt;-</span> scen[[nm]]</span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a>  r <span class="ot">&lt;-</span> <span class="fu">os_final</span>(d)</span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a>  <span class="fu">data.frame</span>(</span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a>    <span class="at">scenario         =</span> nm,</span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>    <span class="at">control_switched =</span> <span class="fu">round</span>(<span class="fu">mean</span>(d<span class="sc">$</span>switched[d<span class="sc">$</span>group <span class="sc">==</span> <span class="dv">1</span>] <span class="sc">==</span> <span class="dv">1</span>), <span class="dv">3</span>),</span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a>    <span class="at">OS_power         =</span> <span class="fu">round</span>(<span class="fu">mean</span>(r<span class="sc">$</span>logrank.p <span class="sc">&lt;=</span> <span class="fl">0.025</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="dv">3</span>),</span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a>    <span class="at">mean_HR          =</span> <span class="fu">round</span>(<span class="fu">exp</span>(<span class="fu">mean</span>(r<span class="sc">$</span>cox.coef, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)), <span class="dv">3</span>),</span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a>    <span class="at">mean_OS_month    =</span> <span class="fu">round</span>(<span class="fu">mean</span>(r<span class="sc">$</span>cutoff, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="dv">1</span>)</span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a>  )</span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a>}))</span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a>tab</span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a><span class="co">#&gt;                          scenario control_switched OS_power mean_HR</span></span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a><span class="co">#&gt; 1                    no switching            0.000    0.399   0.834</span></span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a><span class="co">#&gt; 2    crossover after positive PFS            0.516    0.141   0.913</span></span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a><span class="co">#&gt; 3 crossover after PFS, all trials            0.550    0.134   0.918</span></span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a><span class="co">#&gt; 4       50% switch at progression            0.380    0.082   0.950</span></span>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a><span class="co">#&gt;   mean_OS_month</span></span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a><span class="co">#&gt; 1          34.4</span></span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a><span class="co">#&gt; 2          35.6</span></span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a><span class="co">#&gt; 3          35.7</span></span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a><span class="co">#&gt; 4          35.9</span></span></code></pre></div>
+<p>Switching pulls the intention-to-treat hazard ratio for OS toward one
+and lowers the power of the OS test. The two crossover scenarios differ
+only in the trials where PFS was not significant, in which crossover is
+opened in the second scenario but not in the first, so opening crossover
+in every trial dilutes the OS comparison more.</p>
+</div>
+<div id="computing-time" class="section level2">
+<h2>Computing time</h2>
+<p>The whole study, from data generation to the OS analysis of one
+scenario, runs in a few seconds.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">system.time</span>({</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  d0  <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(<span class="at">nsim =</span> nsim, <span class="at">n =</span> <span class="fu">c</span>(<span class="dv">300</span>, <span class="dv">300</span>), <span class="at">a.time =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">18</span>),</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>                      <span class="at">a.rate =</span> <span class="dv">600</span> <span class="sc">/</span> <span class="dv">18</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>                      <span class="at">h01.median =</span> <span class="fu">list</span>(<span class="dv">8</span>, <span class="dv">12</span>), <span class="at">h02.median =</span> <span class="fu">list</span>(<span class="dv">30</span>, <span class="dv">36</span>),</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>                      <span class="at">h12.median =</span> <span class="fu">list</span>(<span class="dv">12</span>, <span class="dv">12</span>),</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>                      <span class="at">d.hazard =</span> <span class="sc">-</span><span class="fu">log</span>(<span class="dv">1</span> <span class="sc">-</span> <span class="fl">0.05</span>) <span class="sc">/</span> <span class="dv">12</span>, <span class="at">seed =</span> seed)</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  pc  <span class="ot">&lt;-</span> <span class="fu">cutoff_fast</span>(d0, <span class="at">event.looks =</span> <span class="dv">380</span>,</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>                     <span class="at">tte.col =</span> <span class="st">&quot;e1_tte&quot;</span>, <span class="at">event.col =</span> <span class="st">&quot;e1_event&quot;</span>)</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>  pr  <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(<span class="fu">ep</span>(d0, <span class="dv">1</span>), <span class="at">control =</span> <span class="dv">1</span>, <span class="at">cutoff.looks =</span> pc, <span class="at">side =</span> <span class="dv">1</span>)</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>  pos <span class="ot">&lt;-</span> (pr<span class="sc">$</span>reached <span class="sc">&amp;</span> pr<span class="sc">$</span>logrank.p <span class="sc">&lt;=</span> <span class="fl">0.025</span>) <span class="sc">%in%</span> <span class="cn">TRUE</span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>  d1  <span class="ot">&lt;-</span> <span class="fu">switch_fast</span>(d0, <span class="at">group =</span> <span class="dv">1</span>, <span class="at">when =</span> <span class="st">&quot;later&quot;</span>, <span class="at">cutoff =</span> pc, <span class="at">sims =</span> pos,</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>                     <span class="at">aft.factor =</span> <span class="fl">1.3</span>)</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>  r1  <span class="ot">&lt;-</span> <span class="fu">os_final</span>(d1)</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>})</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt;    user  system elapsed </span></span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a><span class="co">#&gt;    0.57    0.03    0.63</span></span></code></pre></div>
+</div>
+<div id="a-check-with-the-rank-preserving-structural-failure-time-model" class="section level2">
+<h2>A check with the rank-preserving structural failure time model</h2>
+<p>The acceleration factor of <code>switch_fast()</code> is the causal
+model of the rank-preserving structural failure time (RPSFT) method of
+Robins and Tsiatis (1991). If the experimental treatment multiplies the
+time spent on it by a factor <code>f</code>, both from randomization in
+the experimental group and after the switch in the control group, the
+RPSFT estimate of <code>psi = -log(f)</code> should be close to the true
+value. The check below simulates 10 large trials in which the
+experimental group has all transition hazards divided by <code>f</code>
+(an accelerated failure time effect of <code>f</code>), lets 60 percent
+of the control patients who progress switch with the same factor, and
+estimates <code>psi</code> in each trial with the rpsftm package
+(Allison, White, and Bond, 2017), ignoring censoring.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>f   <span class="ot">&lt;-</span> <span class="fl">1.5</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>h01 <span class="ot">&lt;-</span> <span class="fu">log</span>(<span class="dv">2</span>) <span class="sc">/</span> <span class="dv">8</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>h02 <span class="ot">&lt;-</span> <span class="fu">log</span>(<span class="dv">2</span>) <span class="sc">/</span> <span class="dv">30</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>h12 <span class="ot">&lt;-</span> <span class="fu">log</span>(<span class="dv">2</span>) <span class="sc">/</span> <span class="dv">12</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>n_rep <span class="ot">&lt;-</span> <span class="dv">10</span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>big <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>  <span class="at">nsim =</span> n_rep, <span class="at">n =</span> <span class="fu">c</span>(<span class="dv">2000</span>, <span class="dv">2000</span>), <span class="at">a.time =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">12</span>), <span class="at">a.rate =</span> <span class="dv">4000</span> <span class="sc">/</span> <span class="dv">12</span>,</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>  <span class="at">h01.hazard =</span> <span class="fu">list</span>(h01, h01 <span class="sc">/</span> f), <span class="at">h02.hazard =</span> <span class="fu">list</span>(h02, h02 <span class="sc">/</span> f),</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>  <span class="at">h12.hazard =</span> <span class="fu">list</span>(h12, h12 <span class="sc">/</span> f), <span class="at">seed =</span> <span class="dv">7</span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>)</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>big <span class="ot">&lt;-</span> <span class="fu">switch_fast</span>(big, <span class="at">group =</span> <span class="dv">1</span>, <span class="at">prob =</span> <span class="fl">0.6</span>, <span class="at">when =</span> <span class="st">&quot;intermediate&quot;</span>,</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>                   <span class="at">aft.factor =</span> f, <span class="at">seed =</span> <span class="dv">8</span>)</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="fu">suppressWarnings</span>(<span class="fu">suppressPackageStartupMessages</span>({</span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>  <span class="fu">library</span>(survival)</span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a>  <span class="fu">library</span>(rpsftm)</span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>}))</span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a>psi_hat <span class="ot">&lt;-</span> <span class="fu">vapply</span>(<span class="fu">seq_len</span>(n_rep), <span class="cf">function</span>(s) {</span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a>  one <span class="ot">&lt;-</span> big[big<span class="sc">$</span>sim <span class="sc">==</span> s, ]</span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a>  rp_dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a>    <span class="at">time   =</span> one<span class="sc">$</span>e2_surv_time,</span>
+<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a>    <span class="at">status =</span> <span class="dv">1</span>,</span>
+<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a>    <span class="at">arm    =</span> one<span class="sc">$</span>group <span class="sc">-</span> <span class="dv">1</span>,</span>
+<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a>    <span class="at">cens   =</span> <span class="fl">1e6</span></span>
+<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a>  )</span>
+<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a>  <span class="co"># Proportion of the observed time spent on the experimental treatment.</span></span>
+<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a>  rp_dat<span class="sc">$</span>rx <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(rp_dat<span class="sc">$</span>arm <span class="sc">==</span> <span class="dv">1</span>, <span class="dv">1</span>,</span>
+<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a>                      <span class="fu">ifelse</span>(one<span class="sc">$</span>switched <span class="sc">==</span> <span class="dv">1</span>,</span>
+<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a>                             (one<span class="sc">$</span>e2_surv_time <span class="sc">-</span> one<span class="sc">$</span>switch_time) <span class="sc">/</span></span>
+<span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a>                               one<span class="sc">$</span>e2_surv_time, <span class="dv">0</span>))</span>
+<span id="cb7-31"><a href="#cb7-31" tabindex="-1"></a>  fit <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb7-32"><a href="#cb7-32" tabindex="-1"></a>    <span class="fu">rpsftm</span>(<span class="fu">Surv</span>(time, status) <span class="sc">~</span> <span class="fu">rand</span>(arm, rx), <span class="at">data =</span> rp_dat,</span>
+<span id="cb7-33"><a href="#cb7-33" tabindex="-1"></a>           <span class="at">censor_time =</span> cens),</span>
+<span id="cb7-34"><a href="#cb7-34" tabindex="-1"></a>    <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NULL</span></span>
+<span id="cb7-35"><a href="#cb7-35" tabindex="-1"></a>  )</span>
+<span id="cb7-36"><a href="#cb7-36" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.null</span>(fit)) <span class="cn">NA_real_</span> <span class="cf">else</span> <span class="fu">unname</span>(fit<span class="sc">$</span>psi)</span>
+<span id="cb7-37"><a href="#cb7-37" tabindex="-1"></a>}, <span class="fu">numeric</span>(<span class="dv">1</span>))</span>
+<span id="cb7-38"><a href="#cb7-38" tabindex="-1"></a></span>
+<span id="cb7-39"><a href="#cb7-39" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">c</span>(<span class="at">true_psi =</span> <span class="sc">-</span><span class="fu">log</span>(f), <span class="at">mean_estimate =</span> <span class="fu">mean</span>(psi_hat, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb7-40"><a href="#cb7-40" tabindex="-1"></a>        <span class="at">sd_estimate =</span> <span class="fu">sd</span>(psi_hat, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb7-41"><a href="#cb7-41" tabindex="-1"></a>        <span class="at">se_of_mean =</span> <span class="fu">sd</span>(psi_hat, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="fu">sum</span>(<span class="sc">!</span><span class="fu">is.na</span>(psi_hat)))), <span class="dv">4</span>)</span>
+<span id="cb7-42"><a href="#cb7-42" tabindex="-1"></a><span class="co">#&gt;      true_psi mean_estimate   sd_estimate    se_of_mean </span></span>
+<span id="cb7-43"><a href="#cb7-43" tabindex="-1"></a><span class="co">#&gt;       -0.4055       -0.3929        0.0326        0.0103</span></span></code></pre></div>
+<p>The mean of the estimates is close to the true value relative to its
+standard error, so the RPSFT method recovers the acceleration factor
+used to generate the switched survival times.</p>
+</div>
+<div id="remarks" class="section level2">
+<h2>Remarks</h2>
+<p><code>switch_fast()</code> covers switching rules whose timing is a
+function of the patient’s own outcomes (progression), of an opening time
+per trial, or of both, with an effect on the remaining time to the
+terminal event given by an acceleration factor or by a new hazard.
+Designs in which an interim decision changes the enrollment or the
+randomization itself, such as dropping an arm and re-randomizing new
+patients, change the data-generating process and are outside this
+approach.</p>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<p>Allison, A., White, I. R., &amp; Bond, S. (2017). rpsftm: an R
+package for rank preserving structural failure time models. <em>The R
+Journal</em>, 9(2), 342-353.</p>
+<p>Robins, J. M. and Tsiatis, A. A. (1991). Correcting for
+non-compliance in randomized trials using rank preserving structural
+failure time models. <em>Communications in Statistics - Theory and
+Methods</em>, 20(8), 2609-2631.</p>
+<p>Zhang, H. (2026). TrialSimulator: Clinical Trial Simulator. R package
+version 1.35.8. <a href="https://CRAN.R-project.org/package=TrialSimulator" class="uri">https://CRAN.R-project.org/package=TrialSimulator</a></p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

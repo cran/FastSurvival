@@ -64,11 +64,11 @@ The standard error is estimated by Greenwood's formula:
 SE[S(t)] = S(t) * sqrt(sum_\{t_i <= t, d_i > 0\} d_i / (n_i * (n_i - d_i)))
 
 where d_i is the number of events and n_i is the number at risk at time t_i.
-The output field \code{std.err} follows the convention of
-\code{\link[survival]{survfit}}, which reports SE[S(t)] / S(t) (i.e., the
-standard error on the log scale) when \code{conf.type != "plain"}, and
-SE[S(t)] when \code{conf.type = "plain"}. This function always returns
-SE[S(t)] (the standard error on the survival scale).
+The output field \code{std.err} is SE[S(t)], the standard error on the
+survival scale, which is the \code{std.err} reported by \code{summary()}
+of a \code{\link[survival]{survfit}} object. The \code{std.err} component
+of the \code{survfit} object itself is on the cumulative-hazard scale,
+SE[S(t)] / S(t), whatever \code{conf.type} is.
 
 When \code{S(t_eval) = 0} (all subjects have experienced the event by
 \code{t_eval}), the standard error is zero and the confidence interval

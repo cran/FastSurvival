@@ -102,7 +102,13 @@ for (i in seq_along(scenarios)) {
     RMST     = s_rmst[s_rmst$look == "overall", "cum.reject"],
     stringsAsFactors = FALSE
   ))
-  examples[[i]] <- dat[dat$sim == 1L, c("tte", "event", "group")]
+  # One replicate, administratively censored at the analysis (calendar time
+  # study_dur), as analysis_fast() does; every subject is enrolled by then.
+  ex1 <- dat[dat$sim == 1L, c("accrual_time", "tte", "event", "group")]
+  fu  <- study_dur - ex1$accrual_time
+  ex1$event <- as.integer(ex1$event == 1L & ex1$tte <= fu)
+  ex1$tte   <- pmin(ex1$tte, fu)
+  examples[[i]] <- ex1[, c("tte", "event", "group")]
 }
 
 ## ----km-plot, fig.width = 9, fig.height = 4.6---------------------------------

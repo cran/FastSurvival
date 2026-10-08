@@ -192,11 +192,18 @@ test_that("simdata_fast (illness-death): input validation", {
                  h01.hazard = list(0.1, 0.08), h02.hazard = list(0.05, 0.04),
                  switch.prop = list(0.3, 0)),
     "h12.switch.hazard")
-  # subgroups are not supported
+  # a per-cell list must have one element per subgroup cell
   expect_error(
     simdata_fast(nsim = 5, n = 50, a.time = c(0, 1), a.prop = 1,
-                 h01.hazard = 0.1, h02.hazard = 0.05, prevalence = c(0.5, 0.5)),
-    "prevalence")
+                 h01.hazard = list(0.1, 0.2, 0.3), h02.hazard = 0.05,
+                 prevalence = c(0.5, 0.5)),
+    "per-cell list")
+  # switching probabilities are checked with subgroups
+  expect_error(
+    simdata_fast(nsim = 5, n = 50, a.time = c(0, 1), a.prop = 1,
+                 h01.hazard = 0.1, h02.hazard = 0.05, switch.prop = 1.5,
+                 h12.switch.hazard = 0.02, prevalence = c(0.5, 0.5)),
+    "probability")
   # only clock-reset is implemented
   expect_error(
     simdata_fast(nsim = 5, n = 50, a.time = c(0, 1), a.prop = 1,
@@ -234,4 +241,135 @@ test_that("simdata_fast (illness-death): scalar n with alloc gives two groups", 
                       seed = 1)
   expect_equal(sort(unique(dat$group)), c(1, 2))
   expect_equal(sum(dat$group == 1 & dat$sim == 1), 50)
+})
+
+test_that("simdata_fast (illness-death): a switch requires an observed intermediate event", {
+  dat <- simdata_fast(
+    nsim = 1, n = c(20000, 20000), a.time = c(0, 1), a.prop = 1,
+    h01.hazard = list(0.10, 0.07), h02.hazard = list(0.05, 0.04),
+    d.hazard = 0.08, switch.prop = list(0.5, 0),
+    h12.switch.hazard = list(0.015, 0.015), seed = 9
+  )
+  sw <- dat$switched == 1L
+  expect_true(any(sw))
+  expect_true(all(dat$intermediate[sw] == 1L & dat$e1_event[sw] == 1L))
+  # A latent intermediate event after dropout does not lead to a switch.
+  late <- dat$intermediate == 1L & dat$e1_event == 0L
+  expect_true(any(late))
+  expect_true(all(dat$switched[late] == 0L))
+  expect_true(all(is.na(dat$switch_time[late])))
+  obs <- dat$group == 1L & dat$intermediate == 1L & dat$e1_event == 1L
+  expect_lt(abs(mean(dat$switched[obs]) - 0.5), 0.02)
+})
+
+test_that("simdata_fast (illness-death): infinite latent times are censored", {
+  dat <- simdata_fast(
+    nsim = 1, n = c(3000, 3000), a.time = c(0, 1), a.prop = 1,
+    h01.hazard = c(0.05, 0), h01.time = c(0, 12, Inf),
+    h02.hazard = c(0.02, 0), h02.time = c(0, 12, Inf), seed = 4
+  )
+  never <- !is.finite(dat$e1_surv_time)
+  expect_true(any(never))
+  expect_equal(dat$e1_event, as.integer(is.finite(dat$e1_surv_time)))
+  expect_equal(dat$e2_event, as.integer(is.finite(dat$e2_surv_time)))
+  expect_true(all(dat$intermediate[never] == 0L))
+})
+
+test_that("simdata_fast (illness-death): a single cell reproduces the data without subgroups", {
+  args <- list(nsim = 5, n = c(60, 60), a.time = c(0, 6), a.rate = 20,
+               h01.hazard = list(0.10, 0.07), h02.hazard = list(0.03, 0.02),
+               h12.hazard = list(0.08, 0.08), switch.prop = list(0.4, 0),
+               h12.switch.hazard = list(0.04, 0.04), d.hazard = 0.01,
+               seed = 12)
+  a <- do.call(simdata_fast, c(args, list(prevalence = 1)))
+  b <- do.call(simdata_fast, args)
+  expect_true(all(a$subgroup == 1L))
+  expect_identical(a[names(b)], b)
+  a1 <- simdata_fast(nsim = 3, n = 50, a.time = c(0, 5), a.rate = 10,
+                     h01.hazard = 0.1, h02.hazard = 0.05, prevalence = 1,
+                     seed = 3)
+  b1 <- simdata_fast(nsim = 3, n = 50, a.time = c(0, 5), a.rate = 10,
+                     h01.hazard = 0.1, h02.hazard = 0.05, seed = 3)
+  expect_identical(a1[names(b1)], b1)
+})
+
+test_that("simdata_fast (illness-death): subgroups follow their own transition hazards", {
+  h01 <- list(list(0.10, 0.05), list(0.07, 0.04))
+  h02 <- c(0.03, 0.02)
+  h12 <- list(c(0.08, 0.20), c(0.06, 0.06))
+  dat <- simdata_fast(nsim = 1, n = c(40000, 40000), a.time = c(0, 1),
+                      a.prop = 1, h01.hazard = h01,
+                      h02.hazard = list(h02[1], h02[2]),
+                      h12.hazard = list(list(0.08, 0.20), 0.06),
+                      prevalence = c(0.3, 0.7), seed = 21)
+  expect_lt(abs(mean(dat$subgroup == 1) - 0.3), 0.01)
+  for (g in 1:2) {
+    for (s in 1:2) {
+      sel <- dat$group == g & dat$subgroup == s
+      l01 <- h01[[g]][[s]]
+      l02 <- h02[g]
+      # Fleischer model: PFS is exponential with rate h01 + h02, the
+      # intermediate event occurs with probability h01 / (h01 + h02), and the
+      # post-event survival is exponential with rate h12 (clock-reset).
+      expect_equal(1 / mean(dat$e1_surv_time[sel]), l01 + l02,
+                   tolerance = 0.03)
+      expect_lt(abs(mean(dat$intermediate[sel]) - l01 / (l01 + l02)), 0.02)
+      prog <- sel & dat$intermediate == 1L
+      post <- dat$e2_surv_time[prog] - dat$e1_surv_time[prog]
+      expect_equal(1 / mean(post), h12[[g]][s], tolerance = 0.04)
+    }
+  }
+})
+
+test_that("simdata_fast (illness-death): a subgroup matches its separate simulation with scaled accrual", {
+  # One group of 60,000 with 25 percent in subgroup 1, against 15,000
+  # subjects of subgroup 1 simulated alone with the accrual rate scaled by the
+  # prevalence. The distributions of accrual and of both endpoints agree.
+  mix <- simdata_fast(nsim = 1, n = 60000, a.time = c(0, 12), a.rate = 5000,
+                      h01.hazard = list(0.10, 0.04), h02.hazard = 0.03,
+                      prevalence = c(0.25, 0.75), fixed.alloc = TRUE,
+                      seed = 31)
+  sep <- simdata_fast(nsim = 1, n = 15000, a.time = c(0, 12), a.rate = 1250,
+                      h01.hazard = 0.10, h02.hazard = 0.03, seed = 32)
+  s1 <- mix[mix$subgroup == 1L, ]
+  expect_equal(nrow(s1), 15000L)
+  expect_lt(abs(mean(s1$accrual_time) - mean(sep$accrual_time)), 0.15)
+  for (t in c(3, 6, 9)) {
+    expect_lt(abs(mean(s1$accrual_time <= t) - mean(sep$accrual_time <= t)),
+              0.02)
+  }
+  for (t in c(6, 12, 24)) {
+    expect_lt(abs(mean(s1$e1_surv_time > t) - mean(sep$e1_surv_time > t)),
+              0.02)
+    expect_lt(abs(mean(s1$e2_surv_time > t) - mean(sep$e2_surv_time > t)),
+              0.02)
+    expect_lt(abs(mean(s1$e2_calendar_time <= t + 6) -
+                    mean(sep$e2_calendar_time <= t + 6)), 0.02)
+  }
+})
+
+test_that("simdata_fast (illness-death): subgroup data work with the analysis functions", {
+  dat <- simdata_fast(
+    nsim = 20, n = c(150, 150), a.time = c(0, 12), a.rate = 25,
+    h01.hazard = list(list(0.10, 0.08), list(0.07, 0.04)),
+    h02.hazard = list(0.03, 0.02), d.hazard = 0.01,
+    prevalence = list(control = c(0.5, 0.5), treatment = c(0.4, 0.6)),
+    seed = 41
+  )
+  expect_identical(names(dat)[1:4], c("sim", "group", "subgroup",
+                                      "accrual_time"))
+  expect_lt(abs(mean(dat$subgroup[dat$group == 2] == 1) - 0.4), 0.05)
+  pfs <- data.frame(sim = dat$sim, group = dat$group,
+                    subgroup = dat$subgroup, accrual_time = dat$accrual_time,
+                    tte = dat$e1_tte, event = dat$e1_event)
+  res <- analysis_fast(pfs, control = 1, event.looks = 120, by.subgroup = TRUE)
+  expect_setequal(unique(res$population),
+                  c("overall", "subgroup_1", "subgroup_2"))
+  cut <- cutoff_fast(dat, event.looks = 40, event.subset = dat$subgroup == 2,
+                     tte.col = "e1_tte", event.col = "e1_event")
+  expect_true(all(is.finite(cut[, 1])))
+  sw <- switch_fast(dat, group = 1, prob = 0.5, when = "intermediate",
+                    aft.factor = 1.3, seed = 1)
+  expect_identical(sw$subgroup, dat$subgroup)
+  expect_true(any(sw$switched == 1))
 })

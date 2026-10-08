@@ -304,3 +304,10 @@ test_that("one-sided p-value matches simtrial::maxcombo when available", {
   # equal, so allow a loose tolerance.
   expect_equal(p, ext_p, tolerance = 0.01)
 })
+
+test_that("maxcombo_fast: presorted = TRUE checks the order", {
+  time  <- c(3, 1, 2, 4, 6, 5)
+  event <- c(1, 1, 0, 1, 1, 0)
+  group <- c(0, 1, 0, 1, 0, 1)
+  expect_error(maxcombo_fast(time, event, group, control = 0, presorted = TRUE), "presorted = FALSE")
+})

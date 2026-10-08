@@ -31,8 +31,10 @@ treated as the treatment group.}
 
 \item{side}{1 for a one-sided test in the direction of treatment benefit
 (hazard ratio below 1, i.e. a negative coefficient) or 2 for a two-sided
-test (default 2). The reported p-value follows this choice; the confidence
-interval is always two-sided at \code{conf.level}.}
+test (default 2). The returned vector has no p-value: \code{side} is
+stored as an attribute, and the \code{print()} method reports the
+p-value that follows it. The confidence interval is always two-sided at
+\code{conf.level}.}
 
 \item{conf.level}{A single numeric value in (0, 1) specifying the confidence
 level for the Wald interval. Defaults to 0.95.}
@@ -42,7 +44,8 @@ level for the Wald interval. Defaults to 0.95.}
 ascending order of \code{time} (with \code{strata}, sorted by stratum
 and by time within stratum, so that the rows of each stratum are
 contiguous), and the internal \code{order()} call is skipped. If
-\code{FALSE} (default), sorting is handled internally.}
+\code{FALSE} (default), sorting is handled internally.
+The order is checked, and an error is given when it does not hold.}
 
 \item{strata}{An optional vector of stratum labels aligned with
 \code{time}, without missing values. When supplied, the stratified
@@ -73,7 +76,7 @@ events, all events in one group, or \code{I_0 = 0}).
 }
 \description{
 Estimates the hazard ratio for a two-group parallel trial using the
-Pike-Halley Estimator, a pure closed-form approximation to the Cox partial
+Pike-Halley Estimator (Homma, 2025), a pure closed-form approximation to the Cox partial
 likelihood maximizer. The function returns the point estimate, its standard
 error on the log scale, and a Wald-type confidence interval, using output
 names consistent with \code{summary(survival::coxph(...))}. The C++ backend
@@ -103,19 +106,23 @@ Third, the closed-form Halley correction is applied:
 delta_hat = U_0 / I_0 - J_0 U_0^2 / (2 I_0^3)
 theta_hat = theta_0 exp(delta_hat)
 
-The residual error satisfies |theta_hat - theta_Cox| = O_p(n^\{-3/2\}),
-three orders of magnitude faster than the O_p(n^\{-1/2\}) rate of Peto and
-Pike, and the per-call cost is approximately thirty times lower than that
-of the iterative Cox solver (Homma, 2025).
+The Halley step converges cubically, so the residual error
+|log(theta_hat) - log(theta_Cox)| is of the order of the cube of the error
+of the Pike anchor. Near the null hypothesis the anchor is
+already close to the Cox estimate and the residual error is negligible. At
+a fixed hazard ratio away from 1 the Pike anchor has a bias that does not
+vanish as the sample size grows (Berry, Kitchin, and Mock, 1991), so the
+residual error levels off at a small value that depends on the hazard ratio
+and the censoring pattern instead of decreasing with the sample size.
 
 The Wald standard error on the log scale is SE = 1 / sqrt(I_0), where I_0
-is the observed information evaluated at the Pike anchor. This is the same
-quantity used in the Wald confidence interval reported by
-\code{summary(coxph(...))}, which is based on the observed information at
-the maximum likelihood estimate. Because the Pike anchor lies within
-O_p(n^\{-1/2\}) of the Cox maximum likelihood estimate, the difference
-between I_0 and the information at the maximum likelihood estimate is
-negligible for the purpose of interval construction.
+is the observed information evaluated at the Pike anchor. The Wald
+confidence interval reported by \code{summary(coxph(...))} uses the
+observed information at the maximum likelihood estimate instead. The two
+differ by an amount of the order of the error of the Pike anchor, which is
+small when the hazard ratio is not far from 1; Berry, Kitchin, and Mock
+(1991) found the bias of the Pike estimator minimal for hazard ratios below
+3.
 
 With \code{strata}, the estimator targets the stratified Cox model, in which
 each stratum has its own baseline hazard and the hazard ratio is common to

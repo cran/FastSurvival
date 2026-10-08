@@ -14,6 +14,7 @@ struct WkmScratch {
   std::vector<double> s2;
   std::vector<double> sp;
   std::vector<double> a_seq;
+  std::vector<double> pf;
 };
 
 // Forward declaration of the pointer-based implementation (defined below).
@@ -35,6 +36,14 @@ void wkm_core_impl(const double*, const int*, const int*, int, int,
 //   w(t) = n G1(t) G2(t) / (n1 G1(t) + n2 G2(t)),
 // where Gj is the censoring survival estimate in group j. The weight type
 // argument selects w (0), sqrt(w) (1) or a constant 1 (2).
+//
+// The variance of sqrt(n1 n2 / n) times the weighted difference is
+//   - sum_k A_k^2 / (S_k^2 w_PF,k) (S_{k+1} - S_k),
+// where A_k is the remaining weighted area under the pooled curve S after
+// interval k (computed with the selected weight) and w_PF is always the
+// Pepe-Fleming weight: n G1 G2 / (n1 G1 + n2 G2) is the inverse of
+// (n1 n2 / n) (1 / (n1 G1) + 1 / (n2 G2)), the censoring factor of the
+// variance of the two Kaplan-Meier estimates, whatever weight is selected.
 //
 // Returns a numeric vector with:
 //   [0] num_raw  = sum_k w_k (S1_k - S2_k) width_k, the weighted integrated
@@ -82,6 +91,7 @@ void wkm_core_impl(const double* time, const int* event, const int* grp, int n,
     sc.s2.resize(n);
     sc.sp.resize(n);
     sc.a_seq.resize(n);
+    sc.pf.resize(n);
   }
   double* width = sc.width.data();
   double* wt    = sc.wt.data();
@@ -89,6 +99,7 @@ void wkm_core_impl(const double* time, const int* event, const int* grp, int n,
   double* s2    = sc.s2.data();
   double* sp    = sc.sp.data();
   double* a_seq = sc.a_seq.data();
+  double* pf    = sc.pf.data();
 
   double surv1 = 1.0, surv2 = 1.0, cen1 = 1.0, cen2 = 1.0, survp = 1.0;
   int y1 = n1, y2 = n2, yp = n;
@@ -141,6 +152,7 @@ void wkm_core_impl(const double* time, const int* event, const int* grp, int n,
     } else {
       w = ((double) n * cen1 * cen2) / denom;
     }
+    pf[k] = w;
     if (weight_type == 1) {
       w = std::sqrt(w);
     } else if (weight_type == 2) {
@@ -181,8 +193,8 @@ void wkm_core_impl(const double* time, const int* event, const int* grp, int n,
     double a_rem = total - a_seq[k];
     double sp_next = (k < n - 1) ? sp[k + 1] : sp_final;
     double d_sm = sp_next - sp[k];
-    if (wt[k] > 0.0 && sp[k] > 0.0) {
-      double term = (a_rem * a_rem) / (sp[k] * sp[k] * wt[k]) * d_sm;
+    if (pf[k] > 0.0 && sp[k] > 0.0) {
+      double term = (a_rem * a_rem) / (sp[k] * sp[k] * pf[k]) * d_sm;
       variance -= term;
     }
   }

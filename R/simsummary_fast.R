@@ -61,7 +61,9 @@
 #' final data and an \code{NA} cutoff at that look. Its statistics are compared
 #' with the boundary like any other, and it is left out of \code{cutoff.mean}
 #' (the mean over the simulations with a finite cutoff) but not out of the
-#' count means.
+#' count means. In \code{\link{pairwise_fast}} output the statistics and
+#' counts of an unreached look are \code{NA}, so that look never crosses a
+#' boundary and is left out of the count means.
 #'
 #' The rejection rate is the type I error under a null data-generating truth and
 #' the power under an alternative truth, but because the function does not know the

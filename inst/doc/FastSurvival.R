@@ -7,7 +7,7 @@ knitr::opts_chunk$set(
 ## ----load-pkg-----------------------------------------------------------------
 library(FastSurvival)
 
-## ----quick--------------------------------------------------------------------
+## ----quick, eval = requireNamespace("survival", quietly = TRUE)---------------
 library(survival)
 
 # Single-time-point Kaplan-Meier estimate

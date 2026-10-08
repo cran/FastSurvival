@@ -408,9 +408,9 @@ at the same time (1000 days).</p>
 </div>
 <div id="log-rank-test" class="section level1">
 <h1>Log-rank test</h1>
-<p><code>survdiff_fast()</code> with <code>side = 1</code> returns a
-signed Z-score. Its square is the chi-square statistic from
-<code>survdiff()</code>.</p>
+<p><code>survdiff_fast()</code> with <code>side = 1</code> returns the
+signed Z-score of the log-rank test (Mantel, 1966). Its square is the
+chi-square statistic from <code>survdiff()</code>.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>fast_lr <span class="ot">&lt;-</span> <span class="fu">survdiff_fast</span>(gbsg<span class="sc">$</span>rfstime, gbsg<span class="sc">$</span>status, gbsg<span class="sc">$</span>hormon,</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>                         <span class="at">control =</span> <span class="dv">0</span>, <span class="at">side =</span> <span class="dv">1</span>)</span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a></span>
@@ -451,23 +451,28 @@ weight family, including the ordinary log-rank test recovered at
 </div>
 <div id="cox-hazard-ratio" class="section level1">
 <h1>Cox hazard ratio</h1>
-<p><code>coxph_fast()</code> returns the Pike-Halley Estimator, a
-closed-form approximation to the Cox partial likelihood maximizer. We
-report the log hazard ratio from both; the sign convention is the same
-and <code>side</code> does not affect the point estimate.</p>
+<p><code>coxph_fast()</code> returns the Pike-Halley Estimator (Homma,
+2025), a closed-form approximation to the maximizer of the Cox partial
+likelihood with the Breslow method for ties. The reference is therefore
+<code>coxph()</code> with <code>ties = &quot;breslow&quot;</code> (its default is
+the Efron method). We report the log hazard ratio from both; the sign
+convention is the same and <code>side</code> does not affect the point
+estimate.</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>fast_hr <span class="ot">&lt;-</span> <span class="fu">coxph_fast</span>(gbsg<span class="sc">$</span>rfstime, gbsg<span class="sc">$</span>status, gbsg<span class="sc">$</span>hormon,</span>
 <span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>                      <span class="at">control =</span> <span class="dv">0</span>, <span class="at">side =</span> <span class="dv">1</span>)</span>
 <span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a></span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>ref_cox <span class="ot">&lt;-</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(rfstime, status) <span class="sc">~</span> hormon, <span class="at">data =</span> gbsg)</span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a></span>
-<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="fu">c</span>(<span class="at">fast =</span> <span class="fu">unclass</span>(fast_hr)[<span class="st">&quot;coef&quot;</span>], <span class="at">cox =</span> <span class="fu">unname</span>(<span class="fu">coef</span>(ref_cox)))</span>
-<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt;  fast.coef        cox </span></span>
-<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt; -0.3638987 -0.3640099</span></span></code></pre></div>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>ref_cox <span class="ot">&lt;-</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(rfstime, status) <span class="sc">~</span> hormon, <span class="at">data =</span> gbsg,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>                 <span class="at">ties =</span> <span class="st">&quot;breslow&quot;</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="fu">c</span>(<span class="at">fast =</span> <span class="fu">unclass</span>(fast_hr)[<span class="st">&quot;coef&quot;</span>], <span class="at">cox =</span> <span class="fu">unname</span>(<span class="fu">coef</span>(ref_cox)))</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt;  fast.coef        cox </span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt; -0.3638987 -0.3638988</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>cox_diff <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">unname</span>(<span class="fu">unclass</span>(fast_hr)[<span class="st">&quot;coef&quot;</span>]) <span class="sc">-</span> <span class="fu">unname</span>(<span class="fu">coef</span>(ref_cox)))</span></code></pre></div>
 <p>Because the Pike-Halley Estimator is a closed-form approximation
 rather than the exact partial-likelihood maximizer, the two log hazard
-ratios are not expected to be identical. They differ slightly, here in
-the fourth decimal place, which reflects the approximation and is not a
-sign of error.</p>
+ratios are not expected to be identical. Their absolute difference here
+is 2.1e-09, which reflects the approximation and is not a sign of
+error.</p>
 <p>With <code>strata</code>, <code>coxph_fast()</code> approximates the
 stratified Cox model, in which each stratum has its own baseline hazard.
 Stratifying by tumor grade, the estimate is compared with
@@ -487,8 +492,8 @@ targets.</p>
 <div id="restricted-mean-survival-time" class="section level1">
 <h1>Restricted mean survival time</h1>
 <p><code>rmst_fast()</code> integrates the Kaplan-Meier survival curve
-up to a horizon. We compare the two-group RMST difference against
-<code>survRM2::rmst2()</code> at 1000 days.</p>
+up to a horizon (Royston and Parmar, 2013). We compare the two-group
+RMST difference against <code>survRM2::rmst2()</code> at 1000 days.</p>
 <div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">library</span>(survRM2)</span>
 <span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a></span>
 <span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>tau <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
@@ -508,12 +513,13 @@ up to a horizon. We compare the two-group RMST difference against
 <h1>Window mean survival time</h1>
 <p><code>wmst_fast()</code> integrates the Kaplan-Meier curve between a
 lower and an upper window limit, generalizing the restricted mean
-survival time. CRAN has no dedicated WMST package, so we validate the
-per-group windowed area directly against a Kaplan-Meier step-function
-integral computed from <code>survfit()</code> over the same window. A
-full comparison against the <code>survWMST</code> package, which is
-distributed on GitHub, is provided in
-<code>tools/compare_wmst_survwmst.R</code>.</p>
+survival time (Paukner and Chappell, 2021). CRAN has no dedicated WMST
+package, so we validate the per-group windowed area directly against a
+Kaplan-Meier step-function integral computed from <code>survfit()</code>
+over the same window. A full comparison against the
+<code>survWMST</code> package, which is distributed on GitHub, is
+provided in <code>tools/compare_wmst_survwmst.R</code> of the package’s
+GitHub repository.</p>
 <div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>tau1 <span class="ot">&lt;-</span> <span class="dv">200</span></span>
 <span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>tau2 <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
 <span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a></span>
@@ -579,8 +585,10 @@ rather than in this vignette.</p>
 <div id="milestone-survival" class="section level1">
 <h1>Milestone survival</h1>
 <p><code>milestone_fast()</code> compares Kaplan-Meier survival between
-two groups at a milestone timepoint. The per-group survival
-probabilities match those from <code>survfit()</code>.</p>
+two groups at a milestone timepoint, here with the complementary log-log
+intervals and the MOVER interval of the difference of Tang (2021). The
+per-group survival probabilities match those from
+<code>survfit()</code>.</p>
 <div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>tstar <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
 <span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a></span>
 <span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>fast_ms <span class="ot">&lt;-</span> <span class="fu">milestone_fast</span>(gbsg<span class="sc">$</span>rfstime, gbsg<span class="sc">$</span>status, gbsg<span class="sc">$</span>hormon,</span>
@@ -713,23 +721,24 @@ group shares of the total hazard.</p>
 precision. The average hazard ratio was additionally cross-checked
 against the archived AHR package, the reference implementation used by
 Dormuth et al. (2024): the two group shares, the average hazard ratio,
-the variances, and both test statistics agree to within the order of
-1e-15. That external comparison is reproducible with the
-<code>tools/compare_ahr_ahrKM.R</code> script shipped in the package
-sources.</p>
+the variances, and both test statistics agree to within about 1e-14.
+That external comparison is reproducible with the
+<code>tools/compare_ahr_ahrKM.R</code> script of the package’s GitHub
+repository.</p>
 </div>
 <div id="max-combo-test" class="section level1">
 <h1>Max-combo test</h1>
 <p><code>maxcombo_fast()</code> computes the max-combo test, the most
-extreme of a set of Fleming-Harrington weighted log-rank statistics. The
-<code>nph</code> package provides <code>logrank.maxtest()</code>, whose
-default weight set is FH(0, 0), FH(0, 1), and FH(1, 0). We request the
-same three weights from <code>maxcombo_fast()</code> and compare the
-component Z-scores. The individual Z-scores are kept in the
-<code>z</code> attribute, signed so that a negative value indicates
-benefit for the treatment group under the package convention. Because
-<code>nph</code> orients the contrast in the opposite direction, the
-signs are mirrored, so we compare absolute values.</p>
+extreme of a set of Fleming-Harrington weighted log-rank statistics
+(Karrison, 2016). The <code>nph</code> package provides
+<code>logrank.maxtest()</code>, whose default weight set is FH(0, 0),
+FH(0, 1), and FH(1, 0). We request the same three weights from
+<code>maxcombo_fast()</code> and compare the component Z-scores. The
+individual Z-scores are kept in the <code>z</code> attribute, signed so
+that a negative value indicates benefit for the treatment group under
+the package convention. Because <code>nph</code> orients the contrast in
+the opposite direction, the signs are mirrored, so we compare absolute
+values.</p>
 <div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>rho   <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">1</span>)</span>
 <span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>gamma <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
 <span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a></span>
@@ -750,10 +759,9 @@ signs are mirrored, so we compare absolute values.</p>
 <span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a><span class="co">#&gt; 3 FH(1,0) 2.951913 2.951913</span></span></code></pre></div>
 <p>The component statistics agree in absolute value. The final max-combo
 statistic is the largest of these, which for the one-sided test is the
-most extreme component Z. The p-values from the two packages are close
-but not identical, since they use different numerical methods for the
-joint distribution (a multivariate normal integral here, a
-Bonferroni-style combination in <code>nph</code>).</p>
+most extreme component Z. The p-values are not compared here, because
+<code>nph::logrank.maxtest()</code> reports two-sided p-values and the
+call above is one-sided.</p>
 </div>
 <div id="robust-modestly-weighted-log-rank-test" class="section level1">
 <h1>Robust modestly-weighted log-rank test</h1>
@@ -795,15 +803,86 @@ absolute values.</p>
 <span id="cb16-24"><a href="#cb16-24" tabindex="-1"></a><span class="co">#&gt; 2 modestly-weighted (s_star = 0.5) 2.773749 2.773749</span></span></code></pre></div>
 <p>The component statistics agree in absolute value. The null
 correlation of the two components, reported in the <code>corr</code>
-attribute, matches the covariance computed by the authors’
-<code>find_cor</code> routine to numerical precision. The combined
-statistic and one-sided p-value then follow from the bivariate normal
-distribution of the two components, evaluated with
-<code>mvtnorm::pmvnorm</code>. On the POPLAR overall-survival data
-analyzed in the original article, <code>rmw_fast()</code> reproduces the
-published one-sided p-values of 0.0028 for the log-rank test, 0.0009 for
-the modestly-weighted test, and 0.0012 for the rMW test, with a
-component correlation of 0.97.</p>
+attribute, is checked against an independent implementation in the
+package test suite. The combined statistic and one-sided p-value then
+follow from the bivariate normal distribution of the two components,
+evaluated with <code>mvtnorm::pmvnorm</code>.</p>
+</div>
+<div id="analysis-cutoffs" class="section level1">
+<h1>Analysis cutoffs</h1>
+<p>The simulation layer determines the calendar time of each analysis
+with <code>cutoff_fast()</code>, which combines a target number of
+events, a planned calendar time, a maximum calendar time, a minimum time
+after the previous look, and a minimum follow-up after a given number of
+enrolled subjects. The same rule is implemented one simulated trial at a
+time by <code>get_analysis_date()</code> of the <a href="https://cran.r-project.org/package=simtrial">simtrial</a> package.
+We compare the two on 50 simulated trials for a look at “150 events, but
+not before month 18 and not before 6 months after the 250th enrolled
+subject, and in any case by month 30”.</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a>sim_c <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(<span class="at">nsim =</span> <span class="dv">50</span>, <span class="at">n =</span> <span class="fu">c</span>(<span class="dv">150</span>, <span class="dv">150</span>), <span class="at">a.time =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">12</span>),</span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a>                      <span class="at">a.rate =</span> <span class="dv">300</span> <span class="sc">/</span> <span class="dv">12</span>, <span class="at">e.median =</span> <span class="fu">list</span>(<span class="dv">12</span>, <span class="dv">16</span>),</span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>                      <span class="at">d.hazard =</span> <span class="fl">0.01</span>, <span class="at">seed =</span> <span class="dv">2026</span>)</span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>cut_c <span class="ot">&lt;-</span> <span class="fu">cutoff_fast</span>(sim_c, <span class="at">event.looks =</span> <span class="dv">150</span>, <span class="at">time.looks =</span> <span class="dv">18</span>,</span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>                     <span class="at">max.time =</span> <span class="dv">30</span>, <span class="at">min.enrolled =</span> <span class="dv">250</span>, <span class="at">min.followup =</span> <span class="dv">6</span>)</span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a>ref_c <span class="ot">&lt;-</span> <span class="fu">vapply</span>(<span class="fu">seq_len</span>(<span class="dv">50</span>), <span class="cf">function</span>(s) {</span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a>  d <span class="ot">&lt;-</span> sim_c[sim_c<span class="sc">$</span>sim <span class="sc">==</span> s, ]</span>
+<span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">enroll_time =</span> d<span class="sc">$</span>accrual_time,</span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a>                  <span class="at">cte =</span> d<span class="sc">$</span>accrual_time <span class="sc">+</span> d<span class="sc">$</span>tte,</span>
+<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a>                  <span class="at">fail =</span> d<span class="sc">$</span>event, <span class="at">stratum =</span> <span class="st">&quot;All&quot;</span>)</span>
+<span id="cb17-11"><a href="#cb17-11" tabindex="-1"></a>  simtrial<span class="sc">::</span><span class="fu">get_analysis_date</span>(x, <span class="at">planned_calendar_time =</span> <span class="dv">18</span>,</span>
+<span id="cb17-12"><a href="#cb17-12" tabindex="-1"></a>                              <span class="at">target_event_overall =</span> <span class="dv">150</span>,</span>
+<span id="cb17-13"><a href="#cb17-13" tabindex="-1"></a>                              <span class="at">max_extension_for_target_event =</span> <span class="dv">30</span>,</span>
+<span id="cb17-14"><a href="#cb17-14" tabindex="-1"></a>                              <span class="at">min_n_overall =</span> <span class="dv">250</span>, <span class="at">min_followup =</span> <span class="dv">6</span>)</span>
+<span id="cb17-15"><a href="#cb17-15" tabindex="-1"></a>}, <span class="fu">numeric</span>(<span class="dv">1</span>))</span>
+<span id="cb17-16"><a href="#cb17-16" tabindex="-1"></a><span class="fu">c</span>(<span class="at">max_abs_difference =</span> <span class="fu">max</span>(<span class="fu">abs</span>(cut_c[, <span class="dv">1</span>] <span class="sc">-</span> ref_c)))</span>
+<span id="cb17-17"><a href="#cb17-17" tabindex="-1"></a><span class="co">#&gt; max_abs_difference </span></span>
+<span id="cb17-18"><a href="#cb17-18" tabindex="-1"></a><span class="co">#&gt;                  0</span></span></code></pre></div>
+<p>The cutoffs agree exactly. The two functions differ only when an
+event target is never met in the simulated data, which
+<code>cutoff_fast()</code> reports as an unreached look rather than as
+the time of the last observed event.</p>
+</div>
+<div id="treatment-switching" class="section level1">
+<h1>Treatment switching</h1>
+<p><code>switch_fast()</code> changes only the outcomes after each
+subject’s switch. For an exponential survival time with hazard
+<code>lambda</code>, a switch at time <code>s</code> after accrual that
+multiplies the remaining time by <code>f</code> gives the survival
+function <code>exp(-lambda t)</code> for <code>t &lt;= s</code> and
+<code>exp(-lambda s - lambda (t - s) / f)</code> for
+<code>t &gt; s</code>. We let every control subject still alive at
+calendar month 12 switch with <code>f = 2</code>, so that
+<code>s = 12 - a</code> for a subject accrued at time <code>a</code>,
+and compare the empirical survival of the control group with the average
+of this survival function over the accrual times.</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a>lam   <span class="ot">&lt;-</span> <span class="fu">log</span>(<span class="dv">2</span>) <span class="sc">/</span> <span class="dv">12</span></span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a>sim_s <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(<span class="at">nsim =</span> <span class="dv">200</span>, <span class="at">n =</span> <span class="fu">c</span>(<span class="dv">250</span>, <span class="dv">250</span>), <span class="at">a.time =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">6</span>),</span>
+<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a>                      <span class="at">a.prop =</span> <span class="dv">1</span>, <span class="at">e.hazard =</span> <span class="fu">list</span>(lam, lam <span class="sc">/</span> <span class="fl">1.5</span>),</span>
+<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a>                      <span class="at">seed =</span> <span class="dv">2027</span>)</span>
+<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a>sw    <span class="ot">&lt;-</span> <span class="fu">switch_fast</span>(sim_s, <span class="at">group =</span> <span class="dv">1</span>, <span class="at">when =</span> <span class="st">&quot;cutoff&quot;</span>,</span>
+<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a>                     <span class="at">cutoff =</span> <span class="fu">rep</span>(<span class="dv">12</span>, <span class="dv">200</span>), <span class="at">aft.factor =</span> <span class="dv">2</span>)</span>
+<span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a>ctl   <span class="ot">&lt;-</span> sw<span class="sc">$</span>group <span class="sc">==</span> <span class="dv">1</span></span>
+<span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a>s_sw  <span class="ot">&lt;-</span> <span class="dv">12</span> <span class="sc">-</span> sw<span class="sc">$</span>accrual_time[ctl]</span>
+<span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a>t_grid <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">6</span>, <span class="dv">12</span>, <span class="dv">18</span>, <span class="dv">24</span>, <span class="dv">36</span>)</span>
+<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb18-11"><a href="#cb18-11" tabindex="-1"></a>  <span class="at">t         =</span> t_grid,</span>
+<span id="cb18-12"><a href="#cb18-12" tabindex="-1"></a>  <span class="at">empirical =</span> <span class="fu">round</span>(<span class="fu">sapply</span>(t_grid, <span class="cf">function</span>(t) <span class="fu">mean</span>(sw<span class="sc">$</span>surv_time[ctl] <span class="sc">&gt;</span> t)), <span class="dv">4</span>),</span>
+<span id="cb18-13"><a href="#cb18-13" tabindex="-1"></a>  <span class="at">analytic  =</span> <span class="fu">round</span>(<span class="fu">sapply</span>(t_grid, <span class="cf">function</span>(t) {</span>
+<span id="cb18-14"><a href="#cb18-14" tabindex="-1"></a>    <span class="fu">mean</span>(<span class="fu">ifelse</span>(t <span class="sc">&lt;=</span> s_sw, <span class="fu">exp</span>(<span class="sc">-</span>lam <span class="sc">*</span> t),</span>
+<span id="cb18-15"><a href="#cb18-15" tabindex="-1"></a>                <span class="fu">exp</span>(<span class="sc">-</span>lam <span class="sc">*</span> s_sw <span class="sc">-</span> lam <span class="sc">*</span> (t <span class="sc">-</span> s_sw) <span class="sc">/</span> <span class="dv">2</span>)))</span>
+<span id="cb18-16"><a href="#cb18-16" tabindex="-1"></a>  }), <span class="dv">4</span>)</span>
+<span id="cb18-17"><a href="#cb18-17" tabindex="-1"></a>)</span>
+<span id="cb18-18"><a href="#cb18-18" tabindex="-1"></a><span class="co">#&gt;    t empirical analytic</span></span>
+<span id="cb18-19"><a href="#cb18-19" tabindex="-1"></a><span class="co">#&gt; 1  6    0.7052   0.7071</span></span>
+<span id="cb18-20"><a href="#cb18-20" tabindex="-1"></a><span class="co">#&gt; 2 12    0.5456   0.5460</span></span>
+<span id="cb18-21"><a href="#cb18-21" tabindex="-1"></a><span class="co">#&gt; 3 18    0.4594   0.4591</span></span>
+<span id="cb18-22"><a href="#cb18-22" tabindex="-1"></a><span class="co">#&gt; 4 24    0.3860   0.3861</span></span>
+<span id="cb18-23"><a href="#cb18-23" tabindex="-1"></a><span class="co">#&gt; 5 36    0.2728   0.2730</span></span></code></pre></div>
+<p>The empirical survival matches the analytic survival function to
+Monte Carlo error (the standard error is at most about 0.002 with 50,000
+control subjects). The vignette on treatment switching also checks the
+switching model with the rank-preserving structural failure time
+estimator of the rpsftm package.</p>
 </div>
 <div id="summary" class="section level1">
 <h1>Summary</h1>
@@ -816,8 +895,10 @@ integral and the weighted Kaplan-Meier statistic matches the RMST
 identity; the average hazard ratio matches a survival-based reference;
 and the closed-form Cox hazard ratio, with or without strata, agrees
 with the partial-likelihood maximizer to the order expected for the
-Pike-Halley approximation. This agreement is verified continuously by
-the package test suite.</p>
+Pike-Halley approximation. In the simulation layer, the analysis cutoffs
+agree with simtrial and the switched survival times follow their
+analytic distribution. This agreement is verified continuously by the
+package test suite.</p>
 </div>
 <div id="references" class="section level1">
 <h1>References</h1>

@@ -456,3 +456,26 @@ test_that("print labels the unweighted stratified log-rank test", {
   fit <- survdiff_fast(ov$futime, ov$fustat, ov$rx, 1, strata = ov$resid.ds)
   expect_output(print(fit), "Stratified log-rank test")
 })
+
+test_that("survdiff_fast: presorted = TRUE checks the order", {
+  time  <- c(3, 1, 2, 4, 6, 5)
+  event <- c(1, 1, 0, 1, 1, 0)
+  group <- c(0, 1, 0, 1, 0, 1)
+  expect_error(survdiff_fast(time, event, group, control = 0, presorted = TRUE), "presorted = FALSE")
+  expect_error(survdiff_fast(time, event, group, control = 0, presorted = TRUE, strata = c(1, 1, 1, 2, 2, 2)), "presorted = FALSE")
+  expect_error(survdiff_fast(time, event, group, control = 0, presorted = TRUE, weight = "fh", gamma = 1), "presorted = FALSE")
+  expect_error(survdiff_fast(time, event, group, control = 0, presorted = TRUE, weight = "fh", gamma = 1, strata = c(1, 1, 1, 2, 2, 2)), "presorted = FALSE")
+})
+
+test_that("survdiff_fast: correctly presorted stratified input is accepted", {
+  time  <- c(1, 2, 3, 1.5, 2.5, 3.5)
+  event <- c(1, 0, 1, 1, 1, 0)
+  group <- c(0, 1, 1, 0, 1, 0)
+  s     <- c(1, 1, 1, 2, 2, 2)
+  expect_equal(
+    unclass(survdiff_fast(time, event, group, control = 0, strata = s,
+                          presorted = TRUE)),
+    unclass(survdiff_fast(time, event, group, control = 0, strata = s)))
+  expect_error(survdiff_fast(time, event, group, control = 0, presorted = TRUE,
+                             strata = c(1, 2, 1, 2, 1, 2)), "contiguous")
+})

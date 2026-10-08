@@ -347,9 +347,10 @@ and OS under the Fleischer model</h1>
 <p>Many confirmatory oncology trials test progression-free survival
 (PFS) as the primary endpoint and overall survival (OS) as a key
 secondary endpoint, with the two endpoints tested in a fixed sequence to
-control the family-wise error rate. Because every PFS event is a death
-or a progression and every death is also a PFS event, the two endpoints
-are positively correlated, and that correlation is needed to
+control the family-wise error rate. A PFS event is a progression or a
+death, so a death before progression is an event for both endpoints, and
+the OS time is never shorter than the PFS time. The two endpoints are
+therefore positively correlated, and that correlation is needed to
 characterize the operating characteristics of the sequential
 procedure.</p>
 <p>This vignette simulates such a design with the simulation trio
@@ -359,11 +360,10 @@ from the Fleischer maximal-independence model, runs an event-driven
 group-sequential design with one futility analysis followed by two
 efficacy analyses, evaluates the power of each endpoint under the
 alternative, and estimates the correlation of the standardized log-rank
-statistics <code>Corr(Z_PFS, Z_OS)</code>. The empirical correlation
-reported here is the quantity for which a closed-form expression is
-derived in a companion methodological note; the simulation provides an
-independent check of that derivation and of the design’s operating
-characteristics.</p>
+statistics <code>Corr(Z_PFS, Z_OS)</code>. This correlation is the input
+that a closed-form evaluation of the sequential procedure would need,
+and the simulation gives the operating characteristics of the procedure
+directly.</p>
 <div id="the-fleischer-model" class="section level3">
 <h3>The Fleischer model</h3>
 <p>For a subject in group <code>g</code> the Fleischer
@@ -477,105 +477,78 @@ both PFS and OS at the same time.</p>
 <span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>  <span class="at">seed       =</span> seed</span>
 <span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>)</span>
 <span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a></span>
-<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co"># Observed PFS endpoint (e1).</span></span>
-<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>pfs_dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>  <span class="at">sim          =</span> df<span class="sc">$</span>sim,</span>
-<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>  <span class="at">group        =</span> df<span class="sc">$</span>group,</span>
-<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>  <span class="at">accrual_time =</span> df<span class="sc">$</span>accrual_time,</span>
-<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>  <span class="at">tte          =</span> df<span class="sc">$</span>e1_tte,</span>
-<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a>  <span class="at">event        =</span> df<span class="sc">$</span>e1_event</span>
-<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a>)</span>
-<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a></span>
-<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co"># Observed OS endpoint (e2).</span></span>
-<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a>os_dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a>  <span class="at">sim          =</span> df<span class="sc">$</span>sim,</span>
-<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a>  <span class="at">group        =</span> df<span class="sc">$</span>group,</span>
-<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a>  <span class="at">accrual_time =</span> df<span class="sc">$</span>accrual_time,</span>
-<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a>  <span class="at">os_tte       =</span> df<span class="sc">$</span>e2_tte,</span>
-<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a>  <span class="at">os_event     =</span> df<span class="sc">$</span>e2_event</span>
-<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a>)</span></code></pre></div>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co"># Single-endpoint view of PFS (k = 1) or OS (k = 2), in the columns that</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co"># analysis_fast() reads.</span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>ep <span class="ot">&lt;-</span> <span class="cf">function</span>(d, k) {</span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>  <span class="fu">data.frame</span>(</span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>    <span class="at">sim          =</span> d<span class="sc">$</span>sim,</span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>    <span class="at">group        =</span> d<span class="sc">$</span>group,</span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a>    <span class="at">accrual_time =</span> d<span class="sc">$</span>accrual_time,</span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a>    <span class="at">tte          =</span> d[[<span class="fu">paste0</span>(<span class="st">&quot;e&quot;</span>, k, <span class="st">&quot;_tte&quot;</span>)]],</span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a>    <span class="at">event        =</span> d[[<span class="fu">paste0</span>(<span class="st">&quot;e&quot;</span>, k, <span class="st">&quot;_event&quot;</span>)]]</span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a>  )</span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a>}</span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a>pfs_dat <span class="ot">&lt;-</span> <span class="fu">ep</span>(df, <span class="dv">1</span>)</span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a>os_dat  <span class="ot">&lt;-</span> <span class="fu">ep</span>(df, <span class="dv">2</span>)</span></code></pre></div>
 </div>
 <div id="primary-endpoint-analysis-pfs" class="section level2">
 <h2>Primary endpoint analysis (PFS)</h2>
-<p>PFS is analyzed at the three event-driven looks. With
-<code>event.looks</code> the calendar cutoff at look <code>l</code> is
-the time of the <code>d_PFS[l]</code>-th PFS event over the whole trial,
-and <code>analysis_fast</code> returns that cutoff per simulation. These
-cutoffs are exactly the analysis times of the design, and the OS
-analysis below reuses them.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>pfs_res <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(</span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  pfs_dat,</span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">control     =</span> <span class="dv">1</span>,</span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">event.looks =</span> d_PFS,</span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">stat        =</span> <span class="st">&quot;logrank&quot;</span>,</span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">side        =</span> <span class="dv">1</span></span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>)</span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a></span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co"># Per-simulation calendar cutoffs A_l (rows = simulation, columns = look)</span></span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>A_mat <span class="ot">&lt;-</span> <span class="fu">matrix</span>(pfs_res<span class="sc">$</span>cutoff, <span class="at">nrow =</span> nsim, <span class="at">ncol =</span> L, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a></span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co"># With this sample size and these event targets the looks are reached in</span></span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co"># essentially every simulation; warn if any target is not reached.</span></span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">all</span>(pfs_res<span class="sc">$</span>reached)) {</span>
-<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>  <span class="fu">warning</span>(<span class="st">&quot;Some PFS event targets were not reached; increase n or lower d_PFS.&quot;</span>)</span>
-<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>}</span>
-<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a></span>
-<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co"># Standardized PFS log-rank statistics (natural sign: benefit is negative)</span></span>
-<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a>Z_PFS <span class="ot">&lt;-</span> <span class="fu">matrix</span>(pfs_res<span class="sc">$</span>logrank.z, <span class="at">nrow =</span> nsim, <span class="at">ncol =</span> L, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<p>PFS is analyzed at the three event-driven looks.
+<code>cutoff_fast</code> returns, for every simulated trial, the
+calendar time of the <code>d_PFS[l]</code>-th PFS event, which is the
+analysis time of look <code>l</code>. It counts the events in the PFS
+columns <code>e1_tte</code> and <code>e1_event</code> of the
+illness-death data. These cutoffs are exactly the analysis times of the
+design, and both endpoints are analyzed at them through the
+<code>cutoff.looks</code> argument of <code>analysis_fast</code>.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># Per-simulation calendar cutoffs A_l (rows = simulation, columns = look),</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co"># triggered by the PFS events.</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>A_mat <span class="ot">&lt;-</span> <span class="fu">cutoff_fast</span>(df, <span class="at">event.looks =</span> d_PFS,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>                     <span class="at">tte.col =</span> <span class="st">&quot;e1_tte&quot;</span>, <span class="at">event.col =</span> <span class="st">&quot;e1_event&quot;</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>pfs_res <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  pfs_dat,</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="at">control      =</span> <span class="dv">1</span>,</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="at">cutoff.looks =</span> A_mat,</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  <span class="at">stat         =</span> <span class="st">&quot;logrank&quot;</span>,</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  <span class="at">side         =</span> <span class="dv">1</span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>)</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co"># With this sample size and these event targets the looks are reached in</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co"># essentially every simulation; warn if any target is not reached.</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">all</span>(pfs_res<span class="sc">$</span>reached)) {</span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>  <span class="fu">warning</span>(<span class="st">&quot;Some PFS event targets were not reached; increase n or lower d_PFS.&quot;</span>)</span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>}</span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co"># Standardized PFS log-rank statistics (natural sign: benefit is negative)</span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a>Z_PFS <span class="ot">&lt;-</span> <span class="fu">matrix</span>(pfs_res<span class="sc">$</span>logrank.z, <span class="at">nrow =</span> nsim, <span class="at">ncol =</span> L, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<p>The same analysis is obtained with <code>event.looks = d_PFS</code>,
+which determines the cutoffs and analyzes PFS in one call; computing the
+cutoffs separately lets the OS analysis reuse them.</p>
 </div>
 <div id="key-secondary-endpoint-analysis-os" class="section level2">
 <h2>Key secondary endpoint analysis (OS)</h2>
 <p>OS is analyzed at the same per-simulation cutoffs <code>A_l</code>.
-For each look the OS times are administratively censored at
-<code>A_l</code>, and the one-sided log-rank statistic is computed with
-<code>analysis_fast</code> at a single, deliberately large calendar time
-so that no further censoring is applied to the already-cut data. This
-reproduces the design rule that the OS analysis at a look uses the
-PFS-driven analysis time.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>big <span class="ot">&lt;-</span> <span class="fu">max</span>(A_mat, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">+</span> <span class="dv">1</span></span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>os_blocks <span class="ot">&lt;-</span> <span class="fu">vector</span>(<span class="st">&quot;list&quot;</span>, L)</span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="cf">for</span> (l <span class="cf">in</span> <span class="fu">seq_len</span>(L)) {</span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  A_l    <span class="ot">&lt;-</span> A_mat[os_dat<span class="sc">$</span>sim, l]                        <span class="co"># per-row cutoff at look l</span></span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  follow <span class="ot">&lt;-</span> <span class="fu">pmax</span>(<span class="dv">0</span>, A_l <span class="sc">-</span> os_dat<span class="sc">$</span>accrual_time)          <span class="co"># administrative follow-up</span></span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  obs_t  <span class="ot">&lt;-</span> <span class="fu">pmin</span>(os_dat<span class="sc">$</span>os_tte, follow)                 <span class="co"># observed OS time at the look</span></span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  obs_e  <span class="ot">&lt;-</span> os_dat<span class="sc">$</span>os_event <span class="sc">*</span></span>
-<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>    <span class="fu">as.integer</span>(os_dat<span class="sc">$</span>accrual_time <span class="sc">+</span> os_dat<span class="sc">$</span>os_tte <span class="sc">&lt;=</span> A_l)</span>
-<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a></span>
-<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>  cut_l <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>    <span class="at">sim          =</span> os_dat<span class="sc">$</span>sim,</span>
-<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>    <span class="at">group        =</span> os_dat<span class="sc">$</span>group,</span>
-<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>    <span class="at">accrual_time =</span> <span class="dv">0</span>,</span>
-<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>    <span class="at">tte          =</span> obs_t,</span>
-<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a>    <span class="at">event        =</span> obs_e</span>
-<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a>  )</span>
-<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a>  res_l <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(</span>
-<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>    cut_l, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">time.looks =</span> big, <span class="at">stat =</span> <span class="st">&quot;logrank&quot;</span>, <span class="at">side =</span> <span class="dv">1</span></span>
-<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a>  )</span>
-<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a></span>
-<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a>  <span class="co"># Relabel as look l and report the PFS-driven cutoff for the timing summary;</span></span>
-<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a>  <span class="co"># keep only the columns that are meaningful for the censored OS data.</span></span>
-<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a>  res_l<span class="sc">$</span>look       <span class="ot">&lt;-</span> l</span>
-<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a>  res_l<span class="sc">$</span>look.value <span class="ot">&lt;-</span> d_PFS[l]</span>
-<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a>  res_l<span class="sc">$</span>cutoff     <span class="ot">&lt;-</span> A_mat[, l]</span>
-<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a>  os_blocks[[l]] <span class="ot">&lt;-</span> res_l[, <span class="fu">c</span>(<span class="st">&quot;sim&quot;</span>, <span class="st">&quot;look&quot;</span>, <span class="st">&quot;look.value&quot;</span>, <span class="st">&quot;cutoff&quot;</span>,</span>
-<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a>                              <span class="st">&quot;n.event&quot;</span>, <span class="st">&quot;logrank.z&quot;</span>, <span class="st">&quot;logrank.chisq&quot;</span>,</span>
-<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a>                              <span class="st">&quot;logrank.p&quot;</span>)]</span>
-<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a>}</span>
-<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a></span>
-<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a>os_res <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, os_blocks)</span>
-<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a>os_res <span class="ot">&lt;-</span> os_res[<span class="fu">order</span>(os_res<span class="sc">$</span>sim, os_res<span class="sc">$</span>look), ]</span>
-<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a></span>
-<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a><span class="co"># Standardized OS log-rank statistics</span></span>
-<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a>Z_OS <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, nsim, L)</span>
-<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a><span class="cf">for</span> (l <span class="cf">in</span> <span class="fu">seq_len</span>(L)) Z_OS[, l] <span class="ot">&lt;-</span> os_blocks[[l]]<span class="sc">$</span>logrank.z</span></code></pre></div>
+At each look the OS times are administratively censored at
+<code>A_l</code>, which reproduces the design rule that the OS analysis
+at a look uses the PFS-driven analysis time.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>os_res <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  os_dat,</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">control      =</span> <span class="dv">1</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">cutoff.looks =</span> A_mat,</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="at">stat         =</span> <span class="st">&quot;logrank&quot;</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">side         =</span> <span class="dv">1</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>)</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co"># Standardized OS log-rank statistics</span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>Z_OS <span class="ot">&lt;-</span> <span class="fu">matrix</span>(os_res<span class="sc">$</span>logrank.z, <span class="at">nrow =</span> nsim, <span class="at">ncol =</span> L, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
 <p>The mean PFS and OS event counts at each look summarize the
 information available to each endpoint. PFS reaches its event targets by
 construction, while OS, being the slower endpoint, accrues far fewer
 events at the same analysis times.</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>d_PFS_emp <span class="ot">&lt;-</span> <span class="fu">colMeans</span>(<span class="fu">matrix</span>(pfs_res<span class="sc">$</span>n.event, <span class="at">nrow =</span> nsim, <span class="at">ncol =</span> L, <span class="at">byrow =</span> <span class="cn">TRUE</span>))</span>
 <span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>d_OS_emp  <span class="ot">&lt;-</span> <span class="fu">colMeans</span>(<span class="fu">matrix</span>(os_res<span class="sc">$</span>n.event,  <span class="at">nrow =</span> nsim, <span class="at">ncol =</span> L, <span class="at">byrow =</span> <span class="cn">TRUE</span>))</span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>A_mean    <span class="ot">&lt;-</span> <span class="fu">colMeans</span>(A_mat)</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>A_mean    <span class="ot">&lt;-</span> <span class="fu">unname</span>(<span class="fu">colMeans</span>(A_mat))</span>
 <span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a></span>
 <span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
 <span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="at">look          =</span> <span class="fu">seq_len</span>(L),</span>
@@ -601,6 +574,13 @@ so they are negated to match the natural sign of <code>logrank.z</code>,
 where treatment benefit is a negative value. The first look carries a
 non-binding futility rule on PFS, expressed as a threshold on the
 standardized statistic.</p>
+<p>The OS information fractions are planning values: they come from the
+mean OS event counts simulated under the alternative hypothesis, whereas
+a trial would use the observed counts at each analysis. This vignette
+evaluates power under the alternative only; the family-wise error rate
+of the hierarchical procedure would be checked by a further simulation
+under the null hypothesis for both endpoints (equal transition hazards
+in the two groups).</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>timing_PFS_eff <span class="ot">&lt;-</span> <span class="fu">c</span>(d_PFS[<span class="dv">2</span>] <span class="sc">/</span> d_PFS[<span class="dv">3</span>], <span class="dv">1</span>)</span>
 <span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>timing_OS_eff  <span class="ot">&lt;-</span> <span class="fu">c</span>(d_OS_emp[<span class="dv">2</span>] <span class="sc">/</span> d_OS_emp[<span class="dv">3</span>], <span class="dv">1</span>)</span>
 <span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a></span>
@@ -692,21 +672,26 @@ overall row is the power of that endpoint considered on its own.</p>
 <span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt;   Boundaries: efficacy on &#39;logrank.z&#39; (direction = lower)</span></span>
 <span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt; Stopping Boundaries: Look by Look</span></span>
-<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Events (s) Efficacy Z Cum. Cross. Eff.</span></span>
-<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt;     1        0.45      111.7         NA           0.0000</span></span>
-<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt;     2        0.70      174.7    -2.0599           0.3376</span></span>
-<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt;     3        1.00      250.4    -2.2516           0.4604</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Events (s) Sample (n) Efficacy Z Cum. Cross. Eff.</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt;     1        0.45      111.7      490.9         NA           0.0000</span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt;     2        0.70      174.7      599.9    -2.0599           0.3376</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt;     3        1.00      250.4      600.0    -2.2516           0.4604</span></span>
 <span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt; Events, Sample Size, Dropouts, Pipeline and Analysis Times: Look by Look</span></span>
-<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Events (s) Analysis Time Cross. Eff.</span></span>
-<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt;     1        0.45      111.7         15.26      0.0000</span></span>
-<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt;     2        0.70      174.7         18.97      0.3376</span></span>
-<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt;     3        1.00      250.4         24.01      0.1228</span></span>
-<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt; Overall</span></span>
-<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt;   Rejection rate (efficacy):      0.4604</span></span>
-<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt;   Expected events at stop:        224.7</span></span>
-<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt;   Expected analysis time at stop: 22.29</span></span></code></pre></div>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Sample (n) Events (s) Dropouts (d) Pipeline Analysis Time</span></span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt;     1        0.45      490.9      111.7         22.4    356.8         15.26</span></span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt;     2        0.70      599.9      174.7         35.1    390.1         18.97</span></span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt;     3        1.00      600.0      250.4         50.2    299.4         24.01</span></span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt;  Cross. Eff.</span></span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt;       0.0000</span></span>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt;       0.3376</span></span>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt;       0.1228</span></span>
+<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="co">#&gt; Overall</span></span>
+<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="co">#&gt;   Rejection rate (efficacy):      0.4604</span></span>
+<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="co">#&gt;   Expected events at stop:        224.7</span></span>
+<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="co">#&gt;   Expected sample size at stop:   600.0</span></span>
+<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="co">#&gt;   Expected analysis time at stop: 22.29</span></span></code></pre></div>
 <p>Under the alternative the PFS futility rule rarely stops the trial,
 which is the intended behavior: a futility look is meant to protect
 against continuing an ineffective treatment, not to interrupt a
@@ -715,9 +700,15 @@ genuinely effective one.</p>
 <h3>Sequential testing of PFS then OS</h3>
 <p>The procedure tests OS only after PFS has been declared significant,
 and OS may be claimed only at the same look as, or a later look than,
-the PFS claim. The per-simulation rejection looks are recovered from the
-boundary-crossing logic, and the joint power is the probability of
-declaring both endpoints under this gatekeeping rule.</p>
+the PFS claim. After a PFS claim the trial continues to the later looks
+for OS, and OS is claimed at the first look, from the PFS claim onward,
+at which its statistic crosses the OS boundary of that look (Glimm,
+Maurer, and Bretz, 2010). An OS crossing before the PFS claim therefore
+does not prevent an OS claim at a later look. The per-simulation PFS
+rejection looks are recovered from the boundary-crossing logic, and the
+power of the hierarchical procedure for OS, which is also the
+probability of declaring both endpoints, follows from the OS crossings
+at the looks after the PFS claim.</p>
 <div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># First efficacy-crossing look for a matrix of statistics, honouring an optional</span></span>
 <span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co"># futility rule that stops the trial without a rejection.</span></span>
 <span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>reject_look <span class="ot">&lt;-</span> <span class="cf">function</span>(Z, efficacy, <span class="at">futility =</span> <span class="cn">NULL</span>) {</span>
@@ -746,32 +737,30 @@ declaring both endpoints under this gatekeeping rule.</p>
 <span id="cb10-26"><a href="#cb10-26" tabindex="-1"></a>pfs_reject <span class="ot">&lt;-</span> <span class="sc">!</span><span class="fu">is.na</span>(pfs_look)</span>
 <span id="cb10-27"><a href="#cb10-27" tabindex="-1"></a>os_reject  <span class="ot">&lt;-</span> <span class="sc">!</span><span class="fu">is.na</span>(os_look)</span>
 <span id="cb10-28"><a href="#cb10-28" tabindex="-1"></a></span>
-<span id="cb10-29"><a href="#cb10-29" tabindex="-1"></a><span class="co"># Hierarchical gatekeeping: OS is claimed only if PFS is claimed at the same or</span></span>
-<span id="cb10-30"><a href="#cb10-30" tabindex="-1"></a><span class="co"># an earlier look.</span></span>
-<span id="cb10-31"><a href="#cb10-31" tabindex="-1"></a>joint_reject <span class="ot">&lt;-</span> pfs_reject <span class="sc">&amp;</span> os_reject <span class="sc">&amp;</span> (os_look <span class="sc">&gt;=</span> pfs_look)</span>
-<span id="cb10-32"><a href="#cb10-32" tabindex="-1"></a></span>
-<span id="cb10-33"><a href="#cb10-33" tabindex="-1"></a>power_table <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb10-34"><a href="#cb10-34" tabindex="-1"></a>  <span class="at">quantity =</span> <span class="fu">c</span>(<span class="st">&quot;PFS power (marginal)&quot;</span>,</span>
-<span id="cb10-35"><a href="#cb10-35" tabindex="-1"></a>               <span class="st">&quot;OS power (marginal)&quot;</span>,</span>
-<span id="cb10-36"><a href="#cb10-36" tabindex="-1"></a>               <span class="st">&quot;OS power (after PFS, hierarchical)&quot;</span>,</span>
-<span id="cb10-37"><a href="#cb10-37" tabindex="-1"></a>               <span class="st">&quot;Joint power (both endpoints)&quot;</span>),</span>
-<span id="cb10-38"><a href="#cb10-38" tabindex="-1"></a>  <span class="at">value =</span> <span class="fu">c</span>(<span class="fu">mean</span>(pfs_reject),</span>
-<span id="cb10-39"><a href="#cb10-39" tabindex="-1"></a>            <span class="fu">mean</span>(os_reject),</span>
-<span id="cb10-40"><a href="#cb10-40" tabindex="-1"></a>            <span class="fu">mean</span>(joint_reject),</span>
-<span id="cb10-41"><a href="#cb10-41" tabindex="-1"></a>            <span class="fu">mean</span>(joint_reject))</span>
+<span id="cb10-29"><a href="#cb10-29" tabindex="-1"></a><span class="co"># Hierarchical testing: OS is claimed at look l when PFS has been claimed at</span></span>
+<span id="cb10-30"><a href="#cb10-30" tabindex="-1"></a><span class="co"># look l or earlier and the OS statistic crosses its look-l boundary.</span></span>
+<span id="cb10-31"><a href="#cb10-31" tabindex="-1"></a>os_cross <span class="ot">&lt;-</span> Z_OS <span class="sc">&lt;=</span> <span class="fu">matrix</span>(eff_OS, <span class="at">nrow =</span> nsim, <span class="at">ncol =</span> L, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-32"><a href="#cb10-32" tabindex="-1"></a>os_cross[<span class="fu">is.na</span>(os_cross)] <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
+<span id="cb10-33"><a href="#cb10-33" tabindex="-1"></a>hier_reject <span class="ot">&lt;-</span> <span class="fu">Reduce</span>(<span class="st">`</span><span class="at">|</span><span class="st">`</span>, <span class="fu">lapply</span>(<span class="fu">seq_len</span>(L), <span class="cf">function</span>(l) {</span>
+<span id="cb10-34"><a href="#cb10-34" tabindex="-1"></a>  pfs_reject <span class="sc">&amp;</span> pfs_look <span class="sc">&lt;=</span> l <span class="sc">&amp;</span> os_cross[, l]</span>
+<span id="cb10-35"><a href="#cb10-35" tabindex="-1"></a>}))</span>
+<span id="cb10-36"><a href="#cb10-36" tabindex="-1"></a></span>
+<span id="cb10-37"><a href="#cb10-37" tabindex="-1"></a>power_table <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb10-38"><a href="#cb10-38" tabindex="-1"></a>  <span class="at">quantity =</span> <span class="fu">c</span>(<span class="st">&quot;PFS power (marginal)&quot;</span>,</span>
+<span id="cb10-39"><a href="#cb10-39" tabindex="-1"></a>               <span class="st">&quot;OS power (marginal)&quot;</span>,</span>
+<span id="cb10-40"><a href="#cb10-40" tabindex="-1"></a>               <span class="st">&quot;OS power within the hierarchical procedure&quot;</span>),</span>
+<span id="cb10-41"><a href="#cb10-41" tabindex="-1"></a>  <span class="at">value =</span> <span class="fu">round</span>(<span class="fu">c</span>(<span class="fu">mean</span>(pfs_reject), <span class="fu">mean</span>(os_reject), <span class="fu">mean</span>(hier_reject)), <span class="dv">3</span>)</span>
 <span id="cb10-42"><a href="#cb10-42" tabindex="-1"></a>)</span>
-<span id="cb10-43"><a href="#cb10-43" tabindex="-1"></a>power_table<span class="sc">$</span>value <span class="ot">&lt;-</span> <span class="fu">round</span>(power_table<span class="sc">$</span>value, <span class="dv">3</span>)</span>
-<span id="cb10-44"><a href="#cb10-44" tabindex="-1"></a>power_table</span>
-<span id="cb10-45"><a href="#cb10-45" tabindex="-1"></a><span class="co">#&gt;                             quantity value</span></span>
-<span id="cb10-46"><a href="#cb10-46" tabindex="-1"></a><span class="co">#&gt; 1               PFS power (marginal) 0.977</span></span>
-<span id="cb10-47"><a href="#cb10-47" tabindex="-1"></a><span class="co">#&gt; 2                OS power (marginal) 0.460</span></span>
-<span id="cb10-48"><a href="#cb10-48" tabindex="-1"></a><span class="co">#&gt; 3 OS power (after PFS, hierarchical) 0.452</span></span>
-<span id="cb10-49"><a href="#cb10-49" tabindex="-1"></a><span class="co">#&gt; 4       Joint power (both endpoints) 0.452</span></span></code></pre></div>
+<span id="cb10-43"><a href="#cb10-43" tabindex="-1"></a>power_table</span>
+<span id="cb10-44"><a href="#cb10-44" tabindex="-1"></a><span class="co">#&gt;                                     quantity value</span></span>
+<span id="cb10-45"><a href="#cb10-45" tabindex="-1"></a><span class="co">#&gt; 1                       PFS power (marginal) 0.977</span></span>
+<span id="cb10-46"><a href="#cb10-46" tabindex="-1"></a><span class="co">#&gt; 2                        OS power (marginal) 0.460</span></span>
+<span id="cb10-47"><a href="#cb10-47" tabindex="-1"></a><span class="co">#&gt; 3 OS power within the hierarchical procedure 0.458</span></span></code></pre></div>
 <p>The marginal OS power is the probability of crossing the OS efficacy
 boundary ignoring the gatekeeping, and the hierarchical OS power is the
-probability of claiming OS within the procedure. The latter cannot
-exceed the PFS power, since OS is reachable only through a PFS
-rejection.</p>
+probability of claiming OS within the procedure, which is also the
+probability of claiming both endpoints. The latter cannot exceed the PFS
+power, since OS is reachable only through a PFS rejection.</p>
 </div>
 </div>
 <div id="correlation-of-the-log-rank-statistics" class="section level2">
@@ -863,11 +852,10 @@ Standardized log-rank statistics at the final look.
 0.6, and is largest at the first look, easing slightly as the trial
 matures. This cross-endpoint correlation is the input a sequential
 PFS-then-OS procedure needs to characterize its joint operating
-characteristics, and the value estimated here by simulation matches the
-closed-form expression derived for the Fleischer model in the companion
-methodological note. The within-endpoint correlations match the
-canonical group-sequential form to simulation error, which serves as a
-check on the event-driven timing and the shared-cutoff OS analysis.</p>
+characteristics, and the simulation estimates it together with the power
+of the procedure. The within-endpoint correlations match the canonical
+group-sequential form to simulation error, which serves as a check on
+the event-driven timing and the shared-cutoff OS analysis.</p>
 <p>The simulation uses the validated Rcpp primitives behind
 <code>analysis_fast</code> for every log-rank computation, so the entire
 study of 5,000 trials with three looks per endpoint runs in a few
@@ -879,6 +867,9 @@ estimates at a proportional cost.</p>
 statistical model for the dependence between progression-free survival
 and overall survival. <em>Statistics in Medicine</em>, 28(21),
 2669-2686.</p>
+<p>Glimm, E., Maurer, W., and Bretz, F. (2010). Hierarchical testing of
+multiple endpoints in group-sequential trials. <em>Statistics in
+Medicine</em>, 29(2), 219-228.</p>
 <p>Lan, K. K. G. and DeMets, D. L. (1983). Discrete sequential
 boundaries for clinical trials. <em>Biometrika</em>, 70(3), 659-663.</p>
 <p>O’Brien, P. C. and Fleming, T. R. (1979). A multiple testing

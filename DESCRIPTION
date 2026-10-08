@@ -1,7 +1,7 @@
 Package: FastSurvival
 Type: Package
 Title: Fast Survival Analysis and Simulation for Clinical Trials
-Version: 1.0.0
+Version: 1.1.0
 Authors@R: person(
     given  = "Gosuke",
     family = "Homma",
@@ -21,8 +21,12 @@ Description: Provides fast alternatives to standard survival analysis functions
     (rmw_fast()), the weighted Kaplan-Meier (Pepe-Fleming) test (wkm_fast()),
     the average hazard with survival weight (ahsw_fast()), and the
     Kalbfleisch-Prentice average hazard ratio (ahr_fast()). The simulation
-    layer generates individual patient data (simdata_fast()), performs interim
-    or sequential analyses (analysis_fast()), and aggregates operating
+    layer generates individual patient data (simdata_fast()), determines the
+    calendar time of each analysis from combined event and calendar-time
+    rules (cutoff_fast()), performs interim or sequential analyses
+    (analysis_fast()), compares several experimental arms with a shared
+    control (pairwise_fast()), applies treatment switching at progression or
+    after an interim analysis (switch_fast()), and aggregates operating
     characteristics (simsummary_fast()). A visualization layer assembles
     design-stage scenarios (gen_scenario_fast()) and builds analysis-stage
     Kaplan-Meier curves (kmcurve_fast()), each with plot and print methods.
@@ -41,14 +45,14 @@ Language: en-US
 Depends: R (>= 4.1.0)
 Imports: graphics, grDevices, stats, dqrng, Rcpp, mvtnorm
 LinkingTo: Rcpp, dqrng
-Suggests: survival, survRM2, survAH, simtrial, gsDesign, rpact, nph,
-        nphRCT, microbenchmark, testthat (>= 3.0.0), knitr, rmarkdown
+Suggests: survival, survRM2, survAH, simtrial, gsDesign, nph, nphRCT,
+        rpsftm, microbenchmark, testthat (>= 3.0.0), knitr, rmarkdown
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
 VignetteBuilder: knitr
 NeedsCompilation: yes
-Packaged: 2026-09-29 03:13:43 UTC; i_lik
+Packaged: 2026-10-08 16:10:45 UTC; i_lik
 Author: Gosuke Homma [aut, cre]
 Maintainer: Gosuke Homma <my.name.is.gosuke@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-09-29 13:40:27 UTC
+Date/Publication: 2026-10-08 16:40:08 UTC

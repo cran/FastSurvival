@@ -37,6 +37,7 @@
 #' @param presorted Logical; set to \code{TRUE} when \code{time}, \code{event}
 #'   and \code{group} are already sorted in ascending order of \code{time}, to
 #'   skip the internal sort. Defaults to \code{FALSE}.
+#'   The order is checked, and an error is given when it does not hold.
 #'
 #' @return A named numeric vector of class \code{"wkm_fast"} with the weighted
 #'   integrated difference, its standard error and confidence limits, and the
@@ -106,6 +107,7 @@ wkm_fast <- function(time, event, group, control = NULL,
   gcode <- ifelse(group == control, 0L, 1L)
 
   if (presorted) {
+    check_presorted(time)
     s_time <- as.numeric(time)
     s_event <- as.integer(event)
     s_grp <- as.integer(gcode)

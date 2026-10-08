@@ -8,6 +8,7 @@ have_survRM2  <- requireNamespace("survRM2", quietly = TRUE)
 have_survAH   <- requireNamespace("survAH", quietly = TRUE)
 have_nph      <- requireNamespace("nph", quietly = TRUE)
 have_nphRCT   <- requireNamespace("nphRCT", quietly = TRUE)
+have_simtrial <- requireNamespace("simtrial", quietly = TRUE)
 
 ## ----load---------------------------------------------------------------------
 library(FastSurvival)
@@ -62,9 +63,11 @@ do.call(rbind, lapply(seq_len(nrow(fh_grid)), function(i) {
 fast_hr <- coxph_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
                       control = 0, side = 1)
 
-ref_cox <- coxph(Surv(rfstime, status) ~ hormon, data = gbsg)
+ref_cox <- coxph(Surv(rfstime, status) ~ hormon, data = gbsg,
+                 ties = "breslow")
 
 c(fast = unclass(fast_hr)["coef"], cox = unname(coef(ref_cox)))
+cox_diff <- abs(unname(unclass(fast_hr)["coef"]) - unname(coef(ref_cox)))
 
 ## ----cox-strata, eval = have_survival-----------------------------------------
 fast_hr_s <- coxph_fast(gbsg$rfstime, gbsg$status, gbsg$hormon,
@@ -252,5 +255,42 @@ data.frame(
   fast      = abs(attr(fit_rmw, "z")),
   nphRCT    = abs(c(z_lr_nph, z_mw_nph)),
   row.names = NULL
+)
+
+## ----cutoff, eval = have_simtrial---------------------------------------------
+sim_c <- simdata_fast(nsim = 50, n = c(150, 150), a.time = c(0, 12),
+                      a.rate = 300 / 12, e.median = list(12, 16),
+                      d.hazard = 0.01, seed = 2026)
+cut_c <- cutoff_fast(sim_c, event.looks = 150, time.looks = 18,
+                     max.time = 30, min.enrolled = 250, min.followup = 6)
+ref_c <- vapply(seq_len(50), function(s) {
+  d <- sim_c[sim_c$sim == s, ]
+  x <- data.frame(enroll_time = d$accrual_time,
+                  cte = d$accrual_time + d$tte,
+                  fail = d$event, stratum = "All")
+  simtrial::get_analysis_date(x, planned_calendar_time = 18,
+                              target_event_overall = 150,
+                              max_extension_for_target_event = 30,
+                              min_n_overall = 250, min_followup = 6)
+}, numeric(1))
+c(max_abs_difference = max(abs(cut_c[, 1] - ref_c)))
+
+## ----switching----------------------------------------------------------------
+lam   <- log(2) / 12
+sim_s <- simdata_fast(nsim = 200, n = c(250, 250), a.time = c(0, 6),
+                      a.prop = 1, e.hazard = list(lam, lam / 1.5),
+                      seed = 2027)
+sw    <- switch_fast(sim_s, group = 1, when = "cutoff",
+                     cutoff = rep(12, 200), aft.factor = 2)
+ctl   <- sw$group == 1
+s_sw  <- 12 - sw$accrual_time[ctl]
+t_grid <- c(6, 12, 18, 24, 36)
+data.frame(
+  t         = t_grid,
+  empirical = round(sapply(t_grid, function(t) mean(sw$surv_time[ctl] > t)), 4),
+  analytic  = round(sapply(t_grid, function(t) {
+    mean(ifelse(t <= s_sw, exp(-lam * t),
+                exp(-lam * s_sw - lam * (t - s_sw) / 2)))
+  }), 4)
 )
 

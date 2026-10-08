@@ -47,7 +47,8 @@ one value per group. If omitted, a Silverman type default is used.}
 
 \item{presorted}{Logical; set to \code{TRUE} when \code{time}, \code{event}
 and \code{group} are already sorted in ascending order of \code{time}, to
-skip the internal sort. Defaults to \code{FALSE}.}
+skip the internal sort. Defaults to \code{FALSE}.
+The order is checked, and an error is given when it does not hold.}
 }
 \value{
 A named numeric vector of class \code{"medsurv_fast"}. For a single

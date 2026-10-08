@@ -120,3 +120,8 @@ test_that("survfit_fast caps the log interval at 1 and validates its input", {
   expect_error(survfit_fast(1:3, c(1, 1, 1), t_eval = 2, conf.level = 95),
                "conf.level")
 })
+
+test_that("survfit_fast: negative times are rejected", {
+  expect_error(survfit_fast(c(-1, 2, 3), c(1, 0, 1), t_eval = 2,
+                            presorted = FALSE), "non-negative")
+})

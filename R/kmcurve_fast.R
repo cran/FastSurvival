@@ -65,10 +65,8 @@
 #' @export
 kmcurve_fast <- function(time, event, group = NULL, control = NULL) {
   n <- length(time)
+  check_time_event(time, event)
   event <- as.integer(event)
-  if (length(event) != n) {
-    stop("'time' and 'event' must have the same length")
-  }
 
   # Determine the number of groups
   if (is.null(group)) {

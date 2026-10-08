@@ -14,6 +14,7 @@ pairwise_fast(
   stat = "logrank",
   adjust = c("none", "bonferroni"),
   p.col = NULL,
+  cutoff.looks = NULL,
   ...
 )
 }
@@ -25,15 +26,16 @@ by \code{\link{simdata_fast}}.}
 \item{control}{The group label of the control arm.}
 
 \item{event.looks}{A numeric vector of target cumulative event counts for the
-primary contrast, one per look. Mutually exclusive with \code{time.looks};
-requires \code{primary}.}
+primary contrast, one per look. Mutually exclusive with \code{time.looks}
+and \code{cutoff.looks}; requires \code{primary}.}
 
 \item{time.looks}{A numeric vector of calendar times, one per look. Mutually
-exclusive with \code{event.looks}.}
+exclusive with \code{event.looks} and \code{cutoff.looks}.}
 
 \item{primary}{The group label of the experimental arm whose control-versus-arm
 comparison defines the shared calendar cutoff. Required with
-\code{event.looks} and ignored with \code{time.looks}.}
+\code{event.looks} and ignored with \code{time.looks} and
+\code{cutoff.looks}.}
 
 \item{arms}{A vector of experimental arm labels to compare against the control.
 Defaults to every group other than \code{control}.}
@@ -46,6 +48,12 @@ example \code{"logrank"}, \code{"coxph"}, or \code{"rmst"}).}
 
 \item{p.col}{The name of the p-value column to adjust. By default it is the
 column matching the chosen \code{stat} (for example \code{"logrank.p"}).}
+
+\item{cutoff.looks}{A numeric matrix of per-simulation calendar cutoffs with
+one row per simulated trial and one column per look, as returned by
+\code{\link{cutoff_fast}}. Mutually exclusive with \code{event.looks} and
+\code{time.looks}. See \code{\link{analysis_fast}} for how the rows are
+matched to the simulations.}
 
 \item{...}{Further arguments passed to \code{\link{analysis_fast}}, such as
 \code{side}, \code{conf.level}, \code{tau}, \code{rho}, and \code{gamma}.
@@ -69,7 +77,7 @@ are stacked into one long data frame with an \code{arm} column, optionally with
 a Bonferroni-adjusted p-value across the contrasts.
 }
 \details{
-Two timing regimes are supported, exactly one of which must be requested.
+Three timing regimes are supported, exactly one of which must be requested.
 
 With \code{time.looks}, every contrast is analyzed at the same fixed calendar
 time or times, so all contrasts share the same data cutoff by construction.
@@ -82,8 +90,19 @@ contrast, including the primary one, is analyzed at those same cutoffs. This
 reproduces the standard design in which the primary event-driven analysis
 fixes a single data cutoff at which all comparisons are performed. For a
 simulation in which the primary event target is not reached at a look, that
-look is marked with \code{reached = FALSE} and \code{NA} statistics for every
-contrast.
+look is marked with \code{reached = FALSE}, and its counts and statistics are
+\code{NA} for every contrast. The shared cutoffs are computed by \code{\link{cutoff_fast}} on the
+events of the control and primary arms.
+
+With \code{cutoff.looks}, every contrast is analyzed at the supplied
+per-simulation calendar cutoffs, for example those returned by
+\code{\link{cutoff_fast}} for a combination of event and calendar-time rules.
+A look that is not reached in a simulation (\code{NA} cutoff) is marked with
+\code{reached = FALSE} and \code{NA} counts and statistics, as in the
+event-driven regime. This differs from \code{\link{analysis_fast}}, which
+analyzes the full data at an unreached look; in
+\code{\link{simsummary_fast}} an unreached look of \code{pairwise_fast}
+output therefore never crosses a boundary.
 
 The Bonferroni option multiplies each p-value by the number of contrasts and
 caps it at one, controlling the family-wise error rate across the
@@ -122,5 +141,6 @@ head(pw2)
 
 }
 \seealso{
-\code{\link{simdata_fast}}, \code{\link{analysis_fast}}
+\code{\link{simdata_fast}}, \code{\link{analysis_fast}},
+  \code{\link{cutoff_fast}}
 }
