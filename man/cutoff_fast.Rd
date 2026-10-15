@@ -49,10 +49,12 @@ subject is enrolled, one per look. Defaults to zero when
 are counted for \code{event.looks}.}
 
 \item{tte.col}{A single character string naming the observed-time column
-used to count events. Defaults to \code{"tte"}.}
+(numeric and non-negative) used to count events. Defaults to
+\code{"tte"}.}
 
 \item{event.col}{A single character string naming the event-indicator column
-(0 or 1) used to count events. Defaults to \code{"event"}.}
+(numeric or logical, 0 or 1) used to count events. Defaults to
+\code{"event"}.}
 }
 \value{
 A numeric matrix with one row per simulated trial and one column per

@@ -6,7 +6,7 @@
 #' hazard with survival weight, followed by the between-group contrasts: the
 #' ratio of average hazards (treatment over control) and the difference of
 #' average hazards (treatment minus control), each with a confidence interval
-#' and a two-sided p-value.
+#' and a p-value that follows the \code{side} recorded in the object.
 #'
 #' @param x An object of class \code{"ahsw_fast"} returned by
 #'   \code{\link{ahsw_fast}}.

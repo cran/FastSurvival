@@ -191,6 +191,14 @@ static void simulate_group_into(
     // draw per subject), because subjects are ordered by accrual interval and
     // contiguous blocks of cell labels would tie subgroup membership to the
     // enrollment period.
+    // The fixed counts must add up to the group size, or the labels would not
+    // fill (or would overrun) the block of each simulated trial.
+    long long fixed_total = 0;
+    for (int c = 0; c < n_cell; ++c) fixed_total += fixed_counts[c];
+    if (fixed_total != (long long) n) {
+      Rcpp::stop("internal error: the fixed subgroup cell counts do not add "
+                 "up to the group size");
+    }
     int pos = 0;
     for (int s = 0; s < nsim; ++s) {
       for (int c = 0; c < n_cell; ++c)

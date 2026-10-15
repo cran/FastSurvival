@@ -54,7 +54,8 @@ void wkm_core_impl(const double*, const int*, const int*, int, int,
 //
 // Inputs time, event and grp must be sorted by time in ascending order; grp is
 // coded as 1 for treatment and 0 for control; event is 1 for an event and 0
-// for censoring.
+// for censoring. When the largest time is infinite, the integral is not
+// defined and num_raw and variance are NA.
 
 // [[Rcpp::export]]
 NumericVector wkm_core(NumericVector time, IntegerVector event, IntegerVector grp,
@@ -82,6 +83,17 @@ void wkm_core_impl(const double* time, const int* event, const int* grp, int n,
   int n1 = 0, n2 = 0;
   for (int i = 0; i < n; ++i) {
     if (grp[i] == 1) ++n1; else ++n2;
+  }
+
+  // The integral runs up to the largest observed time, so it is not defined
+  // when that time is infinite (for example a subject without a finite event
+  // or dropout time at an analysis look that is not reached).
+  if (n > 0 && !std::isfinite(time[n - 1])) {
+    out[0] = NA_REAL;
+    out[1] = NA_REAL;
+    out[2] = (double) n1;
+    out[3] = (double) n2;
+    return;
   }
 
   if ((int) sc.width.size() < n) {

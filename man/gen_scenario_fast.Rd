@@ -36,7 +36,11 @@ Each element of \code{scenarios} is a named list of arguments that defines one
 scenario. Those arguments override the shared arguments in \code{shared}, so
 that parameters held constant across scenarios (sample size, accrual, dropout)
 are written once in \code{shared} and only the varying parameters are written
-per scenario. The survival specification follows \code{\link{simdata_fast}}
+per scenario. A hazard and a median are alternative specifications of the
+same quantity, so a scenario that gives one of them also replaces the other
+in \code{shared}: \code{e.median} in a scenario removes a shared
+\code{e.hazard}, and likewise for \code{d.*}, \code{h01.*}, \code{h02.*},
+\code{h12.*}, and \code{h12.switch.*}. The survival specification follows \code{\link{simdata_fast}}
 exactly: \code{e.hazard} or \code{e.median} given as a two-element list
 (control first, treatment second) for the two groups, with \code{e.time}
 supplying the breakpoints of a piecewise-exponential hazard (last element

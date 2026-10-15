@@ -145,7 +145,7 @@ test_that("weight options run and give finite statistics", {
 test_that("input validation works", {
   expect_error(wkm_fast(1:5, c(0, 1, 0, 1), rep(0:1, 2)), "same length")
   expect_error(
-    wkm_fast(1:6, rep(2L, 6), rep(0:1, 3), control = 0), "0"
+    wkm_fast(1:6, rep(2L, 6), rep(0:1, 3), control = 0), "coded as 0"
   )
   expect_error(
     wkm_fast(1:6, rep(0:1, 3), rep(1:3, 2), control = 1), "two distinct"
@@ -154,7 +154,8 @@ test_that("input validation works", {
     wkm_fast(1:6, rep(0:1, 3), rep(0:1, 3)), "control must be specified"
   )
   expect_error(
-    wkm_fast(1:6, rep(0:1, 3), rep(0:1, 3), control = 0, weight = "foo")
+    wkm_fast(1:6, rep(0:1, 3), rep(0:1, 3), control = 0, weight = "foo"),
+    "should be one of"
   )
 })
 
@@ -195,7 +196,7 @@ test_that("wkm_fast matches the survfit-based reference for every weight", {
 test_that("wkm_fast: the standard error is calibrated for every weight", {
   # Under the null, the empirical SD of the weighted difference over repeated
   # trials should match the mean estimated SE. With the weight-specific
-  # divisor of versions up to 1.1.0 the ratio was about 1.15 for the constant
+  # divisor of versions before 1.1.0 the ratio was about 1.15 for the constant
   # weight in this setting (independent Python simulation).
   set.seed(2026)
   nsim <- 600
@@ -222,4 +223,56 @@ test_that("wkm_fast: the standard error is calibrated for every weight", {
 test_that("wkm_fast: presorted = TRUE checks the order", {
   expect_error(wkm_fast(c(3, 1, 2, 4), c(1, 1, 0, 1), c(0, 1, 0, 1),
                         control = 0, presorted = TRUE), "presorted = FALSE")
+})
+
+test_that("wkm_fast: an infinite observed time gives NA statistics", {
+  time  <- c(2, 3, 5, 7, 11, 13, Inf, Inf)
+  event <- c(1, 1, 1, 0, 1, 1, 0, 0)
+  group <- rep(1:2, 4)
+  r <- wkm_fast(time, event, group, control = 1)
+  # The weighted difference comes from the C++ core without arithmetic, so
+  # it is NA and not NaN.
+  expect_true(is.na(r[["wdiff"]]) && !is.nan(r[["wdiff"]]))
+  expect_true(all(is.na(unclass(r))))
+  expect_equal(attr(r, "n"), c(4, 4))
+  # A finite time in place of Inf gives a finite weighted difference.
+  f <- wkm_fast(replace(time, 7:8, 20), event, group, control = 1)
+  expect_true(is.finite(f[["wdiff"]]))
+})
+
+test_that("wkm_fast: time and event must be numeric and time non-negative", {
+  set.seed(1)
+  tt <- rexp(40, 0.1)
+  ee <- rbinom(40, 1, 0.7)
+  gg <- rep(0:1, 20)
+  expect_error(wkm_fast(as.character(tt), ee, gg, control = 0), "numeric")
+  expect_error(wkm_fast(c(-1, tt[-1]), ee, gg, control = 0), "non-negative")
+  expect_error(wkm_fast(tt, factor(ee), gg, control = 0),
+               "numeric or logical")
+})
+
+test_that("wkm_fast: the formula interface gives the vector result", {
+  set.seed(70)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1), ee = rbinom(n, 1, 0.8),
+                  g = rep(c(1, 0), n / 2))
+  ref <- wkm_fast(d$tt, d$ee, d$g, control = 0, weight = "sqrtPF")
+  expect_identical(wkm_fast(Surv(tt, ee) ~ g, data = d, weight = "sqrtPF"),
+                   ref)
+  expect_identical(class(ref), c("wkm_fast", "fastsurv"))
+  expect_error(wkm_fast(d$tt, d$ee, d$g, 0, data = d), "only with a formula")
+})
+
+test_that("wkm_fast: the formula interface passes every argument", {
+  set.seed(60)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1) + 0.1, ee = rbinom(n, 1, 0.8),
+                  g = rep(c("b", "a"), n / 2), s = rep(c("x", "y", "z"), n / 3))
+  d1 <- d[order(d$tt), ]
+  d2 <- d[order(d$s, d$tt), ]
+  expect_identical(
+    wkm_fast(Surv(tt, ee) ~ g, d1, control = "b", side = 1,
+             conf.level = 0.9, weight = "constant", presorted = TRUE),
+    wkm_fast(d1$tt, d1$ee, d1$g, "b", side = 1, conf.level = 0.9,
+             weight = "constant", presorted = TRUE))
 })

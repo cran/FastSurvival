@@ -373,3 +373,96 @@ test_that("simdata_fast (illness-death): subgroup data work with the analysis fu
   expect_identical(sw$subgroup, dat$subgroup)
   expect_true(any(sw$switched == 1))
 })
+
+test_that("simdata_fast (illness-death): switching and dropout can differ by subgroup", {
+  dat <- simdata_fast(
+    nsim = 1, n = c(30000, 30000), a.time = c(0, 1), a.prop = 1,
+    h01.hazard = list(0.10, 0.07), h02.hazard = list(0.03, 0.02),
+    switch.prop = list(list(0.6, 0.2), 0),
+    h12.switch.hazard = list(list(0.02, 0.05), 0.05),
+    d.hazard = list(list(0.01, 0.05), 0.01),
+    prevalence = c(0.5, 0.5), seed = 51
+  )
+  for (s in 1:2) {
+    ctl <- dat$group == 1L & dat$subgroup == s
+    obs <- ctl & dat$intermediate == 1L & dat$e1_event == 1L
+    expect_lt(abs(mean(dat$switched[obs]) - c(0.6, 0.2)[s]), 0.02)
+    sw <- ctl & dat$switched == 1L
+    post <- dat$e2_surv_time[sw] - dat$e1_surv_time[sw]
+    expect_equal(1 / mean(post), c(0.02, 0.05)[s], tolerance = 0.05)
+    expect_equal(1 / mean(dat$dropout_time[ctl]), c(0.01, 0.05)[s],
+                 tolerance = 0.03)
+  }
+  expect_true(all(dat$switched[dat$group == 2L] == 0L))
+})
+
+test_that("simdata_fast (illness-death): switch.prop and per-group lists are checked without subgroups", {
+  # A percentage instead of a probability.
+  expect_error(
+    simdata_fast(nsim = 1, n = c(200, 200), a.time = c(0, 6), a.prop = 1,
+                 h01.hazard = list(0.10, 0.07), h02.hazard = list(0.03, 0.02),
+                 switch.prop = list(40, 0), h12.switch.hazard = 0.05, seed = 1),
+    "single probability in \\[0, 1\\]")
+  expect_error(
+    simdata_fast(nsim = 1, n = c(200, 200), a.time = c(0, 6), a.prop = 1,
+                 h01.hazard = list(0.10, 0.07), h02.hazard = list(0.03, 0.02),
+                 switch.prop = list(-0.2, 0), h12.switch.hazard = 0.05,
+                 seed = 1),
+    "single probability in \\[0, 1\\]")
+  # A per-group list with a third element.
+  expect_error(
+    simdata_fast(nsim = 1, n = c(50, 50), a.time = c(0, 6), a.prop = 1,
+                 h01.hazard = list(0.10, 0.07, 0.05),
+                 h02.hazard = list(0.03, 0.02), seed = 1),
+    "list of length 2")
+  # Valid probabilities are accepted.
+  d <- simdata_fast(nsim = 1, n = c(50, 50), a.time = c(0, 6), a.prop = 1,
+                    h01.hazard = list(0.10, 0.07), h02.hazard = list(0.03, 0.02),
+                    switch.prop = list(0.4, 0), h12.switch.hazard = 0.05,
+                    seed = 1)
+  expect_equal(nrow(d), 100L)
+})
+
+test_that("simdata_fast (illness-death): n and nsim within rounding error are rounded", {
+  ns <- 100 * 0.29
+  n <- 90 * c(0.3, 0.7)  # 63 is 62.99999999999999
+  d1 <- simdata_fast(nsim = ns, n = n, a.time = c(0, 12), a.prop = 1,
+                     h01.hazard = list(0.10, 0.07),
+                     h02.hazard = list(0.03, 0.02), seed = 1)
+  tab1 <- table(d1$sim, d1$group)
+  expect_equal(nrow(tab1), 29L)
+  expect_true(all(tab1[, "1"] == 27L) && all(tab1[, "2"] == 63L))
+  # With subgroups and fixed cell counts (9 and 18, 21 and 42 per trial).
+  d2 <- simdata_fast(nsim = ns, n = n, a.time = c(0, 12), a.prop = 1,
+                     h01.hazard = list(0.10, 0.07),
+                     h02.hazard = list(0.03, 0.02),
+                     prevalence = c(1, 2) / 3, fixed.alloc = TRUE, seed = 1)
+  tab2 <- table(d2$group, d2$subgroup, d2$sim)
+  expect_equal(dim(tab2)[3L], 29L)
+  expect_equal(as.vector(tab2), rep(c(9, 21, 18, 42), 29L))
+})
+
+test_that("simdata_fast (illness-death): the list checks name the median arguments", {
+  expect_error(
+    simdata_fast(nsim = 1, n = c(50, 50), a.time = c(0, 6), a.prop = 1,
+                 h01.median = list(7, 10, 14), h02.median = list(20, 30),
+                 seed = 1),
+    "'h01.hazard' (or 'h01.median')", fixed = TRUE)
+  expect_error(
+    simdata_fast(nsim = 1, n = c(50, 50), a.time = c(0, 6), a.prop = 1,
+                 h01.hazard = list(0.10, 0.07), h02.hazard = list(0.03, 0.02),
+                 d.median = list(60, 60, 60), seed = 1),
+    "'d.hazard' (or 'd.median')", fixed = TRUE)
+  # With subgroups: the per-group and the per-cell checks.
+  expect_error(
+    simdata_fast(nsim = 1, n = c(50, 50), a.time = c(0, 6), a.prop = 1,
+                 h01.median = list(7, 10, 14), h02.median = list(20, 30),
+                 prevalence = c(0.5, 0.5), seed = 1),
+    "'h01.hazard' (or 'h01.median')", fixed = TRUE)
+  expect_error(
+    simdata_fast(nsim = 1, n = c(50, 50), a.time = c(0, 6), a.prop = 1,
+                 h01.median = list(list(7, 10, 14), list(8, 12, 16)),
+                 h02.median = list(20, 30), prevalence = c(0.5, 0.5),
+                 seed = 1),
+    "A per-cell list for 'h01.hazard' (or 'h01.median')", fixed = TRUE)
+})

@@ -47,25 +47,30 @@ ref_rmw <- function(time, event, j, s_star) {
        rho = Cuv / sqrt(V_lr * V_mw))
 }
 
-# Independent recomputation of the combined p-value from the component
-# Z-scores and the null correlation, mirroring the wrapper's joint normal
-# evaluation (TVPACK for the half-space, Miwa for the rectangle).
+# Independent combined p-value from the component Z-scores and the null
+# correlation: the bivariate normal probability is a one-dimensional integral
+# of the normal density and distribution function, evaluated with
+# stats::integrate() rather than mvtnorm. P(Z1 >= m, Z2 >= m) integrates
+# dnorm(x) * P(Z2 >= m | Z1 = x) over x >= m, and P(|Z1| <= m, |Z2| <= m)
+# integrates dnorm(x) * P(|Z2| <= m | Z1 = x) over |x| <= m. On the ovarian
+# data (rho = 0.982) this agreed with the bivariate normal CDF of scipy to
+# 2e-16 (Python check).
 ref_rmw_p <- function(z_lr, z_mw, rho, side) {
-  rho_use <- max(min(rho, 1 - 1e-10), -1 + 1e-10)
-  corr    <- matrix(c(1, rho_use, rho_use, 1), 2L, 2L)
+  sr <- sqrt(1 - rho^2)
   if (side == 1L) {
-    stat  <- min(z_lr, z_mw)
-    lower <- c(stat, stat)
-    upper <- c(Inf, Inf)
+    m <- min(z_lr, z_mw)
+    f <- function(x) {
+      dnorm(x) * pnorm((m - rho * x) / sr, lower.tail = FALSE)
+    }
+    joint <- integrate(f, m, Inf, rel.tol = 1e-10, abs.tol = 1e-13)$value
   } else {
-    stat  <- max(abs(z_lr), abs(z_mw))
-    lower <- c(-stat, -stat)
-    upper <- c(stat, stat)
+    m <- max(abs(z_lr), abs(z_mw))
+    f <- function(x) {
+      dnorm(x) * (pnorm((m - rho * x) / sr) - pnorm((-m - rho * x) / sr))
+    }
+    joint <- integrate(f, -m, m, rel.tol = 1e-10, abs.tol = 1e-13)$value
   }
-  tvpack_ok <- all(lower == -Inf) || all(upper == Inf)
-  alg <- if (tvpack_ok) mvtnorm::TVPACK() else mvtnorm::Miwa()
-  1 - as.numeric(mvtnorm::pmvnorm(lower = lower, upper = upper,
-                                  corr = corr, algorithm = alg))
+  1 - joint
 }
 
 test_that("rmw_core matches the pure-R reference", {
@@ -130,16 +135,23 @@ test_that("side = 2 statistic is the maximum absolute component Z", {
                tolerance = 1e-12)
 })
 
-test_that("the p-value matches an independent mvtnorm recomputation", {
+test_that("the p-value matches an independent one-dimensional integral", {
   skip_if_not_installed("survival")
-  ov <- survival::ovarian
+  ov  <- survival::ovarian
+  jj  <- as.integer(ov$rx != 1)
+  # Component Z-scores and correlation from the pure-R reference, not from the
+  # fitted object.
+  ref <- ref_rmw(ov$futime, ov$fustat, jj, s_star = 0.5)
   for (sided in c(1L, 2L)) {
     fit   <- rmw_fast(ov$futime, ov$fustat, ov$rx, 1, side = sided, s_star = 0.5)
-    z     <- attr(fit, "z")
-    rho   <- attr(fit, "corr")[1L, 2L]
-    p_ref <- ref_rmw_p(z[["logrank"]], z[["mwlrt"]], rho, sided)
+    p_ref <- ref_rmw_p(ref$z_lr, ref$z_mw, ref$rho, sided)
     expect_equal(as.numeric(fit)[2L], p_ref, tolerance = 1e-6)
   }
+  # Python: 0.1689969050 (one-sided) and 0.3379938099 (two-sided).
+  expect_equal(ref_rmw_p(ref$z_lr, ref$z_mw, ref$rho, 1L), 0.1689969050,
+               tolerance = 1e-8)
+  expect_equal(ref_rmw_p(ref$z_lr, ref$z_mw, ref$rho, 2L), 0.3379938099,
+               tolerance = 1e-8)
 })
 
 test_that("the p-value lies in the unit interval", {
@@ -210,4 +222,30 @@ test_that("rmw_fast: presorted = TRUE checks the order", {
   event <- c(1, 1, 0, 1, 1, 0)
   group <- c(0, 1, 0, 1, 0, 1)
   expect_error(rmw_fast(time, event, group, control = 0, presorted = TRUE), "presorted = FALSE")
+})
+
+test_that("rmw_fast: the formula interface gives the vector result", {
+  set.seed(69)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1), ee = rbinom(n, 1, 0.8),
+                  g = rep(c(1, 0), n / 2))
+  ref <- rmw_fast(d$tt, d$ee, d$g, control = 0, side = 1, s_star = 0.6)
+  expect_identical(rmw_fast(Surv(tt, ee) ~ g, data = d, side = 1,
+                            s_star = 0.6), ref)
+  expect_identical(class(ref), c("rmw_fast", "fastsurv"))
+  expect_error(rmw_fast(d$tt, d$ee, d$g, 0, data = d), "only with a formula")
+})
+
+test_that("rmw_fast: the formula interface passes every argument", {
+  set.seed(60)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1) + 0.1, ee = rbinom(n, 1, 0.8),
+                  g = rep(c("b", "a"), n / 2), s = rep(c("x", "y", "z"), n / 3))
+  d1 <- d[order(d$tt), ]
+  d2 <- d[order(d$s, d$tt), ]
+  expect_identical(
+    rmw_fast(Surv(tt, ee) ~ g, d1, control = "b", side = 1, s_star = 0.7,
+             presorted = TRUE),
+    rmw_fast(d1$tt, d1$ee, d1$g, "b", side = 1, s_star = 0.7,
+             presorted = TRUE))
 })

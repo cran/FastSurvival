@@ -51,7 +51,7 @@ PFS = min(TTP, OS),   OS = OS.
 Since `TTP` and `OS` are independent exponentials, `PFS` is exponential with hazard
 `Lambda = lam1 + lam2`. Given the medians of PFS and OS, the OS hazard is `lam2 = log(2) / median_OS`
 and the PFS hazard is `Lambda = log(2) / median_PFS`, so the implied TTP hazard is
-`lam1 = Lambda - lam2`, which must be positive (median OS at least median PFS in each group).
+`lam1 = Lambda - lam2`, which must be positive (median OS longer than median PFS in each group).
 The dependence between the two endpoints is induced entirely through the shared `OS` component.
 
 ### The design
@@ -459,17 +459,17 @@ proportional cost.
 
 ### References
 
-Fleischer, F., Gaschler-Markefski, B., and Bluhmki, E. (2009). A statistical model for the
+Fleischer, F., Gaschler-Markefski, B., & Bluhmki, E. (2009). A statistical model for the
 dependence between progression-free survival and overall survival. *Statistics in Medicine*,
 28(21), 2669-2686.
 
-Glimm, E., Maurer, W., and Bretz, F. (2010). Hierarchical testing of multiple endpoints in
+Glimm, E., Maurer, W., & Bretz, F. (2010). Hierarchical testing of multiple endpoints in
 group-sequential trials. *Statistics in Medicine*, 29(2), 219-228.
 
-Lan, K. K. G. and DeMets, D. L. (1983). Discrete sequential boundaries for clinical trials.
+Lan, K. K. G., & DeMets, D. L. (1983). Discrete sequential boundaries for clinical trials.
 *Biometrika*, 70(3), 659-663.
 
-O'Brien, P. C. and Fleming, T. R. (1979). A multiple testing procedure for clinical trials.
+O'Brien, P. C., & Fleming, T. R. (1979). A multiple testing procedure for clinical trials.
 *Biometrics*, 35(3), 549-556.
 
 Pocock, S. J. (1977). Group sequential methods in the design and analysis of clinical trials.

@@ -23,3 +23,13 @@ test_that("print.medsurv_fast prints the two-group and single-group summaries", 
   sn["median"] <- NA_real_
   expect_output(print(sn), "Estimate not available")
 })
+
+test_that("print.medsurv_fast labels the p-value by the side of the test", {
+  d <- make_print_data()
+  x2 <- medsurv_fast(d$tte, d$event, d$group, control = 1)
+  expect_output(print(x2), "Pr(>|z|)", fixed = TRUE)
+  x1 <- medsurv_fast(d$tte, d$event, d$group, control = 1, side = 1)
+  out1 <- utils::capture.output(print(x1))
+  expect_true(any(grepl("Pr(>z)", out1, fixed = TRUE)))
+  expect_false(any(grepl("Pr(>|z|)", out1, fixed = TRUE)))
+})

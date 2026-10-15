@@ -7,6 +7,9 @@
 #' survival time with its confidence interval, followed, for a two-group object,
 #' by the difference contrast (treatment minus control) with a confidence
 #' interval, the test statistic, and the p-value.
+#' The p-value column is labeled \code{Pr(>|z|)} for a two-sided test and
+#' \code{Pr(>z)} for a one-sided test, whose p-value is the upper tail in the
+#' direction of treatment benefit.
 #'
 #' @param x An object of class \code{"wmst_fast"} returned by
 #'   \code{\link{wmst_fast}}.
@@ -74,7 +77,7 @@ print.wmst_fast <- function(x, digits = max(1L, getOption("digits") - 3L),
         c("Est.",
           sprintf("lower %g%%", ci_lab),
           sprintf("upper %g%%", ci_lab),
-          "z", "Pr(>|z|)")
+          "z", if (side == 2) "Pr(>|z|)" else "Pr(>z)")
       )
     )
     printCoefmat(con_mat, digits = digits, has.Pvalue = TRUE, P.values = TRUE,

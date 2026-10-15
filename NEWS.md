@@ -1,3 +1,262 @@
+# FastSurvival 1.2.0
+
+This release corrects errors and documentation found while preparing an
+article on the package. It also adds a formula interface, methods that return
+the results as data frames, and two plots.
+
+## New features
+
+* The estimation and testing functions and `kmcurve_fast()` accept a model
+  formula `Surv(time, event) ~ group` (or `~ 1` for the functions that allow
+  a single group) with a data frame, in place of the vectors of times, event
+  indicators, and group labels; `survdiff_fast()` and `coxph_fast()` also
+  accept `strata()` terms. The control group defaults to the first level of
+  the group variable. The result is that of the vector interface, which is
+  unchanged and remains the choice inside simulation loops. See
+  `?formula_interface`.
+
+* The results of the estimation and testing functions have the additional
+  class `"fastsurv"`. Its `as.data.frame()` method returns the estimates and
+  tests of any result, including the lists returned by `milestone_fast()` and
+  `ahr_fast()`, as rows of a data frame with the columns `term`, `estimate`,
+  `std.error`, `conf.low`, `conf.high`, `statistic`, and `p.value`, so that
+  the results of a loop can be stacked with `rbind()`. Its `coef()` and
+  `confint()` methods return the estimates and their confidence limits.
+  Ratios are reported on the log scale. The results are otherwise unchanged.
+  Code that compares `class()` of a result with a single class name should
+  use `inherits()` instead, and `as.data.frame()` and `data.frame()` of a
+  result, and functions that call them such as `write.csv()`, now return the
+  table described in `?as.data.frame.fastsurv`; with R 4.3.0 or later they
+  returned the elements of a numeric result as a one-column data frame, which
+  `as.data.frame(unclass(x))` still gives.
+
+* `plot.kmcurve_fast()` can print the numbers at risk below the survival
+  panel (`risk_table` and `risk_times`) and draw the pointwise confidence
+  limits as a shaded band (`conf.style = "band"`). `as.data.frame()` returns
+  the Kaplan-Meier curves of a `kmcurve_fast` object as a data frame, with the
+  numbers at risk, events, and censored times at each observed time.
+
+* `simsummary_fast()` results have a `plot()` method, which draws the
+  cumulative probabilities of stopping for efficacy and for futility by look,
+  or the stopping probabilities at each look, for every arm and population.
+
+## Bug fixes
+
+* `print.simsummary_fast()` failed with an error for a selection of the
+  columns of a `simsummary_fast()` result, which keeps the class but not the
+  boundary settings, and for a selection of rows without any look row. Such
+  subsets are now printed as ordinary data frames. A selection of rows that
+  keeps only some of the looks, or rows in a different order, paired the
+  boundaries and information fractions with the wrong looks or failed; it is
+  now also printed as an ordinary data frame, and the report is printed only
+  when every block keeps all its looks in their original order. Results
+  combined by `rbind()`, which keep the boundary settings of the first result
+  only, are printed as an ordinary data frame when the rows of a block differ
+  from those of the first result (for example rows of a population summarized
+  with other boundaries, even under the same population name), instead of
+  pairing them with the boundaries of the first. The boundary columns are
+  labeled `Efficacy Bound` and `Futility Bound`, because the statistic need
+  not be a Z-score.
+
+* The median survival time of `medsurv_fast()` and of the `"medsurv"`
+  statistic of `analysis_fast()` was infinite when the Kaplan-Meier estimate
+  of a group stayed at 0.5 up to an infinite observed time (subjects with
+  `tte = Inf` at a look that is not reached), and with `method = "nph"` the
+  test then gave `z = Inf` and `p = 0`. The midpoint of such a stretch is not
+  defined, and the median and the statistics that depend on it are now `NA`.
+  The median printed by `print.kmcurve_fast()` follows the same rule.
+
+* `simdata_fast()` truncated a group size that is a whole number up to
+  rounding error, such as `90 * 0.7` (62.99999999999999), to the integer
+  below, so the group had one subject fewer, and with `fixed.alloc = TRUE` and
+  subgroups the C++ kernel wrote past the end of a buffer. The sizes are now
+  rounded, and the kernels check that the fixed subgroup counts add up to the
+  group size. The data simulated for such sizes change. The `nsim` argument
+  of `simdata_fast()` and the `stream` argument of `simdata_fast()` and
+  `switch_fast()`, which were truncated in the same way, are now rounded too.
+
+* The modestly-weighted log-rank test (`weight = "mwlrt"` in
+  `survdiff_fast()` and `analysis_fast()`) capped the weights at 1, which
+  gives the ordinary log-rank test, when the pooled Kaplan-Meier estimate
+  reached 0 before `t_star` (within a stratum for the stratified test). The
+  weights `1 / S(t-)` are now not capped in this case, as the definition
+  `1 / max(S(t-), S(t_star-))` and nphRCT imply.
+
+* `analysis_fast()` and `cutoff_fast()` accepted negative event times, which
+  the analysis kernel sorted after all positive times, and `analysis_fast()`
+  placed a negative zero (`-0`) last, unlike the stand-alone functions.
+  Negative times are now an error, and `-0` is treated as 0.
+
+* An event indicator given as a factor with the levels "0" and "1" passed the
+  checks of most functions and was then replaced by its integer codes 1 and
+  2, which exchanges events and censored observations (for example in
+  `milestone_fast()`, `ahr_fast()`, `analysis_fast()`, and `cutoff_fast()`).
+  Factor and character event indicators are now an error. `medsurv_fast()`,
+  `wmst_fast()`, and `wkm_fast()` now also reject non-numeric and negative
+  times, which they sorted as text or accepted. Times of class `difftime`,
+  which `is.numeric()` does not count as numeric, are rejected by these
+  functions and in the `tte` column of `analysis_fast()` and `cutoff_fast()`;
+  convert them with `as.numeric()` in the intended unit.
+
+* `wmst_fast()` returned infinite or `NaN` values when `tau2` was not
+  supplied and each group had an infinite observed time. `tau2` must now be
+  finite, and an error asks for it when its default is infinite.
+
+* `simdata_fast()` with the illness-death model and without `prevalence` did
+  not check `switch.prop` (a percentage such as 40 made every subject switch)
+  or the length of per-group lists (a third element was ignored). Both are now
+  checked as with `prevalence`. A multi-arm `n` with the illness-death model
+  now gives the error message intended for it.
+
+* `gen_scenario_fast()` kept a shared `e.hazard` when a scenario gave
+  `e.median` (and likewise for the other hazard and median pairs), so the
+  printed and plotted scenario used the shared hazard, and `simdata_fast()`
+  failed with the merged arguments. A scenario value now replaces the other
+  member of the pair in `shared`.
+
+* `analysis_fast()` reported `NA` for the per-group average hazards of
+  `"ahsw"` whenever the contrasts were not defined, for example for a group
+  without events up to `tau`. Finite average hazards are now reported, as in
+  `ahsw_fast()`.
+
+* `analysis_fast()` combined several `strata` columns through pasted labels,
+  so values containing "." could merge two strata. The columns are now
+  combined through their integer codes.
+
+* Clearer errors: `analysis_fast()` for an empty `mc.rho`, a `conf.level`
+  that is `NA` or not a single value, and a `by.subgroup` that is not `TRUE`
+  or `FALSE`, and it names `event.looks` or `time.looks` in the message about
+  non-positive looks; `simdata_fast()` names the breakpoint argument
+  (`d.time`, `h01.time`, and so on) in the messages about piecewise hazards
+  and requires a whole-number `nsim`; `kmcurve_fast()` rejects missing group
+  values.
+
+* The weighted Kaplan-Meier test (`wkm_fast()` and the `"wkm"` statistic of
+  `analysis_fast()`) returned `NaN` or an infinite weighted difference when an
+  observed time was infinite, for example for a subject without a finite event
+  or dropout time (a cure fraction without dropout) at a look of
+  `analysis_fast()` that is not reached. The integral over the observed range
+  is not defined in this case, and all the statistics are now `NA`.
+
+## Documentation
+
+* `maxcombo_fast()` and `analysis_fast()` now describe the precision of the
+  max-combo p-value correctly. The weights of G(0,1) and G(1,0) add up to the
+  weight of G(0,0), so the correlation matrix of the default weights is
+  singular, and the quasi-Monte-Carlo GenzBretz integral converges slowly:
+  with the default `maxpts` the error of the p-value is of the order of 1e-4
+  rather than `abseps`. The statement that `abseps` can be loosened with
+  negligible effect is removed.
+
+* The description of `mc.alpha` in `analysis_fast()`, the README, and three
+  vignettes is corrected. The decisions that the Bonferroni bounds settle are
+  those of the exact p-values. The other p-values are integrated as without
+  `mc.alpha`, but the GenzBretz integration uses random numbers, so near the
+  level a decision can differ from that of a run without `mc.alpha`, as it can
+  between two runs with different seeds. The statement that the decisions are
+  the same as with every p-value integrated is removed.
+
+* The speed-comparison vignette now gives the ratio of the time per simulated
+  trial with simtrial or TrialSimulator to that with FastSurvival as about two
+  orders of magnitude, because the ratio varies between runs, and states that
+  the one-second timing of 10,000 trials comes from a separate benchmark with
+  a delayed treatment effect.
+
+* The page ranges of Cox (1972) and Gehan (1965) follow the publishers'
+  records (187-202 and 203-224), and the `mrct-regional-consistency` vignette
+  states the result of Homma (2024) for binary outcomes more precisely. The
+  `group-sequential-design` vignette attributes its planning assumptions to
+  the trial protocol.
+
+* The reference to an unpublished manuscript on the Pike-Halley Estimator is
+  removed. The documentation of `coxph_fast()` describes the computation.
+
+* The documentation of `coxph_fast()` and the README describe the correction
+  as a Halley correction expanded to second order, and no longer cite Berry,
+  Kitchin, and Mock (1991) for the statement that the error of the Pike
+  anchor does not vanish with the sample size (their simulation has a fixed
+  sample size). The README no longer quotes a result on the `pharmacoSmoking`
+  data that has no source in the package, and describes `survfit_fast()` as
+  more than an order of magnitude faster than `survfit()` plus `summary()`.
+
+* `milestone_fast()` defines its three test statistics. The `"mover"`
+  statistic is obtained by inverting the interval at `conf.level`, so the
+  statistic and its p-value depend on `conf.level` (a code comment said the
+  opposite), and the `"loglog"` statistic is negative when treatment is
+  better. The print methods of `coxph_fast()`, `rmst_fast()`,
+  `milestone_fast()`, `medsurv_fast()`, `ahr_fast()`, `wkm_fast()`, and
+  `wmst_fast()` label the p-value of a one-sided test `Pr(<z)` or `Pr(>z)`,
+  and their documentation no longer calls the p-value two-sided.
+
+* `analysis_fast()` states that no warning is given when `tau`, `t.eval`, or
+  `wmst.tau2` exceeds the follow-up of a group at a look (the stand-alone
+  functions warn), that `conf.level` applies to every confidence interval,
+  that `maxcombo.stat` and `rmw.stat` depend on `side`, that all events at the
+  calendar time of the target event are included, and when the stratified
+  test reduces to the ordinary one within a subgroup.
+
+* `simdata_fast()` and `switch_fast()` describe the random numbers used when
+  `seed` is not supplied, which `set.seed()` does not control. The package now
+  requires dqrng 0.4.0 or later, whose default generator is the
+  Xoroshiro128++ generator described in the documentation.
+  `simdata_fast()` also states the rounding rule of `fixed.alloc = TRUE` and
+  cites Fleischer, Gaschler-Markefski, and Bluhmki (2009) for the
+  maximal-independence model.
+
+* `wkm_fast()` explains that the constant and square-root weights can be
+  biased when follow-up differs between the groups, because the curve of the
+  group with shorter follow-up is carried forward.
+
+* Vignettes: `compare-logrank-rmst` says that the sample size comes from the
+  Lachin and Foulkes method of `gsDesign::nSurv()` (not the Schoenfeld
+  formula); `group-sequential-design` says that the trial planned to enroll
+  482 patients, gives the section of the protocol, and states the type I
+  error for overall survival; `correlated-pfs-os-gsd` requires a median
+  overall survival longer than the median progression-free survival;
+  `investigate-freidlin-and-korn` attributes the parameters of its strong
+  null scenario to Fig. A1 of Freidlin and Korn (2019), which the `simtrial`
+  documentation also uses; and the computing times are described as they
+  were measured.
+
+* Smaller corrections: the variances of the two group shares of `ahr_fast()`
+  are equal algebraically (code comments); the example of a zero variance in
+  `survdiff_fast()` and `rmw_fast()`; "orthant" instead of "half-space" for
+  the one-sided max-combo and rMW regions; the left-continuous form of the
+  modestly-weighted weight; "Kalbfleisch and Prentice" and the spelling
+  "Öhrn"; the print-edition ISBN of Collett (2014) in `DESCRIPTION`; the issue
+  numbers of Gehan (1965) and Tarone and Ware (1977); and the formatting of
+  several references.
+
+## Tests
+
+* New tests cover the formula interface of every function (compared with the
+  vector interface), the `as.data.frame()`, `coef()`, and `confint()`
+  methods, the numbers at risk and the Kaplan-Meier table of a
+  `kmcurve_fast` object (compared with `summary()` of a
+  `survival::survfit()` object and with a hand calculation), and the plot
+  methods.
+
+* The one-sided max-combo p-values with three and four weights, whose
+  correlation matrices are singular, are compared with an independent
+  numerical integral that uses this structure.
+
+* New tests cover the printing of subsets of `simsummary_fast()` results and
+  the weighted Kaplan-Meier test with infinite times. The tests of
+  `print.simsummary_fast()` are moved to their own file.
+
+* A test checks that the switching proportion, the hazard after switching,
+  and the dropout hazard of the illness-death model of `simdata_fast()` can
+  differ by subgroup.
+
+* New tests cover each bug fix above. The comparisons of the max-combo
+  p-values with the pure-R reference set the seed and use an absolute
+  tolerance, so that they no longer depend on the state left by earlier tests.
+  The rMW p-value is compared with an independent one-dimensional integral.
+  The data generated without `stream` are compared with data printed by
+  FastSurvival 1.0.0, before `stream` existed. A test no longer turns an error
+  of `medsurv_fast()` into a skip, and the error expectations give the
+  expected messages.
+
 # FastSurvival 1.1.0
 
 ## New features

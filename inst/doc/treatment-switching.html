@@ -504,7 +504,7 @@ in every trial dilutes the OS comparison more.</p>
 <div id="computing-time" class="section level2">
 <h2>Computing time</h2>
 <p>The whole study, from data generation to the OS analysis of one
-scenario, runs in a few seconds.</p>
+scenario, runs in about a second.</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">system.time</span>({</span>
 <span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  d0  <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(<span class="at">nsim =</span> nsim, <span class="at">n =</span> <span class="fu">c</span>(<span class="dv">300</span>, <span class="dv">300</span>), <span class="at">a.time =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">18</span>),</span>
 <span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>                      <span class="at">a.rate =</span> <span class="dv">600</span> <span class="sc">/</span> <span class="dv">18</span>,</span>
@@ -520,7 +520,7 @@ scenario, runs in a few seconds.</p>
 <span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>  r1  <span class="ot">&lt;-</span> <span class="fu">os_final</span>(d1)</span>
 <span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>})</span>
 <span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt;    user  system elapsed </span></span>
-<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a><span class="co">#&gt;    0.57    0.03    0.63</span></span></code></pre></div>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a><span class="co">#&gt;    0.42    0.03    0.47</span></span></code></pre></div>
 </div>
 <div id="a-check-with-the-rank-preserving-structural-failure-time-model" class="section level2">
 <h2>A check with the rank-preserving structural failure time model</h2>
@@ -599,7 +599,7 @@ approach.</p>
 <p>Allison, A., White, I. R., &amp; Bond, S. (2017). rpsftm: an R
 package for rank preserving structural failure time models. <em>The R
 Journal</em>, 9(2), 342-353.</p>
-<p>Robins, J. M. and Tsiatis, A. A. (1991). Correcting for
+<p>Robins, J. M., &amp; Tsiatis, A. A. (1991). Correcting for
 non-compliance in randomized trials using rank preserving structural
 failure time models. <em>Communications in Statistics - Theory and
 Methods</em>, 20(8), 2609-2631.</p>

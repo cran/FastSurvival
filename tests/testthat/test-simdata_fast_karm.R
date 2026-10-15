@@ -121,11 +121,14 @@ test_that("simdata_fast: multi-arm rejects unsupported combinations", {
   bad_prev$prevalence <- c(0.5, 0.5)
   expect_error(do.call(simdata_fast, bad_prev), "does not support 'prevalence'")
 
-  # The illness-death model is two-group only.
+  # The illness-death model is two-group only. The check comes before the
+  # one that rejects 'e.median' together with the illness-death model.
   bad_id <- base_args
   bad_id$h01.median <- list(8, 10, 12)
   bad_id$h02.median <- list(24, 28, 32)
-  expect_error(do.call(simdata_fast, bad_id))
+  expect_error(do.call(simdata_fast, bad_id), "which is two-group")
+  bad_id$e.median <- NULL
+  expect_error(do.call(simdata_fast, bad_id), "which is two-group")
 })
 
 test_that("simdata_fast: length(n) > 2 without a per-arm list gives the length error", {
@@ -135,4 +138,14 @@ test_that("simdata_fast: length(n) > 2 without a per-arm list gives the length e
     simdata_fast(nsim = 5, n = c(1, 2, 3), a.time = c(0, 1), a.prop = 1,
                  e.hazard = log(2) / 12),
     "scalar .total N., a vector of length 2")
+})
+
+test_that("simdata_fast: multi-arm n and nsim within rounding error are rounded", {
+  n <- 90 * c(0.3, 0.7)  # 63 is 62.99999999999999
+  d <- simdata_fast(nsim = 100 * 0.29, n = c(n, n[2]), a.time = c(0, 12),
+                    a.prop = 1, e.median = list(12, 18, 18), seed = 1)
+  tab <- table(d$sim, d$group)
+  expect_equal(nrow(tab), 29L)
+  expect_true(all(tab[, "1"] == 27L) && all(tab[, "2"] == 63L) &&
+                all(tab[, "3"] == 63L))
 })

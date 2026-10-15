@@ -250,21 +250,25 @@ test_that("input validation catches bad arguments", {
   group <- rep(c(0, 1), each = n)
 
   # three distinct group values
-  expect_error(ahr_fast(obs, status, rep(c(0, 1, 2), length.out = 2 * n)))
+  expect_error(ahr_fast(obs, status, rep(c(0, 1, 2), length.out = 2 * n)),
+               "exactly two distinct values")
   # mismatched lengths
-  expect_error(ahr_fast(obs[-1], status, group))
+  expect_error(ahr_fast(obs[-1], status, group), "same length")
   # status not 0/1
   bad_status <- status
   bad_status[1] <- 2L
-  expect_error(ahr_fast(obs, bad_status, group))
+  expect_error(ahr_fast(obs, bad_status, group), "must be 0 or 1")
+  # a factor event indicator
+  expect_error(ahr_fast(obs, factor(status), group, control = 0),
+               "numeric or logical")
   # invalid confidence level
-  expect_error(ahr_fast(obs, status, group, conf.level = 1.5))
+  expect_error(ahr_fast(obs, status, group, conf.level = 1.5), "conf.level")
   # non-positive null.ahr
-  expect_error(ahr_fast(obs, status, group, null.ahr = -1))
+  expect_error(ahr_fast(obs, status, group, null.ahr = -1), "null.ahr")
   # missing values
   na_obs <- obs
   na_obs[1] <- NA
-  expect_error(ahr_fast(na_obs, status, group))
+  expect_error(ahr_fast(na_obs, status, group), "missing values")
   # control not one of the two group values
   expect_error(ahr_fast(obs, status, group, control = 9), "must be one of")
 })
@@ -314,4 +318,31 @@ test_that("ahr_fast: presorted = TRUE checks the order", {
 test_that("ahr_fast: event values are validated before conversion", {
   expect_error(ahr_fast(c(1, 2, 3, 4), c(1, 0.7, 0, 1), c(0, 0, 1, 1),
                         control = 0), "0 or 1")
+})
+
+test_that("ahr_fast: the formula interface gives the vector result", {
+  set.seed(72)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1), ee = rbinom(n, 1, 0.8),
+                  g = rep(c(1, 0), n / 2))
+  ref <- ahr_fast(d$tt, d$ee, d$g, control = 0, tau = 5, null.ahr = 0.9)
+  expect_identical(ahr_fast(Surv(tt, ee) ~ g, data = d, tau = 5,
+                            null.ahr = 0.9), ref)
+  expect_identical(class(ref), c("ahr_fast", "fastsurv"))
+  expect_error(ahr_fast(d$tt, d$ee, d$g, 0, tau = 5, data = d),
+               "only with a formula")
+})
+
+test_that("ahr_fast: the formula interface passes every argument", {
+  set.seed(60)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1) + 0.1, ee = rbinom(n, 1, 0.8),
+                  g = rep(c("b", "a"), n / 2), s = rep(c("x", "y", "z"), n / 3))
+  d1 <- d[order(d$tt), ]
+  d2 <- d[order(d$s, d$tt), ]
+  expect_identical(
+    ahr_fast(Surv(tt, ee) ~ g, d1, control = "b", side = 1,
+             conf.level = 0.9, tau = 6, null.ahr = 0.8, presorted = TRUE),
+    ahr_fast(d1$tt, d1$ee, d1$g, "b", side = 1, conf.level = 0.9, tau = 6,
+             null.ahr = 0.8, presorted = TRUE))
 })

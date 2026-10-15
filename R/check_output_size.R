@@ -13,7 +13,8 @@
 #' @keywords internal
 #' @noRd
 check_output_size <- function(nsim, n_grp) {
-  if (length(nsim) != 1L || !is.finite(nsim) || nsim < 1) {
+  if (length(nsim) != 1L || !is.numeric(nsim) || !is.finite(nsim) ||
+      nsim < 1 || abs(nsim - round(nsim)) > 1e-8) {
     stop("'nsim' must be a positive whole number")
   }
   if (as.numeric(nsim) * sum(as.numeric(n_grp)) > .Machine$integer.max) {

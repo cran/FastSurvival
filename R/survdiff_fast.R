@@ -74,11 +74,16 @@
 #' groups.
 #'
 #' @param time A numeric vector of follow-up times for all subjects.
+#'   Alternatively, a formula \code{Surv(time, event) ~ group}, optionally with
+#'   \code{strata()} terms, with the variables in
+#'   \code{data}; see \code{\link{formula_interface}}.
 #' @param event An integer or numeric vector of event indicators
 #'   (1 = event, 0 = censored), aligned with \code{time}.
 #' @param group A vector of group labels aligned with \code{time}.
 #' @param control A scalar value indicating which level of \code{group}
 #'   represents the control group.
+#'   With the formula interface it defaults to the first level of the
+#'   group variable.
 #' @param side An integer, either 1 or 2 (default 2). If \code{side = 1}, returns
 #'   the standardized log-rank statistic (Z-score), defined as
 #'   \code{(O_1 - E_1) / sqrt(V_1)} for the treatment group, so the Z-score is
@@ -104,7 +109,9 @@
 #'   Fleming-Harrington G(rho, gamma) test with weight
 #'   \code{S(t-)^rho (1 - S(t-))^gamma}. \code{"mwlrt"} is the modestly-weighted
 #'   log-rank test of Magirr and Burman with weight
-#'   \code{1 / max(S(t-), S(t_star-))}. \code{"gehan"} is the Gehan-Breslow test
+#'   \code{1 / max(S(t-), S(t_star-))}, the left-continuous form used by
+#'   nphRCT (Magirr and Burman define the weight with \code{S(t)} and
+#'   \code{S(t_star)}). \code{"gehan"} is the Gehan-Breslow test
 #'   with weight equal to the at-risk count, and \code{"tarone-ware"} uses the
 #'   square root of the at-risk count. Here \code{S(t-)} is the left-continuous
 #'   pooled Kaplan-Meier estimate just prior to each event time.
@@ -119,8 +126,12 @@
 #'   "mwlrt"}. The weight is capped at \code{1 / S(t_star-)}, where
 #'   \code{S(t_star-)} is the pooled Kaplan-Meier value just before
 #'   \code{t_star} (the product over event times strictly less than
-#'   \code{t_star}, as in nphRCT).
+#'   \code{t_star}, as in nphRCT). When that value is 0 (the pooled curve
+#'   reaches 0 before \code{t_star}), the weight is not capped.
 #'   A value of 0 yields the ordinary log-rank test.
+#' @param data A data frame in which the variables of a formula given as
+#'   \code{time} are evaluated. Used only with the formula interface; see
+#'   \code{\link{formula_interface}}.
 #'
 #' @return An object of class \code{"survdiff_fast"}, which is a length-one
 #'   numeric value with attributes \code{O0}, \code{E0}, \code{O1}, \code{E1},
@@ -133,7 +144,10 @@
 #'   observed event counts, and \code{E0} and \code{E1} are \code{NA} because a
 #'   single unweighted expected count is not defined for a weighted test.
 #'   Returns \code{NA_real_} (still with class \code{"survdiff_fast"}) when the
-#'   variance is zero (e.g., all events in one group).
+#'   variance is zero (e.g., no event time at which both groups are at risk).
+#'   The object also has the class \code{"fastsurv"}, whose
+#'   \code{as.data.frame()}, \code{coef()}, and \code{confint()} methods
+#'   are described in \code{\link{as.data.frame.fastsurv}}.
 #'
 #' @examples
 #' library(survival)
@@ -175,6 +189,9 @@
 #' survdiff_fast(ovarian$futime, ovarian$fustat, ovarian$rx, 2, side = 1,
 #'               weight = "fh", rho = 0, gamma = 1, strata = ovarian$resid.ds)
 #'
+#' # Formula interface (the first level of rx, 1, is the control group)
+#' survdiff_fast(Surv(futime, fustat) ~ rx + strata(resid.ds), data = ovarian)
+#'
 #' \donttest{
 #' # Speed comparison against survdiff()
 #' if (requireNamespace("microbenchmark", quietly = TRUE)) {
@@ -193,14 +210,14 @@
 #'
 #' @references
 #' Gehan, E. A. (1965). A generalized Wilcoxon test for comparing arbitrarily
-#' singly-censored samples. \emph{Biometrika}, \emph{52}, 203-223.
+#' singly-censored samples. \emph{Biometrika}, \emph{52}(1-2), 203-224.
 #'
 #' Mantel, N. (1966). Evaluation of survival data and two new rank order
 #' statistics arising in its consideration. \emph{Cancer Chemotherapy
 #' Reports}, \emph{50}(3), 163-170.
 #'
 #' Tarone, R. E., & Ware, J. (1977). On distribution-free tests for equality of
-#' survival distributions. \emph{Biometrika}, \emph{64}, 156-160.
+#' survival distributions. \emph{Biometrika}, \emph{64}(1), 156-160.
 #'
 #' Fleming, T. R., & Harrington, D. P. (1991). \emph{Counting Processes and
 #' Survival Analysis}. New York: John Wiley & Sons.
@@ -213,7 +230,23 @@ survdiff_fast <- function(time, event, group, control, side = 2,
                           presorted = FALSE, strata = NULL,
                           weight = c("logrank", "fh", "mwlrt", "gehan",
                                      "tarone-ware"),
-                          rho = 0, gamma = 0, t_star = NULL) {
+                          rho = 0, gamma = 0, t_star = NULL, data = NULL) {
+  # Formula interface: Surv(time, event) ~ group + strata(s) evaluated in
+  # 'data'
+  if (inherits(time, "formula")) {
+    f <- fastsurv_formula(time, data,
+                          event = if (!missing(event)) event,
+                          group = if (!missing(group)) group,
+                          strata = strata, group_mode = "required",
+                          strata_ok = TRUE, fun = "survdiff_fast()")
+    if (missing(control) || is.null(control)) control <- f$control
+    return(survdiff_fast(f$time, f$event, f$group, control = control,
+                         side = side, presorted = presorted,
+                         strata = f$strata, weight = weight, rho = rho,
+                         gamma = gamma, t_star = t_star))
+  }
+  if (!is.null(data)) stop("'data' is used only with a formula")
+
   weight <- match.arg(weight)
 
   # Input validation
@@ -307,14 +340,14 @@ survdiff_fast <- function(time, event, group, control, side = 2,
 
     if (!is.finite(V) || V == 0) {
       return(do.call(structure, c(list(NA_real_), base_attr,
-                                  list(class = "survdiff_fast"))))
+                                  list(class = c("survdiff_fast", "fastsurv")))))
     }
 
     WLR <- U / sqrt(V)
     val <- if (side == 1L) WLR else WLR^2
 
     return(do.call(structure, c(list(val), base_attr,
-                                list(class = "survdiff_fast"))))
+                                list(class = c("survdiff_fast", "fastsurv")))))
   }
 
   # ------------------------------------------------------------------ #
@@ -361,7 +394,7 @@ survdiff_fast <- function(time, event, group, control, side = 2,
         NA_real_,
         O0 = O0, E0 = E0, O1 = O1, E1 = E1, V1 = V1,
         side = side, n = n_total, strata = n_str, control = control,
-        class = "survdiff_fast"
+        class = c("survdiff_fast", "fastsurv")
       ))
     }
 
@@ -372,7 +405,7 @@ survdiff_fast <- function(time, event, group, control, side = 2,
       val,
       O0 = O0, E0 = E0, O1 = O1, E1 = E1, V1 = V1,
       side = side, n = n_total, strata = n_str, control = control,
-      class = "survdiff_fast"
+      class = c("survdiff_fast", "fastsurv")
     ))
   }
 
@@ -410,7 +443,7 @@ survdiff_fast <- function(time, event, group, control, side = 2,
       NA_real_,
       O0 = O0, E0 = E0, O1 = O1, E1 = E1, V1 = V1,
       side = side, n = n_total, control = control,
-      class = "survdiff_fast"
+      class = c("survdiff_fast", "fastsurv")
     ))
   }
 
@@ -421,6 +454,6 @@ survdiff_fast <- function(time, event, group, control, side = 2,
     val,
     O0 = O0, E0 = E0, O1 = O1, E1 = E1, V1 = V1,
     side = side, n = n_total, control = control,
-    class = "survdiff_fast"
+    class = c("survdiff_fast", "fastsurv")
   )
 }

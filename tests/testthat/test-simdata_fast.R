@@ -429,9 +429,19 @@ test_that("simdata_fast: stream gives reproducible and distinct batches", {
   # Same stream, same data, whatever was generated in between.
   expect_identical(b1b, b1)
   expect_false(isTRUE(all.equal(b1$surv_time, b2$surv_time)))
-  # Without 'stream' the historical seeding is unchanged.
-  expect_identical(do.call(simdata_fast, args),
-                   do.call(simdata_fast, c(args, list(stream = NULL))))
+  # Without 'stream' the seeding of the versions before 'stream' existed is
+  # unchanged: the first rows below were printed by the mrct-regional-
+  # consistency vignette of FastSurvival 1.0.0 on CRAN (seed = 2; the accrual
+  # times are drawn for all simulated trials before the survival times, so
+  # nsim must be 10000).
+  old <- simdata_fast(nsim = 10000, n = c(25, 25), a.time = c(3, 12.5),
+                      a.prop = 1, e.median = list(4.3, 5.811), seed = 2)
+  expect_equal(head(old$accrual_time, 6),
+               c(8.314255, 10.349985, 5.726526, 7.179403, 5.562820, 9.503599),
+               tolerance = 1e-6)
+  expect_equal(head(old$surv_time, 6),
+               c(1.589398, 1.604216, 3.582047, 3.952740, 1.644677, 15.446380),
+               tolerance = 1e-6)
   # The illness-death and multi-arm modes use the same stream mechanism.
   id_args <- list(nsim = 3, n = c(40, 40), a.time = c(0, 6), a.rate = 80 / 6,
                   h01.hazard = list(0.10, 0.07), h02.hazard = list(0.05, 0.04),
@@ -509,4 +519,61 @@ test_that("simdata_fast: stream = 0 gives the same data as no stream", {
                    do.call(simdata_fast, args))
   expect_false(identical(do.call(simdata_fast, c(args, list(stream = 1))),
                          do.call(simdata_fast, args)))
+})
+
+test_that("simdata_fast: a whole number up to rounding error is not truncated", {
+  # 90 * 0.7 is 62.99999999999999 in floating point.
+  n <- 90 * c(0.3, 0.7)
+  expect_false(n[2] == 63)
+  d <- simdata_fast(nsim = 2, n = n, a.time = c(0, 12), a.prop = 1,
+                    e.median = list(12, 18), seed = 1)
+  tab <- table(d$sim, d$group)
+  expect_equal(as.vector(tab[, "1"]), c(27L, 27L))
+  expect_equal(as.vector(tab[, "2"]), c(63L, 63L))
+  # With fixed subgroup sizes, every simulated trial has the fixed cell counts
+  # of the whole number (9 and 18 of 27, 21 and 42 of 63).
+  df <- simdata_fast(nsim = 3, n = n, a.time = c(0, 12), a.prop = 1,
+                     e.median = list(12, 18), prevalence = c(1, 2) / 3,
+                     fixed.alloc = TRUE, seed = 1)
+  for (s in 1:3) {
+    ds <- df[df$sim == s, ]
+    expect_equal(as.vector(table(ds$subgroup[ds$group == 1L])), c(9L, 18L))
+    expect_equal(as.vector(table(ds$subgroup[ds$group == 2L])), c(21L, 42L))
+  }
+})
+
+test_that("simdata_fast: error messages name the piecewise argument", {
+  expect_error(
+    simdata_fast(nsim = 1, n = c(10, 10), a.time = c(0, 1), a.prop = 1,
+                 e.median = list(10, 10), d.hazard = c(0.01, 0.02)),
+    "'d.time' must be supplied")
+  expect_error(
+    simdata_fast(nsim = 1, n = c(10, 10), a.time = c(0, 1), a.prop = 1,
+                 e.median = list(10, 10), d.hazard = c(0.01, 0.02),
+                 d.time = c(0, 6)),
+    "length\\(d.time\\)")
+  expect_error(
+    simdata_fast(nsim = 1, n = c(10, 10), a.time = c(0, 1), a.prop = 1,
+                 h01.hazard = c(0.1, 0.2), h02.hazard = 0.05),
+    "'h01.time' must be supplied")
+})
+
+test_that("simdata_fast: nsim must be a whole number", {
+  expect_error(simdata_fast(nsim = 2.5, n = c(10, 10), a.time = c(0, 1),
+                            a.prop = 1, e.median = list(10, 10)),
+               "'nsim' must be a positive whole number")
+})
+
+test_that("simdata_fast rounds nsim and stream within rounding error of a whole number", {
+  ns <- 100 * 0.29  # 28.999999999999996, truncated to 28 before 1.2.0
+  d <- simdata_fast(nsim = ns, n = c(5, 5), a.time = c(0, 1), a.prop = 1,
+                    e.median = list(10, 10), seed = 1)
+  expect_equal(length(unique(d$sim)), 29L)
+  args <- list(nsim = 2, n = c(5, 5), a.time = c(0, 1), a.prop = 1,
+               e.median = list(10, 10), seed = 1)
+  s_f  <- do.call(simdata_fast, c(args, list(stream = ns)))
+  s_29 <- do.call(simdata_fast, c(args, list(stream = 29)))
+  s_28 <- do.call(simdata_fast, c(args, list(stream = 28)))
+  expect_identical(s_f, s_29)
+  expect_false(identical(s_f, s_28))
 })

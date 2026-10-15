@@ -135,7 +135,14 @@
 #' @param d.hazard Dropout hazard(s), same structure as \code{e.hazard}.
 #' @param d.median Dropout median(s); an alternative to \code{d.hazard}.
 #' @param d.time Dropout breakpoints for piecewise hazards.
-#' @param seed Optional integer seed for the \code{dqrng} generator.
+#' @param seed Optional integer seed for the \code{dqrng} generator. If
+#'   \code{NULL} (default), the data are drawn from the current state of that
+#'   generator, which \code{set.seed()} does not control: the state is
+#'   initialized from R's random-number generator when \code{dqrng} is
+#'   loaded, so repeated calls give different data, and processes forked from
+#'   one R session (for example by \code{parallel::mclapply()}) start from the
+#'   same state. Supply \code{seed} (and \code{stream} for parallel batches)
+#'   for reproducible data.
 #' @param stream Optional non-negative whole number selecting an independent
 #'   \code{dqrng} random-number stream for the given \code{seed}; requires
 #'   \code{seed}. A large simulation can be split into batches that are
@@ -150,7 +157,10 @@
 #'   list for group-specific prevalence), for the single-endpoint and the
 #'   illness-death models.
 #' @param fixed.alloc Logical; when \code{TRUE} subgroup sizes are
-#'   deterministic rather than drawn.
+#'   deterministic rather than drawn. In a group of \code{n} subjects, each
+#'   cell with probability \code{p} receives \code{floor(n * p)} subjects, and
+#'   the remaining subjects are added one at a time to the cells in order,
+#'   starting from the first cell.
 #' @param h01.hazard Transition hazard(s) for the non-terminal (intermediate)
 #'   event (state 0 to state 1) in the illness-death model. A scalar or vector
 #'   for one group, or a two-element list for two groups. Supplying any of
@@ -169,11 +179,14 @@
 #' @param h02.time Breakpoints for a piecewise \code{h02.hazard}.
 #' @param h12.hazard Transition hazard(s) for the terminal event after an
 #'   intermediate event (state 1 to state 2) for subjects who do not switch.
-#'   Defaults to \code{h02.hazard}, which gives the Fleischer
-#'   maximal-independence model (Fleischer Theorem 1 when there is no switching
-#'   and the hazards are constant; with a piecewise \code{h02.hazard} the
-#'   clock-reset \code{h12} restarts the piecewise profile at the intermediate
-#'   event).
+#'   Defaults to \code{h02.hazard}, which gives the maximal-independence model
+#'   of Fleischer, Gaschler-Markefski, and Bluhmki (2009): with constant
+#'   hazards and no switching, the time to the intermediate event and the time
+#'   to the terminal event are independent exponential variables, and their
+#'   Theorem 1 gives the correlation of the two endpoints (PFS and OS) as the
+#'   ratio of their medians. A different constant \code{h12.hazard} gives their
+#'   more general model. With a piecewise \code{h02.hazard} the clock-reset
+#'   \code{h12} restarts the piecewise profile at the intermediate event.
 #' @param h12.median Median(s) for the post-event terminal event; an alternative
 #'   to \code{h12.hazard}.
 #' @param h12.time Breakpoints for a piecewise \code{h12.hazard}, measured from
@@ -341,8 +354,9 @@
 #' )
 #' head(df5)
 #'
-#' # Two correlated endpoints, no switching (reduces to Fleischer Theorem 1
-#' # because h12 defaults to h02). In oncology e1 is PFS and e2 is OS; here the
+#' # Two correlated endpoints, no switching (the maximal-independence model of
+#' # Fleischer et al., 2009, because h12 defaults to h02). In oncology e1 is PFS
+#' # and e2 is OS; here the
 #' # control has faster intermediate events and faster direct terminal events.
 #' dfid <- simdata_fast(
 #'   nsim       = 100,
@@ -399,6 +413,11 @@
 #' res12 <- analysis_fast(sub12, control = 1, time.looks = 24, side = 1)
 #' head(res12)
 #'
+#' @references
+#' Fleischer, F., Gaschler-Markefski, B., & Bluhmki, E. (2009). A statistical
+#' model for the dependence between progression-free survival and overall
+#' survival. \emph{Statistics in Medicine}, \emph{28}(21), 2669-2686.
+#'
 #' @seealso \code{\link{analysis_fast}}, \code{\link{cutoff_fast}},
 #'   \code{\link{switch_fast}}, \code{\link{pairwise_fast}}
 #'
@@ -438,6 +457,10 @@ simdata_fast <- function(nsim       = 1000,
       any(!is.finite(n)) || any(n < 1) || any(abs(n - round(n)) > 1e-8)) {
     stop("'n' must contain positive whole numbers")
   }
+  # A value within the tolerance of a whole number, such as 90 * 0.7 =
+  # 62.99999999999999, is rounded here, so that every path below works with the
+  # whole number rather than truncating it.
+  n <- round(n)
   if (!is.null(stream)) {
     if (is.null(seed)) stop("'stream' requires 'seed'")
     if (length(stream) != 1L || !is.finite(stream) || stream < 0 ||
@@ -445,6 +468,8 @@ simdata_fast <- function(nsim       = 1000,
         abs(stream - round(stream)) > 1e-8) {
       stop("'stream' must be a single non-negative whole number")
     }
+    # dqrng would truncate a value such as 100 * 0.29 to the integer below.
+    stream <- round(stream)
   }
   if (!is.null(seed)) dqrng::dqset.seed(seed, stream = stream)
 
@@ -454,6 +479,10 @@ simdata_fast <- function(nsim       = 1000,
   # supplied).
   if (!is.null(h01.hazard) || !is.null(h01.median) ||
       !is.null(h02.hazard) || !is.null(h02.median)) {
+    if (length(n) > 2L) {
+      stop("Multi-arm mode (length(n) > 2) does not support the illness-death ",
+           "model, which is two-group.")
+    }
     if (!is.null(e.hazard) || !is.null(e.median)) {
       stop("Specify the illness-death model with 'h01.*' / 'h02.*', not ",
            "'e.hazard' / 'e.median'.")
@@ -647,7 +676,7 @@ simdata_fast <- function(nsim       = 1000,
   # Each returned list has one element per cell: the hazard vector, the finite
   # breakpoints, and the cumulative hazard at those breakpoints. For a single
   # hazard the breakpoint / cumulative entries are empty (unused by the kernel).
-  build_exp_specs <- function(hazard_grp, time_grp, n_cell) {
+  build_exp_specs <- function(hazard_grp, time_grp, n_cell, nm) {
     if (is.list(hazard_grp) && length(hazard_grp) != n_cell) {
       stop("A per-cell list of hazards or medians must have one element per ",
            "subgroup cell (", n_cell, " here) but has ", length(hazard_grp),
@@ -664,7 +693,7 @@ simdata_fast <- function(nsim       = 1000,
     for (c in seq_len(n_cell)) {
       hz <- if (is.list(hazard_grp)) hazard_grp[[c]] else hazard_grp
       tm <- if (n_cell > 1L && is.list(time_grp)) time_grp[[c]] else time_grp
-      pc <- piecewise_precompute(hz, tm)
+      pc <- piecewise_precompute(hz, tm, nm)
       haz[[c]] <- pc$hazard
       fin[[c]] <- pc$fin_time
       cum[[c]] <- pc$cum_haz
@@ -696,11 +725,11 @@ simdata_fast <- function(nsim       = 1000,
     d.time_t <- if (has_dropout) resolve_time_arg(d.time, 2L) else NULL
   }
 
-  e_c <- build_exp_specs(e_haz_c, e.time_c, n_cell_ctrl)
-  e_t <- build_exp_specs(e_haz_t, e.time_t, n_cell_trt)
-  d_c <- if (has_dropout) build_exp_specs(d_haz_c, d.time_c, n_cell_ctrl) else
+  e_c <- build_exp_specs(e_haz_c, e.time_c, n_cell_ctrl, "e")
+  e_t <- build_exp_specs(e_haz_t, e.time_t, n_cell_trt, "e")
+  d_c <- if (has_dropout) build_exp_specs(d_haz_c, d.time_c, n_cell_ctrl, "d") else
     list(haz = list(numeric(0)), fin = list(numeric(0)), cum = list(numeric(0)))
-  d_t <- if (has_dropout) build_exp_specs(d_haz_t, d.time_t, n_cell_trt) else
+  d_t <- if (has_dropout) build_exp_specs(d_haz_t, d.time_t, n_cell_trt, "d") else
     list(haz = list(numeric(0)), fin = list(numeric(0)), cum = list(numeric(0)))
 
   # Subgroup descriptors.
@@ -724,6 +753,9 @@ simdata_fast <- function(nsim       = 1000,
 
   n_grp_int <- if (n_groups == 1L) as.integer(n_grp[1L]) else as.integer(n_grp[1:2])
   check_output_size(nsim, n_grp_int)
+  # As for 'n', a whole number up to rounding error (such as 100 * 0.29) is
+  # rounded rather than truncated.
+  nsim <- round(nsim)
 
   # Deterministic per-interval accrual counts for each group. Each group's
   # counts sum to its size exactly (largest-remainder rounding), and the kernel
@@ -755,8 +787,9 @@ simdata_fast <- function(nsim       = 1000,
 # Piecewise-exponential pre-computation: validates the hazard / breakpoint
 # pair and returns the hazard vector, the finite left breakpoints, and the
 # cumulative hazard at those breakpoints, matching rpiece_exp_r. For a single
-# hazard the breakpoint / cumulative entries are empty.
-piecewise_precompute <- function(hazard, e.time) {
+# hazard the breakpoint / cumulative entries are empty. 'nm' is the prefix of
+# the argument names used in the error messages ("e", "d", "h01", and so on).
+piecewise_precompute <- function(hazard, e.time, nm = "e") {
   if (!is.numeric(hazard) || length(hazard) < 1L || anyNA(hazard) ||
       any(hazard < 0) || any(is.infinite(hazard))) {
     stop("Hazards must be finite and non-negative, and medians must be ",
@@ -767,13 +800,14 @@ piecewise_precompute <- function(hazard, e.time) {
                 fin_time = numeric(0), cum_haz = numeric(0)))
   }
   if (is.null(e.time)) {
-    stop("'e.time' must be supplied when 'e.hazard' (or 'e.median') is a vector")
+    stop("'", nm, ".time' must be supplied when '", nm, ".hazard' (or '", nm,
+         ".median') is a vector")
   }
   if (length(e.time) != length(hazard) + 1L) {
-    stop("length(e.time) must equal length(e.hazard) + 1")
+    stop("length(", nm, ".time) must equal length(", nm, ".hazard) + 1")
   }
   if (!is.infinite(e.time[length(e.time)])) {
-    stop("Last element of 'e.time' must be Inf")
+    stop("Last element of '", nm, ".time' must be Inf")
   }
   if (anyNA(e.time) || e.time[1L] != 0 || any(diff(e.time) <= 0)) {
     stop("Piecewise breakpoints ('e.time', 'd.time', and so on) must start ",
@@ -1053,7 +1087,28 @@ simdata_fast_id <- function(nsim, n, alloc, a.time, a.rate, a.prop,
   n_groups  <- if (is_two_group) 2L else 1L
   n_grp_int <- if (n_groups == 1L) as.integer(n_grp[1L]) else as.integer(n_grp[1:2])
   check_output_size(nsim, n_grp_int)
+  # As for 'n', a whole number up to rounding error (such as 100 * 0.29) is
+  # rounded rather than truncated.
+  nsim <- round(nsim)
   g2        <- (n_groups == 2L)
+
+  # As with subgroups (simdata_fast_id_sub()), a list is per group and must
+  # have one element per group.
+  if (g2) {
+    spec_args <- list(h01.hazard = h01.hazard, h02.hazard = h02.hazard,
+                      h12.hazard = h12.hazard,
+                      h12.switch.hazard = h12.switch.hazard,
+                      switch.prop = switch.prop, d.hazard = d.hazard)
+    for (nm in names(spec_args)) {
+      x <- spec_args[[nm]]
+      if (is.list(x) && length(x) != 2L) {
+        stop("For a two-group simulation, ", spec_arg_label(nm),
+             " must be a single ",
+             "(shared) specification or a list of length 2 (one element per ",
+             "group); it is a list of length ", length(x), ".")
+      }
+    }
+  }
 
   # Resolve a possibly group-specific argument for group g (1 = control,
   # 2 = treatment). A length-two list is per group; anything else is shared.
@@ -1062,7 +1117,12 @@ simdata_fast_id <- function(nsim, n, alloc, a.time, a.rate, a.prop,
   get_pi <- function(g) {
     if (is.null(switch.prop)) return(0)
     p <- id_grp(switch.prop, g)
-    if (is.null(p)) 0 else as.numeric(p)
+    if (is.null(p)) return(0)
+    if (!is.numeric(p) || length(p) != 1L || !is.finite(p) || p < 0 ||
+        p > 1) {
+      stop("Each 'switch.prop' value must be a single probability in [0, 1]")
+    }
+    as.numeric(p)
   }
   pi_c <- get_pi(1L)
   pi_t <- if (g2) get_pi(2L) else 0
@@ -1076,18 +1136,19 @@ simdata_fast_id <- function(nsim, n, alloc, a.time, a.rate, a.prop,
   get_h12      <- function(g) if (is.null(h12.hazard)) id_grp(h02.hazard, g) else id_grp(h12.hazard, g)
   get_h12_time <- function(g) if (is.null(h12.hazard)) id_grp(h02.time, g)   else id_grp(h12.time, g)
 
-  h01_c <- piecewise_precompute(id_grp(h01.hazard, 1L), id_grp(h01.time, 1L))
-  h01_t <- if (g2) piecewise_precompute(id_grp(h01.hazard, 2L), id_grp(h01.time, 2L)) else h01_c
-  h02_c <- piecewise_precompute(id_grp(h02.hazard, 1L), id_grp(h02.time, 1L))
-  h02_t <- if (g2) piecewise_precompute(id_grp(h02.hazard, 2L), id_grp(h02.time, 2L)) else h02_c
-  h12_c <- piecewise_precompute(get_h12(1L), get_h12_time(1L))
-  h12_t <- if (g2) piecewise_precompute(get_h12(2L), get_h12_time(2L)) else h12_c
+  h12_nm <- if (is.null(h12.hazard)) "h02" else "h12"
+  h01_c <- piecewise_precompute(id_grp(h01.hazard, 1L), id_grp(h01.time, 1L), "h01")
+  h01_t <- if (g2) piecewise_precompute(id_grp(h01.hazard, 2L), id_grp(h01.time, 2L), "h01") else h01_c
+  h02_c <- piecewise_precompute(id_grp(h02.hazard, 1L), id_grp(h02.time, 1L), "h02")
+  h02_t <- if (g2) piecewise_precompute(id_grp(h02.hazard, 2L), id_grp(h02.time, 2L), "h02") else h02_c
+  h12_c <- piecewise_precompute(get_h12(1L), get_h12_time(1L), h12_nm)
+  h12_t <- if (g2) piecewise_precompute(get_h12(2L), get_h12_time(2L), h12_nm) else h12_c
 
   empty_spec <- list(hazard = 1, fin_time = numeric(0), cum_haz = numeric(0))
   if (pi_c > 0 || pi_t > 0) {
-    h12s_c <- piecewise_precompute(id_grp(h12.switch.hazard, 1L), id_grp(h12.switch.time, 1L))
+    h12s_c <- piecewise_precompute(id_grp(h12.switch.hazard, 1L), id_grp(h12.switch.time, 1L), "h12.switch")
     h12s_t <- if (g2) {
-      piecewise_precompute(id_grp(h12.switch.hazard, 2L), id_grp(h12.switch.time, 2L))
+      piecewise_precompute(id_grp(h12.switch.hazard, 2L), id_grp(h12.switch.time, 2L), "h12.switch")
     } else {
       h12s_c
     }
@@ -1097,8 +1158,8 @@ simdata_fast_id <- function(nsim, n, alloc, a.time, a.rate, a.prop,
   }
 
   if (has_dropout) {
-    d_c <- piecewise_precompute(id_grp(d.hazard, 1L), id_grp(d.time, 1L))
-    d_t <- if (g2) piecewise_precompute(id_grp(d.hazard, 2L), id_grp(d.time, 2L)) else d_c
+    d_c <- piecewise_precompute(id_grp(d.hazard, 1L), id_grp(d.time, 1L), "d")
+    d_t <- if (g2) piecewise_precompute(id_grp(d.hazard, 2L), id_grp(d.time, 2L), "d") else d_c
   } else {
     d_c <- empty_spec
     d_t <- empty_spec
@@ -1202,11 +1263,8 @@ simdata_fast_karm <- function(nsim, n, a.time, a.rate, a.prop,
     stop("Multi-arm mode (length(n) > 2) does not support 'prevalence' ",
          "subgroups.")
   }
-  if (!is.null(h01.hazard) || !is.null(h01.median) ||
-      !is.null(h02.hazard) || !is.null(h02.median)) {
-    stop("Multi-arm mode (length(n) > 2) does not support the illness-death ",
-         "model, which is two-group.")
-  }
+  # The illness-death model with length(n) > 2 is rejected by simdata_fast()
+  # before this function is called.
   if (!is.null(e.hazard) && !is.null(e.median)) {
     stop("Specify exactly one of 'e.hazard' and 'e.median'")
   }

@@ -92,9 +92,11 @@
 #'   \code{data}. When supplied, only the events of the rows with \code{TRUE}
 #'   are counted for \code{event.looks}.
 #' @param tte.col A single character string naming the observed-time column
-#'   used to count events. Defaults to \code{"tte"}.
+#'   (numeric and non-negative) used to count events. Defaults to
+#'   \code{"tte"}.
 #' @param event.col A single character string naming the event-indicator column
-#'   (0 or 1) used to count events. Defaults to \code{"event"}.
+#'   (numeric or logical, 0 or 1) used to count events. Defaults to
+#'   \code{"event"}.
 #'
 #' @return A numeric matrix with one row per simulated trial and one column per
 #'   look, holding the calendar cutoffs (\code{NA} for a look that is not
@@ -147,7 +149,14 @@ cutoff_fast <- function(data, event.looks = NULL, time.looks = NULL,
     stop("columns 'sim', 'accrual_time', and '", tte.col, "' of 'data' must ",
          "not contain missing values")
   }
+  if (!is.numeric(data[[tte.col]]) || any(data[[tte.col]] < 0)) {
+    stop("column '", tte.col, "' of 'data' must be numeric and non-negative")
+  }
   ev <- data[[event.col]]
+  if (!(is.numeric(ev) || is.logical(ev))) {
+    stop("column '", event.col, "' of 'data' must be numeric or logical, not ",
+         "a factor or a character vector")
+  }
   if (anyNA(ev) || !all(ev == 0 | ev == 1)) {
     stop("column '", event.col, "' of 'data' must be coded as 0 or 1")
   }

@@ -236,3 +236,81 @@ test_that("milestone_fast: presorted = TRUE checks the order", {
                               control = 0, tau = 2, presorted = TRUE),
                "presorted = FALSE")
 })
+
+test_that("milestone_fast: the mover statistic inverts the interval at conf.level", {
+  set.seed(5)
+  n <- 120
+  g <- rep(0:1, each = n / 2)
+  tt <- rexp(n, ifelse(g == 1, 1 / 14, 1 / 10))
+  cc <- runif(n, 0, 30)
+  ev <- as.integer(tt <= cc)
+  ti <- pmin(tt, cc)
+  levels <- c(0.80, 0.90, 0.95, 0.99)
+  stats <- numeric(length(levels))
+  for (k in seq_along(levels)) {
+    cl <- levels[k]
+    r <- milestone_fast(ti, ev, g, control = 0, tau = 8, method = "mover",
+                        conf.level = cl)
+    stats[k] <- r$statistic
+    # The two-sided p-value is below 1 - conf.level exactly when the interval
+    # excludes zero.
+    expect_identical(r$p.value < 1 - cl, r$diff.lower > 0 | r$diff.upper < 0,
+                     info = cl)
+    # The statistic is the normal quantile times the difference over the
+    # half-width of the interval on the side of zero.
+    half <- if (r$diff >= 0) r$diff - r$diff.lower else r$diff.upper - r$diff
+    expect_equal(r$statistic, qnorm(1 - (1 - cl) / 2) * r$diff / half,
+                 tolerance = 1e-12)
+  }
+  # The statistic depends on conf.level (it does not for "wald").
+  expect_gt(diff(range(stats)), 0.05)
+  w <- vapply(levels, function(cl) {
+    milestone_fast(ti, ev, g, control = 0, tau = 8, method = "wald",
+                   conf.level = cl)$statistic
+  }, numeric(1))
+  expect_lt(diff(range(w)), 1e-12)
+})
+
+test_that("milestone_fast: a factor event indicator is rejected", {
+  set.seed(1)
+  tt <- rexp(40, 0.1)
+  ee <- rbinom(40, 1, 0.7)
+  gg <- rep(0:1, 20)
+  expect_error(milestone_fast(tt, factor(ee), gg, control = 0, tau = 8),
+               "numeric or logical")
+  expect_equal(milestone_fast(tt, ee == 1, gg, control = 0, tau = 8)$statistic,
+               milestone_fast(tt, ee, gg, control = 0, tau = 8)$statistic)
+})
+
+test_that("milestone_fast: the formula interface gives the vector result", {
+  set.seed(66)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1), ee = rbinom(n, 1, 0.8),
+                  g = rep(c(1, 0), n / 2))
+  for (m in c("wald", "loglog", "mover")) {
+    expect_identical(
+      milestone_fast(Surv(tt, ee) ~ g, data = d, tau = 5, method = m),
+      milestone_fast(d$tt, d$ee, d$g, control = 0, tau = 5, method = m))
+  }
+  expect_identical(class(milestone_fast(Surv(tt, ee) ~ g, d, tau = 5)),
+                   c("milestone_fast", "fastsurv"))
+  expect_error(milestone_fast(Surv(tt, ee) ~ 1, data = d, tau = 5),
+               "must name the group")
+  expect_error(milestone_fast(d$tt, d$ee, d$g, 0, tau = 5, data = d),
+               "only with a formula")
+})
+
+test_that("milestone_fast: the formula interface passes every argument", {
+  set.seed(60)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1) + 0.1, ee = rbinom(n, 1, 0.8),
+                  g = rep(c("b", "a"), n / 2), s = rep(c("x", "y", "z"), n / 3))
+  d1 <- d[order(d$tt), ]
+  d2 <- d[order(d$s, d$tt), ]
+  expect_identical(
+    milestone_fast(Surv(tt, ee) ~ g, d1, control = "b", side = 1,
+                   conf.level = 0.9, tau = 5, method = "mover",
+                   presorted = TRUE),
+    milestone_fast(d1$tt, d1$ee, d1$g, "b", side = 1, conf.level = 0.9,
+                   tau = 5, method = "mover", presorted = TRUE))
+})

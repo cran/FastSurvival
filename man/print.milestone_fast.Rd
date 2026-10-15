@@ -25,7 +25,11 @@ milestone timepoint, the control label, and the inference settings. The body
 shows the per-group milestone survival with its confidence interval, followed
 by the difference contrast (treatment minus control) with a confidence
 interval, the test statistic, and the p-value. The p-value follows the
-alternative recorded in the object.
+alternative recorded in the object. Its column is labeled
+\code{Pr(>|z|)} for a two-sided test, and for a one-sided test
+\code{Pr(>z)} (upper tail) with \code{"wald"} and \code{"mover"} or
+\code{Pr(<z)} (lower tail) with \code{"loglog"}, the direction of treatment
+benefit.
 }
 \examples{
 set.seed(1)

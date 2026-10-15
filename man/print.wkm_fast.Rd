@@ -24,6 +24,9 @@ two-group summaries in the package. The header shows the control label and
 the inference settings. The body shows the weighted integrated survival
 difference (treatment minus control) with a confidence interval, the test
 statistic, and the p-value.
+The p-value column is labeled \code{Pr(>|z|)} for a two-sided test and
+\code{Pr(>z)} for a one-sided test, whose p-value is the upper tail in the
+direction of treatment benefit.
 }
 \examples{
 set.seed(1)

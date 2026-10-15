@@ -356,15 +356,16 @@ probability</em>: the chance that the regional criterion is met, often
 evaluated conditional on the overall test being significant.</p>
 <p>Closed-form formulas for these probabilities exist for continuous
 endpoints and have been extended to other endpoint types under a normal
-approximation of the treatment effect (Teng et al., 2018; see Homma,
-2024, for binary outcomes). Those formulas are convenient but they
-assume a fixed design, a single final analysis, and balanced,
-simultaneous accrual across regions. Real oncology MRCTs routinely break
-those assumptions: the design is group-sequential with interim looks,
-and one region (here, Japan) starts enrolling later than the others, so
-its information accrues on a different calendar. When the assumptions
-behind the closed-form formulas no longer hold, simulation is the
-natural way to obtain the consistency probabilities.</p>
+approximation of the treatment effect (Teng et al., 2018), although for
+binary outcomes Homma (2024) showed by simulation that these formulas
+are inaccurate and gave alternative formulas. Closed-form formulas are
+convenient but they assume a fixed design, a single final analysis, and
+balanced, simultaneous accrual across regions. Real oncology MRCTs
+routinely break those assumptions: the design is group-sequential with
+interim looks, and one region (here, Japan) starts enrolling later than
+the others, so its information accrues on a different calendar. When the
+assumptions behind the closed-form formulas no longer hold, simulation
+is the natural way to obtain the consistency probabilities.</p>
 <p>FastSurvival does not provide a regional-consistency function, and it
 is not meant to: consistency criteria are outside its scope. What it
 does provide are fast, validated building blocks. This vignette shows
@@ -640,27 +641,31 @@ on the efficacy column above.</p>
 <span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt;   Boundaries: efficacy on &#39;logrank.z&#39; (direction = lower), futility on &#39;logrank.z&#39;</span></span>
 <span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt; Stopping Boundaries: Look by Look</span></span>
-<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Events (s) Sample (n) Efficacy Z Futility Z Cum. Cross. Eff.</span></span>
-<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt;     1        0.40      142.0      344.8         NA     0.3810           0.0000</span></span>
-<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt;     2        0.70      248.0      485.5    -2.4370         NA           0.4711</span></span>
-<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt;     3        1.00      354.0      500.0    -2.0000    -2.0000           0.8011</span></span>
-<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt; Events, Sample Size, Dropouts, Pipeline and Analysis Times: Look by Look</span></span>
-<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Sample (n) Events (s) Dropouts (d) Pipeline Analysis Time</span></span>
-<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt;     1        0.40      344.8      142.0          0.0    202.8          8.73</span></span>
-<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt;     2        0.70      485.5      248.0          0.0    237.5         12.17</span></span>
-<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt;     3        1.00      500.0      354.0          0.0    146.0         16.14</span></span>
-<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt;  Cross. Eff. Cross. Fut.</span></span>
-<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt;       0.0000      0.0134</span></span>
-<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt;       0.4711      0.0000</span></span>
-<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt;       0.3300      0.1855</span></span>
-<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="co">#&gt; Overall</span></span>
-<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="co">#&gt;   Rejection rate (efficacy):      0.8011</span></span>
-<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="co">#&gt;   Futility-stop rate:             0.1989</span></span>
-<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="co">#&gt;   Expected events at stop:        301.2</span></span>
-<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a><span class="co">#&gt;   Expected sample size at stop:   491.3</span></span>
-<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a><span class="co">#&gt;   Expected analysis time at stop: 14.16</span></span></code></pre></div>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Events (s) Sample (n) Efficacy Bound Futility Bound</span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt;     1        0.40      142.0      344.8             NA         0.3810</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt;     2        0.70      248.0      485.5        -2.4370             NA</span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt;     3        1.00      354.0      500.0        -2.0000        -2.0000</span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt;  Cum. Cross. Eff.</span></span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt;            0.0000</span></span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt;            0.4711</span></span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt;            0.8011</span></span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt; Events, Sample Size, Dropouts, Pipeline and Analysis Times: Look by Look</span></span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Sample (n) Events (s) Dropouts (d) Pipeline Analysis Time</span></span>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt;     1        0.40      344.8      142.0          0.0    202.8          8.73</span></span>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt;     2        0.70      485.5      248.0          0.0    237.5         12.17</span></span>
+<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt;     3        1.00      500.0      354.0          0.0    146.0         16.14</span></span>
+<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="co">#&gt;  Cross. Eff. Cross. Fut.</span></span>
+<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="co">#&gt;       0.0000      0.0134</span></span>
+<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="co">#&gt;       0.4711      0.0000</span></span>
+<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="co">#&gt;       0.3300      0.1855</span></span>
+<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a><span class="co">#&gt; Overall</span></span>
+<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a><span class="co">#&gt;   Rejection rate (efficacy):      0.8011</span></span>
+<span id="cb9-34"><a href="#cb9-34" tabindex="-1"></a><span class="co">#&gt;   Futility-stop rate:             0.1989</span></span>
+<span id="cb9-35"><a href="#cb9-35" tabindex="-1"></a><span class="co">#&gt;   Expected events at stop:        301.2</span></span>
+<span id="cb9-36"><a href="#cb9-36" tabindex="-1"></a><span class="co">#&gt;   Expected sample size at stop:   491.3</span></span>
+<span id="cb9-37"><a href="#cb9-37" tabindex="-1"></a><span class="co">#&gt;   Expected analysis time at stop: 14.16</span></span></code></pre></div>
 <p>The per-look <code>prob.stop.efficacy</code> from
 <code>simsummary_fast()</code> matches the <code>Efficacy</code> column
 computed by hand, and its <code>overall</code> row gives the cumulative

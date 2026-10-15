@@ -54,18 +54,22 @@ available at <https://gosukehommaEX.github.io/FastSurvival/>.
 | `analysis_fast()` | Interim or sequential analysis of simulated data at one or more looks, defined by target event counts, calendar times, or per-simulation cutoffs from `cutoff_fast()`. |
 | `switch_fast()` | Treatment switching in simulated data: switching at an intermediate event (such as progression), at an opening time after an interim analysis, or at the later of the two, optionally only in the trials selected by an interim decision, with an accelerated-failure-time or new-hazard effect after the switch. |
 | `pairwise_fast()` | Pairwise comparison of each experimental arm against a shared control on multi-arm data, at fixed calendar looks, a primary contrast's event-driven cutoffs, or supplied per-simulation cutoffs, with an optional Bonferroni adjustment. |
-| `simsummary_fast()` | Operating-characteristic summary (rejection and futility rates, stopping-look distribution, expected timing) from `analysis_fast()` output and supplied boundaries. |
+| `simsummary_fast()` | Operating-characteristic summary (rejection and futility rates, stopping-look distribution, expected timing) from `analysis_fast()` output and supplied boundaries, with `print()` and `plot()` methods. |
 
 ### Visualization
 
 | Function | Description |
 |----------|-------------|
 | `gen_scenario_fast()` | Assemble one or more two-group scenarios into a `scenario_fast` object for design-stage exploration, with `plot()` (analytic survival curves and the piecewise hazard ratio) and `print()` methods. |
-| `kmcurve_fast()` | Build the Kaplan-Meier curves of a single trial realization into a `kmcurve_fast` object, with `plot()` (curves, restricted-mean shading, and a smoothed time-varying hazard-ratio panel) and `print()` methods. |
+| `kmcurve_fast()` | Build the Kaplan-Meier curves of a single trial realization into a `kmcurve_fast` object, with `plot()` (curves, confidence limits or band, restricted-mean shading, a smoothed time-varying hazard-ratio panel, and a number-at-risk table), `print()`, and `as.data.frame()` methods. |
 
 The estimation and testing functions return S3-class objects with `print()`
 methods that display the results in a format similar to the corresponding
-`survival` package functions.
+`survival` package functions. Besides vectors, they accept a model formula
+`Surv(time, event) ~ group` with a data frame (see `?formula_interface`), and
+`as.data.frame()` returns any of their results as a data frame with the same
+columns, while `coef()` and `confint()` give the estimates and their
+confidence limits (see `?as.data.frame.fastsurv`).
 
 ## Installation
 
@@ -103,6 +107,11 @@ survdiff_fast(ovarian$futime, ovarian$fustat, ovarian$rx,
 # coxph_fast(): hazard ratio via the Pike-Halley Estimator (closed-form)
 # ----------------------------------------------------------------
 coxph_fast(ovarian$futime, ovarian$fustat, ovarian$rx, control = 1)
+
+# The same with a formula (the control group is the first level of rx),
+# and the result as a data frame with the log hazard ratio
+fit <- coxph_fast(Surv(futime, fustat) ~ rx, data = ovarian)
+as.data.frame(fit)
 
 # ----------------------------------------------------------------
 # rmst_fast(): restricted mean survival time (two-group)
@@ -172,9 +181,10 @@ df3 <- simdata_fast(
 time point. A C++ backend locates the evaluation cutoff via binary search,
 then accumulates the Kaplan-Meier product and the Greenwood variance sum in
 a single scan over event positions, without constructing intermediate
-vectors. This makes it orders of magnitude faster than `survfit()` plus
-`summary()` when the same sorted data are evaluated repeatedly at a fixed
-landmark time inside a simulation loop.
+vectors. This makes it more than an order of magnitude faster than
+`survfit()` plus `summary()` (see the speed-comparison vignette) when the same
+sorted data are evaluated repeatedly at a fixed landmark time inside a
+simulation loop.
 
 **survdiff_fast** computes the log-rank statistic (Mantel, 1966) using a
 two-pointer merge
@@ -188,19 +198,19 @@ Fleming-Harrington, modestly-weighted, Gehan-Breslow, and Tarone-Ware
 weighted tests, as well as stratified and stratified-weighted variants, all
 sharing the same single-scan backend.
 
-**coxph_fast** implements the Pike-Halley Estimator proposed by Homma
-(2025), a closed-form approximation to the Cox partial likelihood maximizer.
+**coxph_fast** implements the Pike-Halley Estimator, a closed-form
+approximation to the Cox partial likelihood maximizer.
 The estimator anchors at the Pike closed-form estimate, the ratio of the
 observed-to-expected event ratios of the two groups from the log-rank
-computation (Berry, Kitchin, and Mock, 1991), and applies a single analytic
-Halley correction to the Cox score. Because the Halley step converges
-cubically, the residual error relative to the Cox maximum likelihood estimate
+computation (Berry, Kitchin, and Mock, 1991), and applies a single Halley
+correction to the Cox score, expanded to second order so that the result is
+in closed form. Because this correction converges cubically, the residual
+error relative to the Cox maximum likelihood estimate
 is of the order of the cube of the error of the Pike anchor. It is negligible
 near the null hypothesis. At a fixed hazard ratio away from 1 the Pike anchor
 keeps a bias that does not vanish with the sample size, so the residual error
-levels off at a small value. On the
-`pharmacoSmoking` dataset (tie rate 77.5%), the Pike-Halley Estimator
-reproduces the Breslow-based Cox estimate to within on the order of 1e-08.
+levels off at a small value. The validation vignette compares the estimate
+with `coxph(..., ties = "breslow")` on the `gbsg` data.
 The Wald confidence interval uses the observed information at the Pike
 anchor as the variance estimate. The C++ backend performs group splitting,
 at-risk counting, and per-distinct-event-time accumulation in a single pass.
@@ -341,7 +351,8 @@ calls. Statistics can also be reported within each subgroup. The max-combo
 p-value, a multivariate normal integral per trial and look, dominates the
 computing time; when only the decisions at nominal levels are needed,
 `mc.alpha` integrates only the p-values that the Bonferroni bounds do not
-already place on one side of the level, with unchanged decisions.
+already place on one side of the level; the decisions that the bounds settle
+are those of the exact p-values.
 
 **pairwise_fast** compares each experimental arm against a shared control on
 multi-arm data by running `analysis_fast()` once per contrast and stacking the
@@ -416,7 +427,7 @@ df <- simdata_fast(
   seed     = 42
 )
 
-# 2. Analyze at two interim looks defined by target event counts
+# 2. Analyze at an interim and a final look defined by target event counts
 res <- analysis_fast(
   df, control = 1,
   event.looks = c(300, 450),
@@ -434,6 +445,9 @@ oc <- simsummary_fast(
   alpha = c(0.0060, 0.0231)
 )
 oc
+
+# 4. Plot the cumulative stopping probabilities against the expected events
+plot(oc, xaxis = "events")
 ```
 
 The estimation functions can also be used directly inside a loop. Except for
@@ -453,6 +467,15 @@ hr_mat <- do.call(rbind, lapply(results, unclass))
 colMeans(hr_mat)
 ```
 
+Alternatively, `as.data.frame()` returns every result, including the lists of
+`milestone_fast()` and `ahr_fast()`, as rows with the same columns, which
+stack into one data frame:
+
+```r
+hr_df <- do.call(rbind, lapply(results, as.data.frame))
+head(hr_df)
+```
+
 ## References
  
 Kaplan, E. L., & Meier, P. (1958). Nonparametric estimation from incomplete
@@ -464,10 +487,10 @@ statistics arising in its consideration. *Cancer Chemotherapy Reports*,
 50(3), 163-170.
  
 Gehan, E. A. (1965). A generalized Wilcoxon test for comparing arbitrarily
-singly-censored samples. *Biometrika*, 52, 203-223.
+singly-censored samples. *Biometrika*, 52(1-2), 203-224.
  
 Tarone, R. E., & Ware, J. (1977). On distribution-free tests for equality of
-survival distributions. *Biometrika*, 64, 156-160.
+survival distributions. *Biometrika*, 64(1), 156-160.
  
 Fleming, T. R., & Harrington, D. P. (1991). *Counting Processes and Survival
 Analysis*. New York: John Wiley & Sons.
@@ -484,14 +507,11 @@ Magirr, D., & Burman, C.-F. (2019). Modestly weighted logrank tests.
 *Statistics in Medicine*, 38(20), 3782-3790.
  
 Cox, D. R. (1972). Regression models and life-tables. *Journal of the Royal
-Statistical Society. Series B (Methodological)*, 34(2), 187-220.
+Statistical Society. Series B (Methodological)*, 34(2), 187-202.
  
 Berry, G., Kitchin, R. M., & Mock, P. A. (1991). A comparison of two simple
 hazard ratio estimators based on the logrank test. *Statistics in Medicine*,
 10(5), 749-755.
- 
-Homma, G. (2025). One step from Pike to Cox: a closed-form hazard ratio
-estimator. *Manuscript under review.*
  
 Royston, P., & Parmar, M. K. B. (2013). Restricted mean survival time: an
 alternative to the hazard ratio for the design and analysis of randomized

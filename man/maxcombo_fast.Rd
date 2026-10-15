@@ -14,11 +14,14 @@ maxcombo_fast(
   gamma = c(0, 1, 0, 1),
   presorted = FALSE,
   abseps = 1e-05,
-  maxpts = 25000
+  maxpts = 25000,
+  data = NULL
 )
 }
 \arguments{
-\item{time}{A numeric vector of follow-up times for all subjects.}
+\item{time}{A numeric vector of follow-up times for all subjects.
+Alternatively, a formula \code{Surv(time, event) ~ group}, with the
+variables in \code{data}; see \code{\link{formula_interface}}.}
 
 \item{event}{An integer or numeric vector of event indicators
 (1 = event, 0 = censored), aligned with \code{time}.}
@@ -26,7 +29,9 @@ maxcombo_fast(
 \item{group}{A vector of group labels aligned with \code{time}.}
 
 \item{control}{A scalar value indicating which level of \code{group}
-represents the control group.}
+represents the control group.
+With the formula interface it defaults to the first level of the
+group variable.}
 
 \item{side}{An integer, either 1 or 2. If \code{side = 1}, the
 one-sided max-combo test for treatment benefit is computed. If
@@ -49,13 +54,20 @@ and \code{group} are assumed to be sorted in ascending order of
 The order is checked, and an error is given when it does not hold.}
 
 \item{abseps}{A single positive numeric value, the absolute error tolerance
-passed to the multivariate normal integration. Defaults to 1e-5. Larger
-values speed up the quasi-Monte-Carlo integration (four or more weights,
-or a two-sided test) at the cost of p-value precision.}
+passed to the multivariate normal integration. Defaults to 1e-5. The
+quasi-Monte-Carlo integration (four or more weights, or a two-sided test)
+stops at \code{maxpts} function evaluations when the tolerance is not
+reached, as is usual with the default weights (see Details). Larger
+values can stop it earlier at the cost of p-value precision.}
 
 \item{maxpts}{A single positive integer, the maximum number of function
 evaluations for the quasi-Monte-Carlo integration used with four or more
-weights or with a two-sided test (see Details). Defaults to 25000.}
+weights or with a two-sided test (see Details). Defaults to 25000. Larger
+values reduce the integration error at a higher computing cost.}
+
+\item{data}{A data frame in which the variables of a formula given as
+\code{time} are evaluated. Used only with the formula interface; see
+\code{\link{formula_interface}}.}
 }
 \value{
 An object of class \code{"maxcombo_fast"}, a named numeric vector of
@@ -67,6 +79,9 @@ An object of class \code{"maxcombo_fast"}, a named numeric vector of
   \code{gamma}, the requested \code{side}, and the total sample size in
   \code{n}. Returns \code{NA} values (still with class
   \code{"maxcombo_fast"}) when any component variance is zero or not finite.
+  The object also has the class \code{"fastsurv"}, whose
+  \code{as.data.frame()}, \code{coef()}, and \code{confint()} methods
+  are described in \code{\link{as.data.frame.fastsurv}}.
 }
 \description{
 Computes the max-combo test, the maximum over a set of Fleming-Harrington
@@ -102,15 +117,29 @@ statistic is max_k abs(Z_k) and the p-value is
 
 The joint normal probability is evaluated by dimension. With a single weight
 the univariate normal is used. With two or three weights and a one-sided
-test, where the integration region is a half-space, the deterministic
+test, where the integration region is an orthant (all upper limits
+infinite), the deterministic
 \code{\link[mvtnorm]{TVPACK}} algorithm is used. For the two-sided test, whose
-region is a bounded rectangle, and for four or more weights, the
-quasi-Monte-Carlo \code{\link[mvtnorm]{GenzBretz}} algorithm is used, whose
-precision is governed by \code{abseps} and \code{maxpts}. In a simulation
-study the Monte Carlo error of the estimated rejection rate is driven by the
-number of simulated trials rather than by the precision of each individual
-p-value, so \code{abseps} can be loosened to speed up the four-weight case
-with negligible effect on the operating characteristics.
+region is a bounded rectangle, and for four or more weights, the randomized
+quasi-Monte-Carlo \code{\link[mvtnorm]{GenzBretz}} algorithm is used. It
+uses R's random-number generator, so call \code{set.seed()} beforehand for
+reproducible p-values, and it stops when its error estimate falls below
+\code{abseps} or after \code{maxpts} function evaluations, whichever comes
+first.
+
+The weights of G(0,1) and G(1,0) add up to the weight of G(0,0) at every
+time, because (1 - S) + S = 1, so the numerator of the G(0,0) component is
+the sum of the other two. The correlation matrix of the default weights, or
+of any set that contains these three, is therefore singular, and the
+quasi-Monte-Carlo integral converges slowly. With the default \code{maxpts}
+the absolute error of the p-value is typically of the order of 1e-4 rather
+than \code{abseps}. In a check with the default weights and a one-sided
+test, the p-values of 20,000 simulated analyses (two looks of 10,000 trials
+with a delayed treatment effect) were computed twice with different seeds;
+the two values differed by less than 1e-3 in every analysis and by at most
+about 3e-4 in 99 percent of them. A larger \code{maxpts} reduces the error
+at a higher computing cost. In a simulation study, the integration error affects only
+the decisions for p-values within about that error of the nominal level.
 
 When \code{presorted = TRUE}, the inputs are assumed to be sorted in ascending
 order of \code{time} and the internal \code{order()} call is skipped, which is
@@ -136,6 +165,9 @@ maxcombo_fast(ovarian$futime, ovarian$fustat, ovarian$rx, 1,
 ord <- order(ovarian$futime)
 maxcombo_fast(ovarian$futime[ord], ovarian$fustat[ord], ovarian$rx[ord],
               control = 1, presorted = TRUE)
+
+# Formula interface
+maxcombo_fast(Surv(futime, fustat) ~ rx, data = ovarian, side = 1)
 
 \donttest{
 # Cross-check against simtrial::maxcombo (one-sided)

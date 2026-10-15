@@ -27,7 +27,8 @@ void weighted_logrank_core_impl(const double*, const int*, const int*, int,
 //' with weight \code{min(1 / S_minus, max_weight)}, where \code{max_weight}
 //' is the reciprocal of the pooled Kaplan-Meier value just before
 //' \code{t_star}, i.e. the product over event times strictly less than
-//' \code{t_star} as in nphRCT (and is 1 when \code{t_star = 0});
+//' \code{t_star} as in nphRCT (and is 1 when \code{t_star = 0}, and infinite,
+//' so that the weights are not capped, when that product is 0);
 //' 2 = Gehan-Breslow with weight \code{n_j}; 3 = Tarone-Ware with weight
 //' \code{sqrt(n_j)}. Here \code{S_minus} is the left-continuous pooled
 //' Kaplan-Meier estimate just prior to each event time, initialized at 1.
@@ -120,9 +121,10 @@ void weighted_logrank_core_impl(
       nrisk -= c;
       i = jj;
     }
-    if (s_star > 0.0) {
-      max_weight = 1.0 / s_star;
-    }
+    // When the pooled curve reaches 0 before t_star, the cap 1 / S(t_star-) is
+    // infinite and the weights 1 / S(t-) are not capped (as in nphRCT). They
+    // stay finite, because S(t-) > 0 at every event time with subjects at risk.
+    max_weight = (s_star > 0.0) ? 1.0 / s_star : R_PosInf;
   }
 
   // ---------------------------------------------------------------- //

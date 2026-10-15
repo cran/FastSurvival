@@ -31,8 +31,10 @@ void medsurv_core_impl(const double*, const int*, int, double,
 //             S(t) <= 0.5 (within a tolerance of sqrt(machine epsilon)), and,
 //             when S(t) equals 0.5 on a flat stretch, the midpoint between that
 //             event time and the next event time (or the last observed time if
-//             no later event exists). NA if undefined. This is the point
-//             estimate for both variance methods.
+//             no later event exists). NA if undefined, including a stretch
+//             at 0.5 that ends at an infinite observed time, in which case
+//             all the columns are NA. This is the point estimate for both
+//             variance methods.
 //   column 1: Kaplan-Meier estimate S at the median
 //   column 2: Greenwood sum up to and including the median,
 //             sum_{s <= median} d(s) / (Y(s) (Y(s) - d(s)))   [method "km"]
@@ -145,7 +147,17 @@ void medsurv_core_impl(const double* time, const int* event, int n, double bw,
     const int n_ev = (int) event_time.size();
     const double t_next = (pos_med + 1 < n_ev) ? event_time[pos_med + 1]
                                                : time[n - 1];
-    median = 0.5 * (event_time[pos_med] + t_next);
+    if (std::isfinite(t_next)) {
+      median = 0.5 * (event_time[pos_med] + t_next);
+    } else {
+      // The stretch ends at an infinite observed time (a subject without a
+      // finite event or dropout time), so the midpoint is not defined. The
+      // median and its variance components are NA, as when the curve does
+      // not reach 0.5.
+      found = false;
+      median = NA_REAL;
+      surv_med = NA_REAL;
+    }
   }
 
   double greenwood = NA_REAL;

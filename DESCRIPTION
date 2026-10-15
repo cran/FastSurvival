@@ -1,7 +1,7 @@
 Package: FastSurvival
 Type: Package
 Title: Fast Survival Analysis and Simulation for Clinical Trials
-Version: 1.1.0
+Version: 1.2.0
 Authors@R: person(
     given  = "Gosuke",
     family = "Homma",
@@ -20,8 +20,10 @@ Description: Provides fast alternatives to standard survival analysis functions
     test (maxcombo_fast()), the robust modestly-weighted log-rank test
     (rmw_fast()), the weighted Kaplan-Meier (Pepe-Fleming) test (wkm_fast()),
     the average hazard with survival weight (ahsw_fast()), and the
-    Kalbfleisch-Prentice average hazard ratio (ahr_fast()). The simulation
-    layer generates individual patient data (simdata_fast()), determines the
+    Kalbfleisch-Prentice average hazard ratio (ahr_fast()). Besides vectors,
+    these functions accept a model formula with a data frame, and their
+    results can be returned as data frames. The simulation layer generates
+    individual patient data (simdata_fast()), determines the
     calendar time of each analysis from combined event and calendar-time
     rules (cutoff_fast()), performs interim or sequential analyses
     (analysis_fast()), compares several experimental arms with a shared
@@ -35,7 +37,7 @@ Description: Provides fast alternatives to standard survival analysis functions
     re-estimation, probability-of-success calculations, and regional consistency
     evaluation in multi-regional trials. Core computations are implemented in
     'C++' via 'Rcpp' for maximum performance. Methodological background is
-    described in Collett (2014, ISBN:9780429196294).
+    described in Collett (2014, ISBN:9781439856789).
 License: MIT + file LICENSE
 URL: https://github.com/gosukehommaEX/FastSurvival,
         https://gosukehommaEX.github.io/FastSurvival/
@@ -43,16 +45,16 @@ BugReports: https://github.com/gosukehommaEX/FastSurvival/issues
 Encoding: UTF-8
 Language: en-US
 Depends: R (>= 4.1.0)
-Imports: graphics, grDevices, stats, dqrng, Rcpp, mvtnorm
-LinkingTo: Rcpp, dqrng
+Imports: graphics, grDevices, stats, dqrng (>= 0.4.0), Rcpp, mvtnorm
+LinkingTo: Rcpp, dqrng (>= 0.4.0)
 Suggests: survival, survRM2, survAH, simtrial, gsDesign, nph, nphRCT,
         rpsftm, microbenchmark, testthat (>= 3.0.0), knitr, rmarkdown
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
 VignetteBuilder: knitr
 NeedsCompilation: yes
-Packaged: 2026-10-08 16:10:45 UTC; i_lik
+Packaged: 2026-10-15 01:01:24 UTC; i_lik
 Author: Gosuke Homma [aut, cre]
 Maintainer: Gosuke Homma <my.name.is.gosuke@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-10-08 16:40:08 UTC
+Date/Publication: 2026-10-15 02:40:02 UTC

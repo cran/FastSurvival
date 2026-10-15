@@ -120,7 +120,9 @@ test. The nominal one-sided levels 0.002 and 0.024 are close to those of an
 O'Brien-Fleming-type spending function at these looks and are used for
 illustration. With `mc.alpha` set to these levels, the max-combo p-value is
 integrated only when the Bonferroni bounds do not decide the comparison with
-the level, which leaves the decisions unchanged.
+the level. The decisions that the bounds settle are those of the exact
+p-values, and the others carry the error of the randomized integration, as
+without `mc.alpha`.
 
 ```{r analysis}
 alpha_look <- c(0.002, 0.024)

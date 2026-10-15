@@ -40,9 +40,10 @@ Both scenarios share a control arm with a constant hazard of 0.25 per year. In
 the weak null the experimental arm is identical to the control arm. In the
 strong null the experimental arm has a very large hazard for a short initial
 period (early harm) and a slightly lower hazard thereafter; the parameters
-follow the Freidlin and Korn (2019) example as implemented in the `simtrial`
-package documentation, namely an experimental hazard ratio of 16 for the first
-0.1 year followed by 0.76 afterwards. The analysis is at 5 years.
+are those of Fig. A1 in the Appendix of Freidlin and Korn (2019), which the
+`simtrial` package documentation also uses, namely an experimental hazard ratio
+of 16 for the first 0.1 year (1.2 months) followed by 0.76 afterwards. The
+analysis is at 5 years.
 
 ```{r scenarios}
 e_time <- c(0, 0.1, Inf)         # change point at 0.1 year
@@ -99,8 +100,9 @@ tests each occupy the `logrank.*` columns, so they are obtained from separate
 testing is one-sided in the direction of experimental benefit. Only the
 decision at the 2.5% level is needed from the MaxCombo test, so
 `mc.alpha = ALPHA` evaluates the multivariate normal integral only for the
-p-values that the Bonferroni bounds do not place on one side of that level; the
-decisions are the same as with every p-value integrated.
+p-values that the Bonferroni bounds do not place on one side of that level.
+The decisions that the bounds settle are those of the exact p-values, and the
+others carry the error of the randomized integration, as without `mc.alpha`.
 
 ```{r design}
 NSIM    <- 2000L     # raise (e.g. 5000) for tighter Monte Carlo error
@@ -203,12 +205,12 @@ to this failure.
 
 ## Notes
 
-The strong null parameters follow the Freidlin and Korn (2019) example as given
-in the `simtrial` package documentation. The modestly-weighted log-rank delay
-`T_STAR` and the number of simulated trials `NSIM` are set at the top of the
-design chunk and can be changed; `NSIM` is kept modest so the vignette builds
-quickly, and a larger value tightens the Monte Carlo error on the reported
-rates.
+The strong null parameters are those of Fig. A1 in the Appendix of Freidlin and
+Korn (2019), which the `simtrial` package documentation also uses. The
+modestly-weighted log-rank delay `T_STAR` and the number of simulated trials
+`NSIM` are set at the top of the design chunk and can be changed; `NSIM` is
+kept modest so the vignette builds quickly, and a larger value tightens the
+Monte Carlo error on the reported rates.
 
 ## References
 

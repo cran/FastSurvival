@@ -14,11 +14,15 @@ medsurv_fast(
   conf.type = "log",
   method = c("km", "nph"),
   bw = NULL,
-  presorted = FALSE
+  presorted = FALSE,
+  data = NULL
 )
 }
 \arguments{
-\item{time}{Numeric vector of event or censoring times.}
+\item{time}{Numeric vector of event or censoring times.
+Alternatively, a formula \code{Surv(time, event) ~ group} or
+\code{Surv(time, event) ~ 1}, with the variables in
+\code{data}; see \code{\link{formula_interface}}.}
 
 \item{event}{Integer vector, 1 for an event and 0 for censoring.}
 
@@ -26,7 +30,9 @@ medsurv_fast(
 two-group comparison. If omitted, a single-group median is returned.}
 
 \item{control}{The level of \code{group} that denotes the control group.
-Required when \code{group} is supplied.}
+Required when \code{group} is supplied.
+With the formula interface it defaults to the first level of the
+group variable.}
 
 \item{side}{Either 2 for a two-sided test or 1 for a one-sided test of
 treatment superiority (difference greater than 0).}
@@ -49,6 +55,10 @@ one value per group. If omitted, a Silverman type default is used.}
 and \code{group} are already sorted in ascending order of \code{time}, to
 skip the internal sort. Defaults to \code{FALSE}.
 The order is checked, and an error is given when it does not hold.}
+
+\item{data}{A data frame in which the variables of a formula given as
+\code{time} are evaluated. Used only with the formula interface; see
+\code{\link{formula_interface}}.}
 }
 \value{
 A named numeric vector of class \code{"medsurv_fast"}. For a single
@@ -56,6 +66,9 @@ A named numeric vector of class \code{"medsurv_fast"}. For a single
   limits. For two groups the elements are the control and treatment medians,
   their difference, the standard errors, the confidence limits and the Wald
   statistics for the difference.
+  The object also has the class \code{"fastsurv"}, whose
+  \code{as.data.frame()}, \code{coef()}, and \code{confint()} methods
+  are described in \code{\link{as.data.frame.fastsurv}}.
 }
 \description{
 Estimates the Kaplan-Meier median survival time for a single group, or the
@@ -72,7 +85,11 @@ interval, the midpoint of that interval is returned (the next event time, or
 the last observed time when no later event exists, closes the interval). This
 is the convention used by \code{survfit}, including its tolerance of
 \code{sqrt(.Machine$double.eps)} when comparing the estimate with 0.5. The
-point estimate is the same for both variance methods.
+point estimate is the same for both variance methods. When the estimate
+stays at 0.5 up to an infinite observed time (for example a subject without
+a finite event or dropout time in simulated data), the midpoint is not
+defined, and the median of that group and the statistics that depend on it
+are \code{NA}.
 
 Two variance methods are available through the \code{method} argument. With
 \code{method = "km"} the variance of the estimated median follows the
@@ -103,8 +120,12 @@ event <- as.integer(tt <= cc)
 medsurv_fast(time, event, group = g, control = 0)
 medsurv_fast(time, event, group = g, control = 0, method = "nph")
 
+# Formula interface
+d <- data.frame(time, event, g)
+medsurv_fast(Surv(time, event) ~ g, data = d)
+
 }
 \references{
-Fleming, T. R., & Harrington, D. P. (1991). Counting Processes and Survival
-Analysis. New York: John Wiley & Sons.
+Fleming, T. R., & Harrington, D. P. (1991). \emph{Counting Processes and
+Survival Analysis}. New York: John Wiley & Sons.
 }

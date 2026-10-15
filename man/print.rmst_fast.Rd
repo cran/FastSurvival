@@ -24,7 +24,11 @@ the restricted mean survival time, its Greenwood standard error, and the
 Wald confidence interval at the requested horizon. In two-group mode it
 shows the per-group restricted mean survival times together with the
 difference (treatment minus control) and ratio (treatment over control)
-contrasts, each with a Wald z-statistic and two-sided p-value.
+contrasts, each with a Wald z-statistic and a p-value that follows the
+\code{side} recorded in the object.
+The p-value column is labeled \code{Pr(>|z|)} for a two-sided test and
+\code{Pr(>z)} for a one-sided test, whose p-value is the upper tail in the
+direction of treatment benefit.
 }
 \examples{
 set.seed(42)

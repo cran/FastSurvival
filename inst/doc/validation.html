@@ -451,9 +451,9 @@ weight family, including the ordinary log-rank test recovered at
 </div>
 <div id="cox-hazard-ratio" class="section level1">
 <h1>Cox hazard ratio</h1>
-<p><code>coxph_fast()</code> returns the Pike-Halley Estimator (Homma,
-2025), a closed-form approximation to the maximizer of the Cox partial
-likelihood with the Breslow method for ties. The reference is therefore
+<p><code>coxph_fast()</code> returns the Pike-Halley Estimator, a
+closed-form approximation to the maximizer of the Cox partial likelihood
+with the Breslow method for ties. The reference is therefore
 <code>coxph()</code> with <code>ties = &quot;breslow&quot;</code> (its default is
 the Efron method). We report the log hazard ratio from both; the sign
 convention is the same and <code>side</code> does not affect the point
@@ -913,9 +913,7 @@ Processes and Survival Analysis</em>. New York: John Wiley &amp;
 Sons.</p>
 <p>Cox, D. R. (1972). Regression models and life-tables. <em>Journal of
 the Royal Statistical Society. Series B (Methodological)</em>, 34(2),
-187-220.</p>
-<p>Homma, G. (2025). One step from Pike to Cox: a closed-form hazard
-ratio estimator. <em>Manuscript under review.</em></p>
+187-202.</p>
 <p>Royston, P., &amp; Parmar, M. K. B. (2013). Restricted mean survival
 time: an alternative to the hazard ratio for the design and analysis of
 randomized trials with a time-to-event outcome. <em>BMC Medical Research

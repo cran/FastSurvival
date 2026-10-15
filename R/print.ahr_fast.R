@@ -1,5 +1,9 @@
 #' Print an ahr_fast object
 #'
+#' The p-value column is labeled \code{Pr(>|z|)} for a two-sided test and
+#' \code{Pr(<z)} for a one-sided test, whose p-value is the lower tail in the
+#' direction of treatment benefit.
+#'
 #' @param x an object of class \code{"ahr_fast"}
 #' @param digits number of significant digits to print
 #' @param ... further arguments (currently ignored)
@@ -42,7 +46,8 @@ print.ahr_fast <- function(x, digits = max(3L, getOption("digits") - 3L),
     dimnames = list(
       "average hazard ratio (treatment / control)",
       c("Est.", sprintf("lower %g%%", ci_pct),
-        sprintf("upper %g%%", ci_pct), "z", "Pr(>|z|)")
+        sprintf("upper %g%%", ci_pct), "z",
+        if (side == 1L) "Pr(<z)" else "Pr(>|z|)")
     )
   )
   printCoefmat(cmat, digits = digits, has.Pvalue = TRUE,

@@ -13,11 +13,14 @@ ahr_fast(
   conf.level = 0.95,
   tau = NULL,
   null.ahr = 1,
-  presorted = FALSE
+  presorted = FALSE,
+  data = NULL
 )
 }
 \arguments{
-\item{time}{vector of right-censored event times}
+\item{time}{vector of right-censored event times
+Alternatively, a formula \code{Surv(time, event) ~ group}, with the
+variables in \code{data}; see \code{\link{formula_interface}}.}
 
 \item{event}{0/1 (or logical) event indicators, 1 for an event}
 
@@ -25,7 +28,9 @@ ahr_fast(
 
 \item{control}{the value of \code{group} that denotes the reference (control)
 group. The average hazard ratio is reported for the other group relative to
-it.}
+it.
+With the formula interface it defaults to the first level of the
+group variable.}
 
 \item{side}{1 for a one-sided test in the direction of treatment benefit
 (average hazard ratio below \code{null.ahr}) or 2 for a two-sided test
@@ -45,6 +50,10 @@ used for the Z statistic and p-value (default 1)}
 ascending order so that each group's observations are also ascending; this
 skips the internal sort (default \code{FALSE})
 The order is checked, and an error is given when it does not hold.}
+
+\item{data}{A data frame in which the variables of a formula given as
+\code{time} are evaluated. Used only with the formula interface; see
+\code{\link{formula_interface}}.}
 }
 \value{
 An object of class \code{"ahr_fast"}, a list with elements
@@ -57,6 +66,9 @@ An object of class \code{"ahr_fast"}, a list with elements
   comparison-group share), \code{null.share}, \code{null.ahr}, \code{theta}
   (the two group shares), \code{var.theta1}, \code{var.theta2},
   \code{side}, \code{tau}, \code{n} (the two group sizes) and \code{groups}.
+  The object also has the class \code{"fastsurv"}, whose
+  \code{as.data.frame()}, \code{coef()}, and \code{confint()} methods
+  are described in \code{\link{as.data.frame.fastsurv}}.
 }
 \description{
 Estimates the average hazard ratio of Kalbfleisch and Prentice (1981) between
@@ -105,6 +117,10 @@ obs <- pmin(c(time1, time2), cens)
 event <- as.integer(c(time1, time2) <= cens)
 group <- rep(c(0, 1), each = n)
 ahr_fast(obs, event, group, control = 0, tau = 8)
+
+# Formula interface
+d <- data.frame(obs, event, group)
+ahr_fast(Surv(obs, event) ~ group, data = d, tau = 8)
 }
 \references{
 Kalbfleisch, J. D., & Prentice, R. L. (1981). Estimation of the average

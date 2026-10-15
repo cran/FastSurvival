@@ -23,8 +23,24 @@
 #' does not carry the separate null and alternative columns or the alpha and beta
 #' spending of an analytic design report. When the summary has several blocks
 #' (arms of \code{\link{pairwise_fast}} output or subgroup populations), each
-#' block is printed under its own heading. The underlying object is an ordinary
-#' data frame, so the unrounded values remain available by subsetting it directly.
+#' block is printed under its own heading. The object is a data frame with an
+#' additional class, so the unrounded values remain available by subsetting
+#' it. A selection of rows that keeps, in every block, all the looks in their
+#' original order (for example one population or one arm) is printed as a
+#' report. Any other selection of rows, such as some of the looks or rows in a
+#' different order, is printed as an ordinary data frame, because the
+#' boundaries and the information fractions refer to all the looks of the
+#' design. A selection of columns keeps the class but not the boundary
+#' settings, and is printed as an ordinary data frame, as is a selection
+#' without any look row. Only a selection by \code{x[i, ]} keeps the boundary
+#' settings; a selection by \code{subset()} or by \code{x[i, j]}, even with all
+#' the columns, is printed as an ordinary data frame. Results combined by
+#' \code{rbind()} keep the attributes of the first result only, which include a
+#' copy of its rows. The report is therefore printed only when the rows of
+#' every block equal those of the first result; rows that differ, such as
+#' those of a population summarized with other boundaries, make the whole
+#' object print as an ordinary data frame, even when the block has the same
+#' name in both results.
 #'
 #' @param x An object of class \code{"simsummary_fast"} from
 #'   \code{\link{simsummary_fast}}.
@@ -34,7 +50,7 @@
 #'
 #' @return The object \code{x}, invisibly.
 #'
-#' @seealso \code{\link{simsummary_fast}}.
+#' @seealso \code{\link{simsummary_fast}}, \code{\link{plot.simsummary_fast}}.
 #'
 #' @export
 print.simsummary_fast <- function(x, digits = 4, ...) {
@@ -45,6 +61,55 @@ print.simsummary_fast <- function(x, digits = 4, ...) {
   is_z    <- !is.null(bd) && identical(bd$mode, "z")
   has_fut <- is_z && !is.null(bd$futility)
   has_col <- function(nm) nm %in% names(dat)
+
+  # A selection of columns keeps the class but not the boundary attribute,
+  # and may lack the columns of the report; such a subset, or one without any
+  # look row, is printed as an ordinary data frame.
+  need <- c("look", "population", "cum.reject", "prob.stop.efficacy",
+            if (has_fut) "prob.stop.futility")
+  if (is.null(bd) || !all(need %in% names(dat)) ||
+      !any(dat$look != "overall")) {
+    print(dat, ...)
+    return(invisible(x))
+  }
+
+  # The boundaries are stored per look of the design, so the report is printed
+  # only when every block keeps all the looks in their original order; any
+  # other selection of rows is printed as an ordinary data frame. So is an
+  # object whose rows differ from the copy stored with the boundaries, such as
+  # one combined by rbind() with rows of another result, even when the blocks
+  # have the same names. 'rows' are the rows of one block (looks and, when
+  # kept, the overall row) and 'key' its arm and population.
+  rows_known <- function(rows, key) {
+    if (is.null(bd$rows)) return(TRUE)
+    ref <- bd$rows
+    for (nm in names(key)) {
+      if (!(nm %in% names(ref))) return(FALSE)
+      ref <- ref[as.character(ref[[nm]]) == as.character(key[[nm]]), ,
+                 drop = FALSE]
+    }
+    ref <- ref[match(as.character(rows$look), as.character(ref$look)), ,
+               drop = FALSE]
+    if (anyNA(ref$look)) return(FALSE)
+    cols <- intersect(names(rows), names(ref))
+    isTRUE(all.equal(ref[, cols, drop = FALSE], rows[, cols, drop = FALSE],
+                     check.attributes = FALSE))
+  }
+  if (!is.null(bd$looks)) {
+    blk_cols <- c(if ("arm" %in% names(dat)) "arm", "population")
+    blk_keys <- unique(dat[, blk_cols, drop = FALSE])
+    for (b in seq_len(nrow(blk_keys))) {
+      in_blk <- dat$population == blk_keys$population[b]
+      if ("arm" %in% names(dat)) in_blk <- in_blk & dat$arm == blk_keys$arm[b]
+      blk_looks <- as.character(dat$look[in_blk & dat$look != "overall"])
+      if (!identical(blk_looks, bd$looks) ||
+          !rows_known(dat[in_blk, , drop = FALSE],
+                      blk_keys[b, , drop = FALSE])) {
+        print(dat, ...)
+        return(invisible(x))
+      }
+    }
+  }
 
   fmt <- function(v, d) {
     out <- formatC(as.numeric(v), format = "f", digits = d)
@@ -86,7 +151,7 @@ print.simsummary_fast <- function(x, digits = 4, ...) {
     if (has_col("n.event.mean")) {
       ev  <- lk$n.event.mean
       fin <- ev[nlook]
-      if (is.finite(fin) && fin > 0) info_frac <- ev / fin
+      if (nlook > 0L && is.finite(fin) && fin > 0) info_frac <- ev / fin
     } else if (has_col("look.value")) {
       lv <- lk$look.value
       if (any(is.finite(lv)) && max(lv, na.rm = TRUE) > 0) {
@@ -102,8 +167,8 @@ print.simsummary_fast <- function(x, digits = 4, ...) {
     if (has_col("n.event.mean"))    t1[["Events (s)"]] <- fmt(lk$n.event.mean, 1)
     if (has_col("n.enrolled.mean")) t1[["Sample (n)"]] <- fmt(lk$n.enrolled.mean, 1)
     if (is_z) {
-      t1[["Efficacy Z"]] <- fmt(eff_b, digits)
-      if (has_fut) t1[["Futility Z"]] <- fmt(bd$futility, digits)
+      t1[["Efficacy Bound"]] <- fmt(eff_b, digits)
+      if (has_fut) t1[["Futility Bound"]] <- fmt(bd$futility, digits)
     } else {
       t1[["Nominal p"]] <- fmt(eff_b, digits)
     }

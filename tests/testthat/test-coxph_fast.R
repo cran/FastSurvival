@@ -226,3 +226,43 @@ test_that("coxph_fast: presorted = TRUE checks the order", {
   expect_error(coxph_fast(time, event, group, control = 0, presorted = TRUE, strata = c(1, 1, 1, 2, 2, 2)), "presorted = FALSE")
   expect_error(coxph_fast(c(1, 3, 2, 4, 5, 6), event, group, control = 0, presorted = TRUE, strata = c(1, 2, 1, 2, 1, 2)), "presorted = FALSE")
 })
+
+test_that("coxph_fast: the formula interface gives the vector result", {
+  set.seed(63)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1), ee = rbinom(n, 1, 0.8),
+                  g = rep(c(1, 0), n / 2))
+  d$s <- rep(c("x", "y", "z"), n / 3)
+  ref <- coxph_fast(d$tt, d$ee, d$g, control = 0)
+  # The control group defaults to the smallest value of g
+  expect_identical(coxph_fast(Surv(tt, ee) ~ g, data = d), ref)
+  expect_identical(coxph_fast(Surv(tt, ee) ~ g, d, side = 1),
+                   coxph_fast(d$tt, d$ee, d$g, control = 0, side = 1))
+  expect_identical(coxph_fast(Surv(tt, ee) ~ g, d, control = 1),
+                   coxph_fast(d$tt, d$ee, d$g, control = 1))
+  # An explicit NULL control also gives the first level
+  expect_identical(coxph_fast(Surv(tt, ee) ~ g, d, control = NULL), ref)
+  expect_identical(class(ref), c("coxph_fast", "fastsurv"))
+  expect_identical(coxph_fast(Surv(tt, ee) ~ g + strata(s), data = d),
+                   coxph_fast(d$tt, d$ee, d$g, control = 0, strata = d$s))
+  expect_error(coxph_fast(Surv(tt, ee) ~ g, d, 0), "right-hand side")
+  expect_error(coxph_fast(d$tt, d$ee, d$g, control = 0, data = d),
+               "only with a formula")
+})
+
+test_that("coxph_fast: the formula interface passes every argument", {
+  set.seed(60)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1) + 0.1, ee = rbinom(n, 1, 0.8),
+                  g = rep(c("b", "a"), n / 2), s = rep(c("x", "y", "z"), n / 3))
+  d1 <- d[order(d$tt), ]
+  d2 <- d[order(d$s, d$tt), ]
+  expect_identical(
+    coxph_fast(Surv(tt, ee) ~ g + strata(s), d2, control = "b", side = 1,
+               conf.level = 0.9, presorted = TRUE),
+    coxph_fast(d2$tt, d2$ee, d2$g, "b", side = 1, conf.level = 0.9,
+               presorted = TRUE, strata = d2$s))
+  # The control group defaults to the first value in sorted order
+  expect_identical(coxph_fast(Surv(tt, ee) ~ g, d),
+                   coxph_fast(d$tt, d$ee, d$g, control = "a"))
+})

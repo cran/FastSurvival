@@ -14,7 +14,11 @@
 #' scenario. Those arguments override the shared arguments in \code{shared}, so
 #' that parameters held constant across scenarios (sample size, accrual, dropout)
 #' are written once in \code{shared} and only the varying parameters are written
-#' per scenario. The survival specification follows \code{\link{simdata_fast}}
+#' per scenario. A hazard and a median are alternative specifications of the
+#' same quantity, so a scenario that gives one of them also replaces the other
+#' in \code{shared}: \code{e.median} in a scenario removes a shared
+#' \code{e.hazard}, and likewise for \code{d.*}, \code{h01.*}, \code{h02.*},
+#' \code{h12.*}, and \code{h12.switch.*}. The survival specification follows \code{\link{simdata_fast}}
 #' exactly: \code{e.hazard} or \code{e.median} given as a two-element list
 #' (control first, treatment second) for the two groups, with \code{e.time}
 #' supplying the breakpoints of a piecewise-exponential hazard (last element
@@ -96,6 +100,10 @@ gen_scenario_fast <- function(scenarios, shared = list(), labels = NULL) {
                        paste("Scenario", seq_len(n_scn)))
   }
 
+  pre <- c("e", "d", "h01", "h02", "h12", "h12.switch")
+  alt_spec <- c(stats::setNames(paste0(pre, ".median"), paste0(pre, ".hazard")),
+                stats::setNames(paste0(pre, ".hazard"), paste0(pre, ".median")))
+
   out <- vector("list", n_scn)
   for (k in seq_len(n_scn)) {
     sk <- scenarios[[k]]
@@ -107,8 +115,14 @@ gen_scenario_fast <- function(scenarios, shared = list(), labels = NULL) {
     lab_k <- if (!is.null(sk[["label"]])) as.character(sk[["label"]]) else base_lab[k]
     sk[["label"]] <- NULL
 
+    # A scenario that gives one of a hazard / median pair replaces the other
+    # member of the pair in 'shared', so that both are never passed on.
     merged <- shared
-    for (nm in names(sk)) merged[[nm]] <- sk[[nm]]
+    for (nm in names(sk)) {
+      other <- alt_spec[nm]
+      if (!is.na(other) && !(other %in% names(sk))) merged[[other]] <- NULL
+      merged[[nm]] <- sk[[nm]]
+    }
 
     if (is.null(merged[["e.hazard"]]) && is.null(merged[["e.median"]])) {
       stop(sprintf("Scenario '%s' has no 'e.hazard' or 'e.median'", lab_k))

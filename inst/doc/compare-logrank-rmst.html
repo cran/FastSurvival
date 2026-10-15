@@ -363,9 +363,9 @@ size.</p>
 <h2>Design and sample size</h2>
 <p>The control group has a median survival of 12 months. The sample size
 is set so that the proportional-hazards scenario, with a hazard ratio of
-0.75, has 90% power at a one-sided 0.025 level. The events are obtained
-from the Schoenfeld formula and inflated to a sample size with the
-Lachin-Foulkes method through <code>gsDesign::nSurv</code>, given 12
+0.75, has 90% power at a one-sided 0.025 level. The sample size and the
+expected number of events are computed with the method of Lachin and
+Foulkes (1986), the default of <code>gsDesign::nSurv</code>, given 12
 months of accrual, 36 months of minimum follow-up, and a 5% annual
 dropout. The same sample size is then applied unchanged to all three
 scenarios.</p>
@@ -559,9 +559,6 @@ entry, losses to follow-up, noncompliance, and stratification.
 time: an alternative to the hazard ratio for the design and analysis of
 randomized trials with a time-to-event outcome. <em>BMC Medical Research
 Methodology</em>, 13, 152.</p>
-<p>Schoenfeld, D. A. (1983). Sample-size formula for the
-proportional-hazards regression model. <em>Biometrics</em>, 39(2),
-499-503.</p>
 <p>Uno, H., Claggett, B., Tian, L., et al. (2014). Moving beyond the
 hazard ratio in quantifying the between-group difference in survival
 analysis. <em>Journal of Clinical Oncology</em>, 32(22), 2380-2385.</p>

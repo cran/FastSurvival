@@ -19,3 +19,13 @@ test_that("print.ahr_fast prints the hazard shares and the average hazard ratio"
   xn$ahr <- NA_real_
   expect_output(print(xn), "Estimate not available")
 })
+
+test_that("print.ahr_fast labels the p-value by the side of the test", {
+  d <- make_print_data()
+  x2 <- ahr_fast(d$tte, d$event, d$group, control = 1, tau = 10)
+  expect_output(print(x2), "Pr(>|z|)", fixed = TRUE)
+  x1 <- ahr_fast(d$tte, d$event, d$group, control = 1, tau = 10, side = 1)
+  out1 <- utils::capture.output(print(x1))
+  expect_true(any(grepl("Pr(<z)", out1, fixed = TRUE)))
+  expect_false(any(grepl("Pr(>|z|)", out1, fixed = TRUE)))
+})

@@ -246,8 +246,8 @@ microbenchmark(
 # ahr_fast vs AHR::ahrKM
 
 The Kalbfleisch-Prentice average hazard ratio is benchmarked against `ahrKM()`
-from the AHR package, which Dormuth et al. (2024) used to compute the average
-hazard ratio. Because AHR has been archived on CRAN, this benchmark is shown as a
+from the AHR package (Dormuth et al. (2024) computed the average hazard ratio
+with the AHR package). Because AHR has been archived on CRAN, this benchmark is shown as a
 static block rather than a live chunk. Install AHR with
 `remotes::install_github("cran/AHR")` and run the block to reproduce it.
 
@@ -302,13 +302,15 @@ The per-call gains carry over to complete simulation studies. The scripts in
 FastSurvival and with other simulation packages and record the operating
 characteristics and the elapsed time. For a two-arm group-sequential design
 with 600 subjects and two event-driven log-rank analyses, the time per
-simulated trial was about 200 times longer with simtrial and about 80 times
-longer with TrialSimulator than with FastSurvival, and for a crossover after a
+simulated trial was about two orders of magnitude longer with simtrial and
+with TrialSimulator than with FastSurvival, and for a crossover after a
 positive progression-free survival analysis in an illness-death model it was
-about 50 times longer with TrialSimulator. The power and the analysis times
-agreed within Monte Carlo error. With FastSurvival, generating 10,000 such
-trials and computing the log-rank and RMST statistics at the two looks each
-took about one second. The max-combo p-values, one multivariate normal integral
+more than an order of magnitude longer with TrialSimulator. The ratios varied
+between runs on the same computer. The power and the analysis times agreed
+within Monte Carlo error. In a separate benchmark with the same sample size and
+looks and a delayed treatment effect, generating 10,000 trials and computing
+the log-rank and RMST statistics at the two looks with FastSurvival each took
+on the order of one second. The max-combo p-values, one multivariate normal integral
 per trial and look, take most of the computing time; when only the decisions at
 given nominal levels are needed, the `mc.alpha` argument of `analysis_fast()`
 restricts the integration to the p-values near those levels.

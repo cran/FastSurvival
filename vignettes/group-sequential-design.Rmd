@@ -30,7 +30,7 @@ proportional hazards, where gsDesign and similar packages are accurate, but
 that once the simulation agrees on a case they can handle, the same machinery
 can be trusted for cases they cannot, such as non-proportional hazards or
 data-dependent analysis timing. The whole vignette, with 10,000 simulated
-trials for the main design, runs in a few seconds.
+trials for the main design, runs in well under a minute.
 
 ```{r load}
 library(FastSurvival)
@@ -43,14 +43,16 @@ vedotin versus the investigator's choice of chemotherapy in patients with
 recurrent or metastatic cervical cancer (Vergote et al., 2024). The primary end
 point was overall survival, with patients randomly assigned in a 1:1 ratio.
 
-The design enrolled approximately 482 patients and was powered at 90% on the
-occurrence of 336 total deaths, with one prespecified interim efficacy analysis
-at about 75% of information (252 of 336 events). The overall two-sided type I
-error was controlled at 5% using the Lan-DeMets spending function with an
+The design planned to enroll approximately 482 patients and was powered at 90%
+on the occurrence of 336 total deaths, with one prespecified interim efficacy
+analysis at about 75% of information (252 of 336 events). Overall survival was
+tested at a two-sided 5% level with the Lan-DeMets spending function with an
 O'Brien-Fleming boundary. For planning we take an exponential overall survival
 with a median of 12.9 months in the tisotumab vedotin group and 9.0 months in
 the chemotherapy group (a hazard ratio of about 0.70), accrual over 23 months,
-and a 5% annual dropout rate in each group.
+and a 5% annual dropout rate in each group, the assumptions in Section 9.2 of
+the trial protocol, which is available with the full text of Vergote et al.
+(2024).
 
 # Simulating the trial
 
@@ -118,6 +120,13 @@ expected sample size, and expected analysis time across the looks.
 ```{r summary, eval = has_gsd}
 oc <- simsummary_fast(res, p.col = "logrank.p", alpha = spend_alpha)
 oc
+```
+
+`plot()` draws the cumulative probability of stopping for efficacy at each
+look, here against the expected number of events.
+
+```{r summary-plot, eval = has_gsd, fig.width = 6, fig.height = 4.5}
+plot(oc, xaxis = "events")
 ```
 
 # Comparison with the closed-form design
@@ -207,7 +216,9 @@ The max-combo p-value requires a multivariate normal integral for every
 simulated trial and look, which dominates the computing time. When only the
 decisions at the nominal levels are needed, `mc.alpha` computes the integral
 only for the p-values that the Bonferroni bounds do not already place on one
-side of the level; the decisions are the same as with every p-value integrated.
+side of the level. The decisions that the bounds settle are those of the
+exact p-values, and the others carry the error of the randomized integration,
+as without `mc.alpha`.
 The nominal levels below are those of the log-rank design and are used for
 illustration only: the correlation between the max-combo statistics at the two
 looks differs from that of the log-rank statistic, so a formal design would

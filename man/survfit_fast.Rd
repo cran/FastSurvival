@@ -10,12 +10,15 @@ survfit_fast(
   t_eval,
   conf.level = 0.95,
   conf.type = "log",
-  presorted = TRUE
+  presorted = TRUE,
+  data = NULL
 )
 }
 \arguments{
 \item{t_sorted}{A numeric vector of event or censoring times. Must be
-sorted in ascending order when \code{presorted = TRUE}.}
+sorted in ascending order when \code{presorted = TRUE}.
+Alternatively, a formula \code{Surv(time, event) ~ 1}, with the
+variables in \code{data}; see \code{\link{formula_interface}}.}
 
 \item{e_sorted}{An integer or numeric vector of event indicators
 (1 = event, 0 = censored), aligned with \code{t_sorted}.}
@@ -32,7 +35,12 @@ Defaults to \code{"log"}.}
 
 \item{presorted}{A logical value. If \code{TRUE} (default), \code{t_sorted}
 and \code{e_sorted} are assumed to be sorted in ascending order of time.
-If \code{FALSE}, the vectors are sorted internally before computation.}
+If \code{FALSE}, the vectors are sorted internally before computation.
+With the formula interface the default is \code{FALSE}.}
+
+\item{data}{A data frame in which the variables of a formula given as
+\code{t_sorted} are evaluated. Used only with the formula interface; see
+\code{\link{formula_interface}}.}
 }
 \value{
 An object of class \code{"survfit_fast"}, which is a named numeric
@@ -44,6 +52,9 @@ An object of class \code{"survfit_fast"}, which is a named numeric
   \code{t_eval}, \code{conf.level}, and \code{conf.type}.
   Returns a vector of \code{NA_real_} values (still with class
   \code{"survfit_fast"}) when \code{n} is zero.
+  The object also has the class \code{"fastsurv"}, whose
+  \code{as.data.frame()}, \code{coef()}, and \code{confint()} methods
+  are described in \code{\link{as.data.frame.fastsurv}}.
 }
 \description{
 Computes the Kaplan-Meier survival probability at a specified time point,
@@ -120,6 +131,10 @@ survfit_fast(t_raw, e_raw, t_eval = 10, presorted = FALSE)
 library(survival)
 fit <- survfit(Surv(t_raw, e_raw) ~ 1, conf.type = "plain")
 summary(fit, times = 10)
+
+# Formula interface (the data are sorted internally)
+d <- data.frame(time = t_raw, status = e_raw)
+survfit_fast(Surv(time, status) ~ 1, data = d, t_eval = 10)
 
 }
 \references{

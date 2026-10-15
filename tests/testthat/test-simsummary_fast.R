@@ -264,21 +264,6 @@ test_that("simsummary_fast errors when futility supplied in p mode", {
 })
 
 # ------------------------------------------------------------------ #
-#  print method
-# ------------------------------------------------------------------ #
-
-test_that("print.simsummary_fast returns its input invisibly", {
-  df <- data.frame(sim = 1:4, look = 1L, logrank.z = c(-2.5, -1.0, -3.0, 0.5),
-                   n.event = c(50, 52, 48, 55), cutoff = rep(24, 4))
-  res <- simsummary_fast(df, eff.col = "logrank.z", efficacy = -1.96)
-  expect_output(print(res), "Group-Sequential Operating Characteristics")
-  # capture.output keeps the printed report out of the test log
-  utils::capture.output(vis <- withVisible(print(res)))
-  expect_false(vis$visible)
-  expect_identical(vis$value, res)
-})
-
-# ------------------------------------------------------------------ #
 #  End-to-end with analysis_fast output
 # ------------------------------------------------------------------ #
 

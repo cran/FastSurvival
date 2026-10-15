@@ -59,7 +59,8 @@ The scheme codes are: 0 = Fleming-Harrington G(rho, gamma) with weight
 with weight \code{min(1 / S_minus, max_weight)}, where \code{max_weight}
 is the reciprocal of the pooled Kaplan-Meier value just before
 \code{t_star}, i.e. the product over event times strictly less than
-\code{t_star} as in nphRCT (and is 1 when \code{t_star = 0});
+\code{t_star} as in nphRCT (and is 1 when \code{t_star = 0}, and infinite,
+so that the weights are not capped, when that product is 0);
 2 = Gehan-Breslow with weight \code{n_j}; 3 = Tarone-Ware with weight
 \code{sqrt(n_j)}. Here \code{S_minus} is the left-continuous pooled
 Kaplan-Meier estimate just prior to each event time, initialized at 1.

@@ -17,5 +17,7 @@
 \code{x}, invisibly
 }
 \description{
-Print an ahr_fast object
+The p-value column is labeled \code{Pr(>|z|)} for a two-sided test and
+\code{Pr(<z)} for a one-sided test, whose p-value is the lower tail in the
+direction of treatment benefit.
 }

@@ -13,7 +13,11 @@
 #' the last observed time when no later event exists, closes the interval). This
 #' is the convention used by \code{survfit}, including its tolerance of
 #' \code{sqrt(.Machine$double.eps)} when comparing the estimate with 0.5. The
-#' point estimate is the same for both variance methods.
+#' point estimate is the same for both variance methods. When the estimate
+#' stays at 0.5 up to an infinite observed time (for example a subject without
+#' a finite event or dropout time in simulated data), the midpoint is not
+#' defined, and the median of that group and the statistics that depend on it
+#' are \code{NA}.
 #'
 #' Two variance methods are available through the \code{method} argument. With
 #' \code{method = "km"} the variance of the estimated median follows the
@@ -34,11 +38,16 @@
 #' difference indicates a longer median survival time under treatment.
 #'
 #' @param time Numeric vector of event or censoring times.
+#'   Alternatively, a formula \code{Surv(time, event) ~ group} or
+#'   \code{Surv(time, event) ~ 1}, with the variables in
+#'   \code{data}; see \code{\link{formula_interface}}.
 #' @param event Integer vector, 1 for an event and 0 for censoring.
 #' @param group Optional grouping vector with exactly two distinct levels for a
 #'   two-group comparison. If omitted, a single-group median is returned.
 #' @param control The level of \code{group} that denotes the control group.
 #'   Required when \code{group} is supplied.
+#'   With the formula interface it defaults to the first level of the
+#'   group variable.
 #' @param side Either 2 for a two-sided test or 1 for a one-sided test of
 #'   treatment superiority (difference greater than 0).
 #' @param conf.level Confidence level for the intervals.
@@ -55,12 +64,18 @@
 #'   and \code{group} are already sorted in ascending order of \code{time}, to
 #'   skip the internal sort. Defaults to \code{FALSE}.
 #'   The order is checked, and an error is given when it does not hold.
+#' @param data A data frame in which the variables of a formula given as
+#'   \code{time} are evaluated. Used only with the formula interface; see
+#'   \code{\link{formula_interface}}.
 #'
 #' @return A named numeric vector of class \code{"medsurv_fast"}. For a single
 #'   group the elements are the median, its standard error and confidence
 #'   limits. For two groups the elements are the control and treatment medians,
 #'   their difference, the standard errors, the confidence limits and the Wald
 #'   statistics for the difference.
+#'   The object also has the class \code{"fastsurv"}, whose
+#'   \code{as.data.frame()}, \code{coef()}, and \code{confint()} methods
+#'   are described in \code{\link{as.data.frame.fastsurv}}.
 #'
 #' @examples
 #' set.seed(1)
@@ -73,16 +88,34 @@
 #' medsurv_fast(time, event, group = g, control = 0)
 #' medsurv_fast(time, event, group = g, control = 0, method = "nph")
 #'
+#' # Formula interface
+#' d <- data.frame(time, event, g)
+#' medsurv_fast(Surv(time, event) ~ g, data = d)
+#'
 #' @references
-#' Fleming, T. R., & Harrington, D. P. (1991). Counting Processes and Survival
-#' Analysis. New York: John Wiley & Sons.
+#' Fleming, T. R., & Harrington, D. P. (1991). \emph{Counting Processes and
+#' Survival Analysis}. New York: John Wiley & Sons.
 #'
 #' @importFrom stats qnorm pnorm sd
 #' @export
 medsurv_fast <- function(time, event, group = NULL, control = NULL,
                          side = 2, conf.level = 0.95, conf.type = "log",
                          method = c("km", "nph"), bw = NULL,
-                         presorted = FALSE) {
+                         presorted = FALSE, data = NULL) {
+  # Formula interface: Surv(time, event) ~ group or ~ 1 evaluated in 'data'
+  if (inherits(time, "formula")) {
+    f <- fastsurv_formula(time, data,
+                          event = if (!missing(event)) event,
+                          group = group, group_mode = "optional",
+                          fun = "medsurv_fast()")
+    if (is.null(control)) control <- f$control
+    return(medsurv_fast(f$time, f$event, group = f$group, control = control,
+                        side = side, conf.level = conf.level,
+                        conf.type = conf.type, method = method, bw = bw,
+                        presorted = presorted))
+  }
+  if (!is.null(data)) stop("'data' is used only with a formula")
+
   method <- match.arg(method)
 
   n_obs <- length(time)
@@ -98,6 +131,10 @@ medsurv_fast <- function(time, event, group = NULL, control = NULL,
   if (!all(event %in% c(0, 1))) {
     stop("event must be coded as 0 (censored) or 1 (event).")
   }
+  # Type, sign, and coding of the inputs, as in the other analysis functions
+  # (a factor 'event' would otherwise be replaced by its integer codes, and a
+  # character 'time' sorted as text).
+  check_time_event(time, event)
   if (!(side %in% c(1, 2))) {
     stop("side must be 1 or 2.")
   }
@@ -253,6 +290,6 @@ medsurv_fast <- function(time, event, group = NULL, control = NULL,
   attr(out, "control") <- control_label
   attr(out, "treatment") <- treatment_label
   attr(out, "method") <- method
-  class(out) <- "medsurv_fast"
+  class(out) <- c("medsurv_fast", "fastsurv")
   out
 }

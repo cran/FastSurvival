@@ -23,3 +23,15 @@ survdiff_fast(ovarian$futime, ovarian$fustat, ovarian$rx,
 coxph_fast(ovarian$futime, ovarian$fustat, ovarian$rx,
            control = 1, side = 1)
 
+## ----formula, eval = requireNamespace("survival", quietly = TRUE)-------------
+fit <- coxph_fast(Surv(futime, fustat) ~ rx, data = ovarian, side = 1)
+as.data.frame(fit)
+exp(confint(fit))
+
+as.data.frame(rmst_fast(Surv(futime, fustat) ~ rx, data = ovarian,
+                        tau = 500))
+
+## ----km-plot, eval = requireNamespace("survival", quietly = TRUE), fig.width = 7, fig.height = 5----
+km <- kmcurve_fast(Surv(futime, fustat) ~ rx, data = ovarian)
+plot(km, risk_table = TRUE, conf.style = "band")
+

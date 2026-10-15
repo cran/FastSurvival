@@ -45,6 +45,9 @@ spend_alpha
 oc <- simsummary_fast(res, p.col = "logrank.p", alpha = spend_alpha)
 oc
 
+## ----summary-plot, eval = has_gsd, fig.width = 6, fig.height = 4.5------------
+plot(oc, xaxis = "events")
+
 ## ----closed-form, eval = has_gsd----------------------------------------------
 looks <- c(252, 336)
 theta <- log(12.9 / 9.0) / 2

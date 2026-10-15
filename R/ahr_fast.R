@@ -36,11 +36,15 @@
 #' Uno-Horiguchi average hazard with survival weight.
 #'
 #' @param time vector of right-censored event times
+#'   Alternatively, a formula \code{Surv(time, event) ~ group}, with the
+#'   variables in \code{data}; see \code{\link{formula_interface}}.
 #' @param event 0/1 (or logical) event indicators, 1 for an event
 #' @param group vector with exactly two distinct values identifying the groups.
 #' @param control the value of \code{group} that denotes the reference (control)
 #'   group. The average hazard ratio is reported for the other group relative to
 #'   it.
+#'   With the formula interface it defaults to the first level of the
+#'   group variable.
 #' @param side 1 for a one-sided test in the direction of treatment benefit
 #'   (average hazard ratio below \code{null.ahr}) or 2 for a two-sided test
 #'   (default 2).
@@ -55,6 +59,9 @@
 #'   ascending order so that each group's observations are also ascending; this
 #'   skips the internal sort (default \code{FALSE})
 #'   The order is checked, and an error is given when it does not hold.
+#' @param data A data frame in which the variables of a formula given as
+#'   \code{time} are evaluated. Used only with the formula interface; see
+#'   \code{\link{formula_interface}}.
 #' @return An object of class \code{"ahr_fast"}, a list with elements
 #'   \code{ahr} (the average hazard ratio, comparison vs reference),
 #'   \code{log.ahr}, \code{se.loghr}, \code{lower}, \code{upper},
@@ -65,6 +72,9 @@
 #'   comparison-group share), \code{null.share}, \code{null.ahr}, \code{theta}
 #'   (the two group shares), \code{var.theta1}, \code{var.theta2},
 #'   \code{side}, \code{tau}, \code{n} (the two group sizes) and \code{groups}.
+#'   The object also has the class \code{"fastsurv"}, whose
+#'   \code{as.data.frame()}, \code{coef()}, and \code{confint()} methods
+#'   are described in \code{\link{as.data.frame.fastsurv}}.
 #' @references
 #' Kalbfleisch, J. D., & Prentice, R. L. (1981). Estimation of the average
 #' hazard ratio. \emph{Biometrika}, \emph{68}(1), 105-112.
@@ -84,9 +94,26 @@
 #' event <- as.integer(c(time1, time2) <= cens)
 #' group <- rep(c(0, 1), each = n)
 #' ahr_fast(obs, event, group, control = 0, tau = 8)
+#'
+#' # Formula interface
+#' d <- data.frame(obs, event, group)
+#' ahr_fast(Surv(obs, event) ~ group, data = d, tau = 8)
 ahr_fast <- function(time, event, group, control, side = 2,
                      conf.level = 0.95, tau = NULL, null.ahr = 1,
-                     presorted = FALSE) {
+                     presorted = FALSE, data = NULL) {
+
+  # Formula interface: Surv(time, event) ~ group evaluated in 'data'
+  if (inherits(time, "formula")) {
+    f <- fastsurv_formula(time, data,
+                          event = if (!missing(event)) event,
+                          group = if (!missing(group)) group,
+                          group_mode = "required", fun = "ahr_fast()")
+    if (missing(control) || is.null(control)) control <- f$control
+    return(ahr_fast(f$time, f$event, f$group, control = control,
+                    side = side, conf.level = conf.level, tau = tau,
+                    null.ahr = null.ahr, presorted = presorted))
+  }
+  if (!is.null(data)) stop("'data' is used only with a formula")
 
   # Input validation
   if (!is.numeric(time)) stop("'time' must be numeric.")
@@ -98,6 +125,10 @@ ahr_fast <- function(time, event, group, control, side = 2,
   }
   if (anyNA(time) || anyNA(event) || anyNA(group)) {
     stop("'time', 'event' and 'group' must not contain missing values.")
+  }
+  if (!(is.numeric(event) || is.logical(event))) {
+    stop("'event' must be numeric or logical, not a factor or a character ",
+         "vector.")
   }
   # Validate before converting, so that a value such as 0.7 is not truncated.
   if (!all(event == 0 | event == 1)) stop("'event' must be 0 or 1.")
@@ -172,9 +203,9 @@ ahr_fast <- function(time, event, group, control, side = 2,
     # AHR = null.ahr, the comparison-group share equals null.ahr / (1 +
     # null.ahr) (which is 0.5 when null.ahr = 1). Using the comparison share
     # (rather than the reference share) aligns the sign of z with log(ahr).
-    # The comparison share is tested with its own variance (var.theta2), which
-    # matches the per-component test in the AHR package (the direct estimator
-    # does not force var.theta1 == var.theta2 in finite samples).
+    # The comparison share is tested with its own variance (var.theta2), as in
+    # the per-component test of the AHR package. Because theta2 = 1 - theta1,
+    # var.theta2 equals var.theta1 algebraically (up to rounding).
     se.theta <- sqrt(var.theta2)
     null.share <- null.ahr / (1 + null.ahr)
     z <- (theta2 - null.share) / se.theta
@@ -220,6 +251,6 @@ ahr_fast <- function(time, event, group, control, side = 2,
               p.value.loghr = p.value.loghr, null.ahr = null.ahr,
               theta = theta, var.theta1 = var.theta1, var.theta2 = var.theta2,
               side = side, tau = tau, n = n, groups = c(ref, cmp))
-  class(out) <- "ahr_fast"
+  class(out) <- c("ahr_fast", "fastsurv")
   out
 }

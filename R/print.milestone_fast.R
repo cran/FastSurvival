@@ -7,7 +7,11 @@
 #' shows the per-group milestone survival with its confidence interval, followed
 #' by the difference contrast (treatment minus control) with a confidence
 #' interval, the test statistic, and the p-value. The p-value follows the
-#' alternative recorded in the object.
+#' alternative recorded in the object. Its column is labeled
+#' \code{Pr(>|z|)} for a two-sided test, and for a one-sided test
+#' \code{Pr(>z)} (upper tail) with \code{"wald"} and \code{"mover"} or
+#' \code{Pr(<z)} (lower tail) with \code{"loglog"}, the direction of treatment
+#' benefit.
 #'
 #' @param x An object of class \code{"milestone_fast"} returned by
 #'   \code{\link{milestone_fast}}.
@@ -63,7 +67,15 @@ print.milestone_fast <- function(x, digits = max(1L, getOption("digits") - 3L),
   print(round(g_tab, digits = digits))
   cat("\n")
 
-  # Difference contrast (treatment minus control).
+  # Difference contrast (treatment minus control). A one-sided p-value is the
+  # tail in the direction of benefit, the lower tail for "loglog".
+  p_lab <- if (!identical(alt, "one.sided")) {
+    "Pr(>|z|)"
+  } else if (identical(x[["method"]], "loglog")) {
+    "Pr(<z)"
+  } else {
+    "Pr(>z)"
+  }
   con_mat <- matrix(
     c(x[["diff"]], x[["diff.lower"]], x[["diff.upper"]],
       x[["statistic"]], x[["p.value"]]),
@@ -73,7 +85,7 @@ print.milestone_fast <- function(x, digits = max(1L, getOption("digits") - 3L),
       c("Est.",
         sprintf("lower %g%%", ci_lab),
         sprintf("upper %g%%", ci_lab),
-        "z", "Pr(>|z|)")
+        "z", p_lab)
     )
   )
   printCoefmat(con_mat, digits = digits, has.Pvalue = TRUE, P.values = TRUE,

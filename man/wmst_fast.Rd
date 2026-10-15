@@ -13,11 +13,15 @@ wmst_fast(
   tau2 = NULL,
   side = 2,
   conf.level = 0.95,
-  presorted = FALSE
+  presorted = FALSE,
+  data = NULL
 )
 }
 \arguments{
-\item{time}{Numeric vector of event or censoring times.}
+\item{time}{Numeric vector of event or censoring times.
+Alternatively, a formula \code{Surv(time, event) ~ group} or
+\code{Surv(time, event) ~ 1}, with the variables in
+\code{data}; see \code{\link{formula_interface}}.}
 
 \item{event}{Integer vector, 1 for an event and 0 for censoring.}
 
@@ -25,7 +29,9 @@ wmst_fast(
 two-group comparison. If omitted, a single-group WMST is returned.}
 
 \item{control}{The level of \code{group} that denotes the control group.
-Required when \code{group} is supplied.}
+Required when \code{group} is supplied.
+With the formula interface it defaults to the first level of the
+group variable.}
 
 \item{tau1}{Lower limit of the window. Defaults to 0.}
 
@@ -33,7 +39,9 @@ Required when \code{group} is supplied.}
 to both groups is used (the minimum over groups of the maximum observed
 time), or the maximum observed time for a single group. A supplied value
 larger than that gives a warning, because the Kaplan-Meier curve is not
-estimated beyond it.}
+estimated beyond it. The window must be finite: when that default is
+infinite (for example when each group has a subject without a finite
+event or dropout time in simulated data), \code{tau2} must be supplied.}
 
 \item{side}{Either 2 for a two-sided test or 1 for a one-sided test of
 treatment superiority (difference greater than 0).}
@@ -44,6 +52,10 @@ treatment superiority (difference greater than 0).}
 and \code{group} are already sorted in ascending order of \code{time}, to
 skip the internal sort. Defaults to \code{FALSE}.
 The order is checked, and an error is given when it does not hold.}
+
+\item{data}{A data frame in which the variables of a formula given as
+\code{time} are evaluated. Used only with the formula interface; see
+\code{\link{formula_interface}}.}
 }
 \value{
 A named numeric vector of class \code{"wmst_fast"}. For a single
@@ -51,6 +63,9 @@ A named numeric vector of class \code{"wmst_fast"}. For a single
   For two groups the elements are the control and treatment WMST values,
   their difference, the standard errors, the confidence limits and the Wald
   statistics for the difference.
+  The object also has the class \code{"fastsurv"}, whose
+  \code{as.data.frame()}, \code{coef()}, and \code{confint()} methods
+  are described in \code{\link{as.data.frame.fastsurv}}.
 }
 \description{
 Estimates the window mean survival time (WMST) for a single group, or the
@@ -83,8 +98,12 @@ time <- pmin(tt, cc)
 event <- as.integer(tt <= cc)
 wmst_fast(time, event, group = g, control = 0, tau1 = 2, tau2 = 12)
 
+# Formula interface
+d <- data.frame(time, event, g)
+wmst_fast(Surv(time, event) ~ g, data = d, tau1 = 2, tau2 = 12)
+
 }
 \references{
-Paukner, M., & Chappell, R. (2021). Window mean survival time. Statistics in
-Medicine, 40(25), 5521-5533.
+Paukner, M., & Chappell, R. (2021). Window mean survival time.
+\emph{Statistics in Medicine}, \emph{40}(25), 5521-5533.
 }

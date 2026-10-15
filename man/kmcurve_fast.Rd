@@ -4,27 +4,38 @@
 \alias{kmcurve_fast}
 \title{Build Kaplan-Meier Curves for One Trial Realization}
 \usage{
-kmcurve_fast(time, event, group = NULL, control = NULL)
+kmcurve_fast(time, event, group = NULL, control = NULL, data = NULL)
 }
 \arguments{
-\item{time}{A numeric vector of follow-up times for all subjects.}
+\item{time}{A numeric vector of follow-up times for all subjects.
+Alternatively, a formula \code{Surv(time, event) ~ group} or
+\code{Surv(time, event) ~ 1}, with the variables in
+\code{data}; see \code{\link{formula_interface}}.}
 
 \item{event}{An integer or numeric vector of event indicators (1 = event,
 0 = censored), aligned with \code{time}.}
 
 \item{group}{A vector identifying the groups, aligned with \code{time}, with
-one or two distinct values. If \code{NULL} (default), all subjects are
-treated as a single group.}
+one or two distinct values and no missing values. If \code{NULL}
+(default), all subjects are treated as a single group.}
 
 \item{control}{The value of \code{group} that denotes the reference (control)
 group; the other value is treated as the treatment group. Required in the
-two-group case and ignored in the single-group case.}
+two-group case and ignored in the single-group case.
+With the formula interface it defaults to the first level of the
+group variable.}
+
+\item{data}{A data frame in which the variables of a formula given as
+\code{time} are evaluated. Used only with the formula interface; see
+\code{\link{formula_interface}}.}
 }
 \value{
 An object of class \code{kmcurve_fast}: a list with a logical
   \code{two_group} flag, the group values and their labels, the per-group
   Kaplan-Meier summaries in element \code{km}, the pooled \code{data}, and the
-  per-group sample sizes \code{n} and event counts \code{events}.
+  per-group sample sizes \code{n} and event counts \code{events}. The
+  curves are returned as a data frame by
+  \code{\link{as.data.frame.kmcurve_fast}}.
 }
 \description{
 Builds the Kaplan-Meier step functions for a single realized data set (for
@@ -64,6 +75,12 @@ fit <- kmcurve_fast(time, event, group, control = 0)
 print(fit)
 plot(fit)
 plot(fit, hr = TRUE, rmst = TRUE, tau = 18)
+plot(fit, risk_table = TRUE, conf.style = "band")
+head(as.data.frame(fit))
+
+# Formula interface
+d <- data.frame(time, event, group)
+kmcurve_fast(Surv(time, event) ~ group, data = d)
 
 # Single-group object: pass group = NULL (or a single-level group)
 fit1 <- kmcurve_fast(time[group == 0], event[group == 0])
@@ -72,6 +89,7 @@ plot(fit1, rmst = TRUE, tau = 18)
 }
 \seealso{
 \code{\link{plot.kmcurve_fast}}, \code{\link{print.kmcurve_fast}},
-  \code{\link{survfit_fast}}, \code{\link{coxph_fast}},
+  \code{\link{as.data.frame.kmcurve_fast}}, \code{\link{survfit_fast}},
+  \code{\link{coxph_fast}},
   \code{\link{rmst_fast}}, \code{\link{ahr_fast}}
 }

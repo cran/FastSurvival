@@ -172,7 +172,8 @@ test_that("plot and print methods run for both single and two-group objects", {
          conf.type = "log-log", ahr_line = TRUE),
     NA)
   expect_error(plot(fit1, rmst = TRUE, tau = 18, conf.type = "plain"), NA)
-  expect_warning(plot(fit1, hr = TRUE))   # hazard ratio ignored for one group
+  # The hazard ratio is ignored for one group.
+  expect_warning(plot(fit1, hr = TRUE), "requires two groups")
 })
 
 test_that("kmcurve_fast: time and event are validated", {
@@ -180,4 +181,43 @@ test_that("kmcurve_fast: time and event are validated", {
   expect_error(kmcurve_fast(c(1, 2, 3), c(1, 2, 1)), "0 \\(censored\\)")
   expect_error(kmcurve_fast(c(1, 2, 3), c(1, 0.7, 1)), "0 \\(censored\\)")
   expect_error(kmcurve_fast(c(-1, 2, 3), c(1, 0, 1)), "non-negative")
+})
+
+test_that("kmcurve_fast: the median is NA when the curve stays at 0.5 up to Inf", {
+  # A flat stretch at 0.5 that ends at an infinite time has no midpoint.
+  expect_true(is.na(km_step_median(c(1, 2), c(0.75, 0.5), Inf)))
+  expect_equal(km_step_median(c(1, 2), c(0.75, 0.5), 4), 3)
+  fit <- kmcurve_fast(c(1, 2, Inf, Inf), c(1, 1, 0, 0))
+  out <- utils::capture.output(print(fit))
+  expect_false(any(grepl("Inf", out, fixed = TRUE)))
+})
+
+test_that("kmcurve_fast: missing group values are rejected", {
+  expect_error(kmcurve_fast(c(1, 2, 3, 4), c(1, 0, 1, 1),
+                            group = c(1, 2, NA, 2), control = 1),
+               "missing values")
+})
+
+test_that("kmcurve_fast: the formula interface gives the vector result", {
+  set.seed(73)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1), ee = rbinom(n, 1, 0.8),
+                  g = rep(c(1, 0), n / 2))
+  expect_identical(kmcurve_fast(Surv(tt, ee) ~ g, data = d),
+                   kmcurve_fast(d$tt, d$ee, d$g, control = 0))
+  expect_identical(kmcurve_fast(Surv(tt, ee) ~ 1, data = d),
+                   kmcurve_fast(d$tt, d$ee))
+  expect_identical(class(kmcurve_fast(d$tt, d$ee)), "kmcurve_fast")
+  expect_error(kmcurve_fast(d$tt, d$ee, data = d), "only with a formula")
+})
+
+test_that("kmcurve_fast: the formula interface passes every argument", {
+  set.seed(60)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1) + 0.1, ee = rbinom(n, 1, 0.8),
+                  g = rep(c("b", "a"), n / 2), s = rep(c("x", "y", "z"), n / 3))
+  d1 <- d[order(d$tt), ]
+  d2 <- d[order(d$s, d$tt), ]
+  expect_identical(kmcurve_fast(Surv(tt, ee) ~ g, d, control = "b"),
+                   kmcurve_fast(d$tt, d$ee, d$g, control = "b"))
 })

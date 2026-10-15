@@ -42,6 +42,9 @@
 #' \code{presorted = TRUE} avoids one O(n log n) pass.
 #'
 #' @param time A numeric vector of event or censoring times.
+#'   Alternatively, a formula \code{Surv(time, event) ~ group} or
+#'   \code{Surv(time, event) ~ 1}, with the variables in
+#'   \code{data}; see \code{\link{formula_interface}}.
 #' @param event An integer or numeric vector of event indicators
 #'   (1 = event, 0 = censored), aligned with \code{time}.
 #' @param group An optional vector of group labels aligned with \code{time}.
@@ -49,6 +52,8 @@
 #'   the two-group contrasts are returned and \code{control} must be given.
 #' @param control A scalar value indicating which level of \code{group}
 #'   represents the control group. Required when \code{group} is supplied.
+#'   With the formula interface it defaults to the first level of the
+#'   group variable.
 #' @param side 1 for a one-sided test in the direction of treatment benefit
 #'   (longer restricted mean survival in the treatment group) or 2 for a
 #'   two-sided test (default 2). Applies to the two-group contrasts; the
@@ -63,6 +68,9 @@
 #'   be sorted in ascending order of \code{time}. If \code{FALSE} (default),
 #'   sorting is handled internally.
 #'   The order is checked, and an error is given when it does not hold.
+#' @param data A data frame in which the variables of a formula given as
+#'   \code{time} are evaluated. Used only with the formula interface; see
+#'   \code{\link{formula_interface}}.
 #'
 #' @return An object of class \code{"rmst_fast"}, a named numeric vector. In
 #'   single-group mode it has length 4 with elements \code{rmst},
@@ -76,6 +84,9 @@
 #'   in two-group mode the \code{control} label is also stored. Returns
 #'   \code{NA_real_} values (still with class \code{"rmst_fast"}) when \code{n}
 #'   is zero in single-group mode.
+#'   The object also has the class \code{"fastsurv"}, whose
+#'   \code{as.data.frame()}, \code{coef()}, and \code{confint()} methods
+#'   are described in \code{\link{as.data.frame.fastsurv}}.
 #'
 #' @examples
 #' set.seed(42)
@@ -96,6 +107,10 @@
 #' event <- rbinom(2 * n, 1, 0.8)
 #' group <- rep(0:1, each = n)
 #' rmst_fast(time, event, group = group, control = 0, tau = 10)
+#'
+#' # Formula interface, and the result as a data frame
+#' d <- data.frame(time, event, group)
+#' as.data.frame(rmst_fast(Surv(time, event) ~ group, data = d, tau = 10))
 #'
 #' \donttest{
 #' # Validation against survRM2
@@ -121,7 +136,21 @@
 #' @importFrom stats qnorm pnorm
 #' @export
 rmst_fast <- function(time, event, group = NULL, control = NULL, side = 2,
-                      conf.level = 0.95, tau, presorted = FALSE) {
+                      conf.level = 0.95, tau, presorted = FALSE,
+                      data = NULL) {
+  # Formula interface: Surv(time, event) ~ group or ~ 1 evaluated in 'data'
+  if (inherits(time, "formula")) {
+    f <- fastsurv_formula(time, data,
+                          event = if (!missing(event)) event,
+                          group = group, group_mode = "optional",
+                          fun = "rmst_fast()")
+    if (is.null(control)) control <- f$control
+    return(rmst_fast(f$time, f$event, group = f$group, control = control,
+                     side = side, conf.level = conf.level, tau = tau,
+                     presorted = presorted))
+  }
+  if (!is.null(data)) stop("'data' is used only with a formula")
+
   # Input validation
   n <- length(time)
   if (length(event) != n) {
@@ -146,7 +175,7 @@ rmst_fast <- function(time, event, group = NULL, control = NULL, side = 2,
                 lower = NA_real_, upper = NA_real_)
     wrap1  <- function(v) {
       structure(v, tau = tau, conf.level = conf.level, side = side,
-                class = "rmst_fast")
+                class = c("rmst_fast", "fastsurv"))
     }
     if (n == 0L) return(wrap1(na_out))
     check_tau_follow_up(time, NULL, tau)
@@ -251,5 +280,5 @@ rmst_fast <- function(time, event, group = NULL, control = NULL, side = 2,
   )
 
   structure(out, tau = tau, conf.level = conf.level, side = side,
-            control = control, class = "rmst_fast")
+            control = control, class = c("rmst_fast", "fastsurv"))
 }

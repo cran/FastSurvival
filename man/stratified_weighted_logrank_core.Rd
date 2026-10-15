@@ -50,17 +50,18 @@ stratum is processed as an independent weighted log-rank test using the same
 logic as \code{weighted_logrank_core}, with weights derived from the
 within-stratum pooled Kaplan-Meier estimate, and the per-stratum numerator U
 and variance V are accumulated into the returned totals. The overall
-statistic is Z = sum U / sqrt(sum V). This matches the stratified weighted
-log-rank test of Magirr, which sums the per-stratum U and V and standardizes
-once. Not intended to be called directly by users; use
-\code{survdiff_fast()} with both \code{weight} and \code{strata} instead.
+statistic is Z = sum U / sqrt(sum V), the usual stratified form, which sums
+the per-stratum U and V and standardizes once. Not intended to be called
+directly by users; use \code{survdiff_fast()} with both \code{weight} and
+\code{strata} instead.
 }
 \details{
 The scheme codes match \code{weighted_logrank_core}: 0 = Fleming-Harrington
 G(rho, gamma); 1 = modestly-weighted with cap \code{1 / S(t_star-)}, the
 pooled Kaplan-Meier value just before \code{t_star}, computed within each
-stratum; 2 = Gehan-Breslow; 3 = Tarone-Ware. The left-continuous
-pooled Kaplan-Meier estimate is restarted at 1 at the beginning of every
+stratum (no cap when that value is 0); 2 = Gehan-Breslow; 3 = Tarone-Ware.
+The left-continuous pooled Kaplan-Meier estimate is restarted at 1 at the
+beginning of every
 stratum, so the weights of each stratum depend only on that stratum's
 pooled data. For the modestly-weighted scheme the weight cap is determined
 in a first pass within each stratum before accumulation.

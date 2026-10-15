@@ -138,7 +138,7 @@ test_that("single-group mode returns a WMST and confidence interval", {
 
 test_that("input validation works", {
   expect_error(wmst_fast(1:5, c(0, 1, 0, 1)), "same length")
-  expect_error(wmst_fast(1:5, rep(2L, 5)), "0")
+  expect_error(wmst_fast(1:5, rep(2L, 5)), "coded as 0")
   expect_error(
     wmst_fast(1:6, rep(0:1, 3), group = rep(1:3, 2), control = 1), "two distinct"
   )
@@ -188,4 +188,63 @@ test_that("wmst_fast: presorted = TRUE checks the order", {
   event <- c(1, 1, 0, 1, 1, 0)
   group <- c(0, 1, 0, 1, 0, 1)
   expect_error(wmst_fast(time, event, group, control = 0, tau1 = 1, tau2 = 3, presorted = TRUE), "presorted = FALSE")
+})
+
+test_that("wmst_fast: an infinite window end is rejected", {
+  # Each group has subjects with an infinite time, so the default tau2 (the
+  # largest time common to the two groups) is infinite.
+  tt <- c(2, 3, 5, Inf, Inf, 1, 4, 6, Inf, Inf)
+  ee <- c(1, 1, 1, 0, 0, 1, 1, 1, 0, 0)
+  gg <- rep(0:1, each = 5)
+  expect_error(wmst_fast(tt, ee, gg, control = 0), "tau2 must be supplied")
+  expect_error(wmst_fast(tt, ee, gg, control = 0, tau2 = Inf),
+               "single finite value")
+  expect_error(wmst_fast(tt[gg == 0], ee[gg == 0]), "tau2 must be supplied")
+  res <- wmst_fast(tt, ee, gg, control = 0, tau2 = 5)
+  expect_true(all(is.finite(res[c("wmst.control", "wmst.treatment", "diff",
+                                  "se.diff", "z", "p")])))
+})
+
+test_that("wmst_fast: time and event must be numeric and time non-negative", {
+  set.seed(1)
+  tt <- rexp(40, 0.1)
+  ee <- rbinom(40, 1, 0.7)
+  gg <- rep(0:1, 20)
+  expect_error(wmst_fast(as.character(tt), ee, gg, control = 0, tau2 = 5),
+               "numeric")
+  expect_error(wmst_fast(c(-1, tt[-1]), ee, gg, control = 0, tau2 = 5),
+               "non-negative")
+  expect_error(wmst_fast(tt, factor(ee), gg, control = 0, tau2 = 5),
+               "numeric or logical")
+})
+
+test_that("wmst_fast: the formula interface gives the vector result", {
+  set.seed(65)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1), ee = rbinom(n, 1, 0.8),
+                  g = rep(c(1, 0), n / 2))
+  ref2 <- wmst_fast(d$tt, d$ee, group = d$g, control = 0, tau1 = 1,
+                    tau2 = 5)
+  expect_identical(wmst_fast(Surv(tt, ee) ~ g, data = d, tau1 = 1, tau2 = 5),
+                   ref2)
+  ref1 <- wmst_fast(d$tt, d$ee, tau1 = 1, tau2 = 5)
+  expect_identical(wmst_fast(Surv(tt, ee) ~ 1, data = d, tau1 = 1, tau2 = 5),
+                   ref1)
+  expect_identical(class(ref2), c("wmst_fast", "fastsurv"))
+  expect_error(wmst_fast(d$tt, d$ee, tau2 = 5, data = d),
+               "only with a formula")
+})
+
+test_that("wmst_fast: the formula interface passes every argument", {
+  set.seed(60)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1) + 0.1, ee = rbinom(n, 1, 0.8),
+                  g = rep(c("b", "a"), n / 2), s = rep(c("x", "y", "z"), n / 3))
+  d1 <- d[order(d$tt), ]
+  d2 <- d[order(d$s, d$tt), ]
+  expect_identical(
+    wmst_fast(Surv(tt, ee) ~ g, d1, control = "b", tau1 = 1, tau2 = 6,
+              side = 1, conf.level = 0.9, presorted = TRUE),
+    wmst_fast(d1$tt, d1$ee, d1$g, "b", tau1 = 1, tau2 = 6, side = 1,
+              conf.level = 0.9, presorted = TRUE))
 })

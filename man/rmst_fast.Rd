@@ -12,11 +12,15 @@ rmst_fast(
   side = 2,
   conf.level = 0.95,
   tau,
-  presorted = FALSE
+  presorted = FALSE,
+  data = NULL
 )
 }
 \arguments{
-\item{time}{A numeric vector of event or censoring times.}
+\item{time}{A numeric vector of event or censoring times.
+Alternatively, a formula \code{Surv(time, event) ~ group} or
+\code{Surv(time, event) ~ 1}, with the variables in
+\code{data}; see \code{\link{formula_interface}}.}
 
 \item{event}{An integer or numeric vector of event indicators
 (1 = event, 0 = censored), aligned with \code{time}.}
@@ -26,7 +30,9 @@ If \code{NULL} (default), a single-group RMST is computed. If supplied,
 the two-group contrasts are returned and \code{control} must be given.}
 
 \item{control}{A scalar value indicating which level of \code{group}
-represents the control group. Required when \code{group} is supplied.}
+represents the control group. Required when \code{group} is supplied.
+With the formula interface it defaults to the first level of the
+group variable.}
 
 \item{side}{1 for a one-sided test in the direction of treatment benefit
 (longer restricted mean survival in the treatment group) or 2 for a
@@ -45,6 +51,10 @@ is not estimated beyond that time.}
 be sorted in ascending order of \code{time}. If \code{FALSE} (default),
 sorting is handled internally.
 The order is checked, and an error is given when it does not hold.}
+
+\item{data}{A data frame in which the variables of a formula given as
+\code{time} are evaluated. Used only with the formula interface; see
+\code{\link{formula_interface}}.}
 }
 \value{
 An object of class \code{"rmst_fast"}, a named numeric vector. In
@@ -59,6 +69,9 @@ An object of class \code{"rmst_fast"}, a named numeric vector. In
   in two-group mode the \code{control} label is also stored. Returns
   \code{NA_real_} values (still with class \code{"rmst_fast"}) when \code{n}
   is zero in single-group mode.
+  The object also has the class \code{"fastsurv"}, whose
+  \code{as.data.frame()}, \code{coef()}, and \code{confint()} methods
+  are described in \code{\link{as.data.frame.fastsurv}}.
 }
 \description{
 Computes the restricted mean survival time (RMST) up to a horizon \code{tau}
@@ -120,6 +133,10 @@ time  <- c(rexp(n, 0.10), rexp(n, 0.07))
 event <- rbinom(2 * n, 1, 0.8)
 group <- rep(0:1, each = n)
 rmst_fast(time, event, group = group, control = 0, tau = 10)
+
+# Formula interface, and the result as a data frame
+d <- data.frame(time, event, group)
+as.data.frame(rmst_fast(Surv(time, event) ~ group, data = d, tau = 10))
 
 \donttest{
 # Validation against survRM2

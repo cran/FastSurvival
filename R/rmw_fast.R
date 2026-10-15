@@ -2,7 +2,7 @@
 #'
 #' @description
 #' Computes the robust modestly-weighted (rMW) log-rank test of Magirr and
-#' Ohrn, which combines the standard log-rank test with a single
+#' \enc{Öhrn}{Ohrn}, which combines the standard log-rank test with a single
 #' modestly-weighted log-rank test. The test statistic is the maximum of the
 #' two standardized components, evaluated against their joint null distribution.
 #' Because the standard log-rank statistic is included as one of the two
@@ -37,7 +37,8 @@
 #' \code{side = 2} the statistic is \code{max(abs(Z_lr), abs(Z_mw))} and the
 #' two-sided p-value is \code{P(max(abs(Z_lr), abs(Z_mw)) >= observed)}. The
 #' joint normal probability is evaluated with \code{mvtnorm::pmvnorm}, using the
-#' exact \code{TVPACK} algorithm for the one-sided half-space and the
+#' exact \code{TVPACK} algorithm for the one-sided region, an orthant (all
+#' upper limits infinite), and the
 #' deterministic \code{Miwa} algorithm for the two-sided rectangle.
 #'
 #' When \code{presorted = TRUE}, the input vectors are assumed to be sorted by
@@ -46,11 +47,15 @@
 #' generated in time order.
 #'
 #' @param time A numeric vector of follow-up times for all subjects.
+#'   Alternatively, a formula \code{Surv(time, event) ~ group}, with the
+#'   variables in \code{data}; see \code{\link{formula_interface}}.
 #' @param event An integer or numeric vector of event indicators
 #'   (1 = event, 0 = censored), aligned with \code{time}.
 #' @param group A vector of group labels aligned with \code{time}.
 #' @param control A scalar value indicating which level of \code{group}
 #'   represents the control group.
+#'   With the formula interface it defaults to the first level of the
+#'   group variable.
 #' @param side An integer, either 1 or 2 (default 2). If \code{side = 1}, the
 #'   statistic is the minimum of the two standardized components and a one-sided
 #'   p-value is returned. If \code{side = 2}, the statistic is the maximum of
@@ -65,6 +70,9 @@
 #'   and the internal \code{order()} call is skipped. If \code{FALSE} (default),
 #'   sorting is handled internally.
 #'   The order is checked, and an error is given when it does not hold.
+#' @param data A data frame in which the variables of a formula given as
+#'   \code{time} are evaluated. Used only with the formula interface; see
+#'   \code{\link{formula_interface}}.
 #'
 #' @return An object of class \code{"rmw_fast"}, a length-two numeric vector
 #'   \code{c(statistic, p.value)} with attributes \code{z} (the named component
@@ -73,7 +81,10 @@
 #'   observed number of events in the treatment group), \code{side}, and
 #'   \code{n} (the total sample size). Returns \code{NA} statistic and p-value
 #'   (still with class \code{"rmw_fast"}) when either component variance is zero
-#'   (e.g., all events in one group).
+#'   (e.g., no event time at which both groups are at risk).
+#'   The object also has the class \code{"fastsurv"}, whose
+#'   \code{as.data.frame()}, \code{coef()}, and \code{confint()} methods
+#'   are described in \code{\link{as.data.frame.fastsurv}}.
 #'
 #' @examples
 #' library(survival)
@@ -98,6 +109,9 @@
 #' rmw_fast(ovarian$futime[ord], ovarian$fustat[ord], ovarian$rx[ord],
 #'          control = 1, side = 1, s_star = 0.5, presorted = TRUE)
 #'
+#' # Formula interface
+#' rmw_fast(Surv(futime, fustat) ~ rx, data = ovarian, side = 1)
+#'
 #' @seealso
 #' \code{\link{survdiff_fast}} for the standard and weighted log-rank tests.
 #' \code{\link{print.rmw_fast}} for the print method.
@@ -112,7 +126,19 @@
 #'
 #' @export
 rmw_fast <- function(time, event, group, control, side = 2,
-                     s_star = 0.5, presorted = FALSE) {
+                     s_star = 0.5, presorted = FALSE, data = NULL) {
+
+  # Formula interface: Surv(time, event) ~ group evaluated in 'data'
+  if (inherits(time, "formula")) {
+    f <- fastsurv_formula(time, data,
+                          event = if (!missing(event)) event,
+                          group = if (!missing(group)) group,
+                          group_mode = "required", fun = "rmw_fast()")
+    if (missing(control) || is.null(control)) control <- f$control
+    return(rmw_fast(f$time, f$event, f$group, control = control,
+                    side = side, s_star = s_star, presorted = presorted))
+  }
+  if (!is.null(data)) stop("'data' is used only with a formula")
 
   # Input validation
   if (length(time) != length(event) || length(time) != length(group)) {
@@ -160,7 +186,7 @@ rmw_fast <- function(time, event, group, control, side = 2,
       z = c(logrank = NA_real_, mwlrt = NA_real_),
       corr = matrix(NA_real_, 2L, 2L),
       s_star = s_star, O1 = O1, side = side, n = n_total, control = control,
-      class = "rmw_fast"
+      class = c("rmw_fast", "fastsurv")
     ))
   }
 
@@ -198,6 +224,6 @@ rmw_fast <- function(time, event, group, control, side = 2,
     c(statistic = stat, p.value = p),
     z = z, corr = matrix(c(1, rho, rho, 1), 2L, 2L),
     s_star = s_star, O1 = O1, side = side, n = n_total, control = control,
-    class = "rmw_fast"
+    class = c("rmw_fast", "fastsurv")
   )
 }

@@ -125,3 +125,36 @@ test_that("survfit_fast: negative times are rejected", {
   expect_error(survfit_fast(c(-1, 2, 3), c(1, 0, 1), t_eval = 2,
                             presorted = FALSE), "non-negative")
 })
+
+test_that("survfit_fast: the formula interface gives the vector result", {
+  set.seed(61)
+  t_raw <- round(rexp(80, 0.1), 1)
+  e_raw <- rbinom(80, 1, 0.7)
+  d <- data.frame(tt = t_raw, ee = e_raw)
+  ord <- order(t_raw)
+  ref <- survfit_fast(t_raw[ord], e_raw[ord], t_eval = 8)
+  # The data are sorted internally (presorted = FALSE unless given)
+  expect_identical(survfit_fast(Surv(tt, ee) ~ 1, data = d, t_eval = 8), ref)
+  expect_identical(survfit_fast(Surv(tt, ee) ~ 1, d, 8), ref)
+  expect_identical(class(ref), c("survfit_fast", "fastsurv"))
+  expect_error(survfit_fast(Surv(tt, ee) ~ 1, data = d, t_eval = 8,
+                            presorted = TRUE), "not sorted")
+  expect_error(survfit_fast(Surv(tt, ee) ~ g, data = cbind(d, g = 1:2),
+                            t_eval = 8), "single group")
+  expect_error(survfit_fast(t_raw[ord], e_raw[ord], t_eval = 8, data = d),
+               "only with a formula")
+})
+
+test_that("survfit_fast: the formula interface passes every argument", {
+  set.seed(60)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1) + 0.1, ee = rbinom(n, 1, 0.8),
+                  g = rep(c("b", "a"), n / 2), s = rep(c("x", "y", "z"), n / 3))
+  d1 <- d[order(d$tt), ]
+  d2 <- d[order(d$s, d$tt), ]
+  expect_identical(
+    survfit_fast(Surv(tt, ee) ~ 1, d1, t_eval = 5, conf.level = 0.9,
+                 conf.type = "log-log", presorted = TRUE),
+    survfit_fast(d1$tt, d1$ee, 5, conf.level = 0.9, conf.type = "log-log",
+                 presorted = TRUE))
+})

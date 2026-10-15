@@ -22,8 +22,9 @@
 #' mean survival time at \code{tau}. It can be read as a general censoring-free
 #' incidence rate on the window from 0 to \code{tau} and stays interpretable
 #' under non-proportional hazards. This is a different quantity from the average
-#' hazard ratio of Kalbfleisch, which averages the time-varying ratio of hazards
-#' rather than forming a single average hazard per group and then contrasting.
+#' hazard ratio of Kalbfleisch and Prentice (see \code{\link{ahr_fast}}), which
+#' averages the time-varying ratio of hazards rather than forming a single
+#' average hazard per group and then contrasting.
 #'
 #' Writing the treatment and control average hazards as a1 and a0, the ratio
 #' contrast is RAH = a1 / a0, formed on the log scale with variance
@@ -41,11 +42,15 @@
 #' group.
 #'
 #' @param time A numeric vector of follow-up times for all subjects.
+#'   Alternatively, a formula \code{Surv(time, event) ~ group}, with the
+#'   variables in \code{data}; see \code{\link{formula_interface}}.
 #' @param event An integer or numeric vector of event indicators
 #'   (1 = event, 0 = censored), aligned with \code{time}.
 #' @param group A vector of group labels aligned with \code{time}.
 #' @param control A scalar value indicating which level of \code{group}
 #'   represents the control group.
+#'   With the formula interface it defaults to the first level of the
+#'   group variable.
 #' @param side 1 for a one-sided test in the direction of treatment benefit
 #'   (lower average hazard in the treatment group, i.e. a ratio below 1 and a
 #'   negative difference) or 2 for a two-sided test (default 2). The reported
@@ -62,6 +67,9 @@
 #'   \code{time}, and the internal \code{order()} call is skipped. If
 #'   \code{FALSE} (default), sorting is handled internally.
 #'   The order is checked, and an error is given when it does not hold.
+#' @param data A data frame in which the variables of a formula given as
+#'   \code{time} are evaluated. Used only with the formula interface; see
+#'   \code{\link{formula_interface}}.
 #'
 #' @return An object of class \code{"ahsw_fast"}, a named numeric vector
 #'   containing the per-group average hazards (\code{ah.ctrl}, \code{ah.trt}),
@@ -72,6 +80,9 @@
 #'   \code{control} label is also stored. Returns \code{NA} values (still with
 #'   class \code{"ahsw_fast"}) when either group has no events up to \code{tau}
 #'   (a zero average hazard) or a non-finite variance.
+#'   The object also has the class \code{"fastsurv"}, whose
+#'   \code{as.data.frame()}, \code{coef()}, and \code{confint()} methods
+#'   are described in \code{\link{as.data.frame.fastsurv}}.
 #'
 #' @examples
 #' library(survival)
@@ -83,6 +94,9 @@
 #' ord <- order(ovarian$futime)
 #' ahsw_fast(ovarian$futime[ord], ovarian$fustat[ord], ovarian$rx[ord],
 #'           control = 1, tau = 600, presorted = TRUE)
+#'
+#' # Formula interface
+#' ahsw_fast(Surv(futime, fustat) ~ rx, data = ovarian, tau = 600)
 #'
 #' \donttest{
 #' # Validation against survAH
@@ -105,7 +119,21 @@
 #' @importFrom stats qnorm pnorm
 #' @export
 ahsw_fast <- function(time, event, group, control, side = 2,
-                      conf.level = 0.95, tau, presorted = FALSE) {
+                      conf.level = 0.95, tau, presorted = FALSE,
+                      data = NULL) {
+  # Formula interface: Surv(time, event) ~ group evaluated in 'data'
+  if (inherits(time, "formula")) {
+    f <- fastsurv_formula(time, data,
+                          event = if (!missing(event)) event,
+                          group = if (!missing(group)) group,
+                          group_mode = "required", fun = "ahsw_fast()")
+    if (missing(control) || is.null(control)) control <- f$control
+    return(ahsw_fast(f$time, f$event, f$group, control = control,
+                     side = side, conf.level = conf.level, tau = tau,
+                     presorted = presorted))
+  }
+  if (!is.null(data)) stop("'data' is used only with a formula")
+
   # Input validation
   n_total <- length(time)
   if (length(event) != n_total || length(group) != n_total) {
@@ -164,7 +192,7 @@ ahsw_fast <- function(time, event, group, control, side = 2,
 
   wrap <- function(v) {
     structure(v, tau = tau, conf.level = conf.level, side = side,
-              control = control, class = "ahsw_fast")
+              control = control, class = c("ahsw_fast", "fastsurv"))
   }
 
   # Bail out if either group has no events up to tau (zero average hazard) or

@@ -203,9 +203,10 @@ static AHRResult ahr_core_impl(const std::vector<double>& time1,
   Sigma11 /= denom * denom;
   res.var_theta1 = Sigma11 / (double) n;
 
-  // Variance of the second (comparison) group share. The direct estimator does
-  // not force Sigma[1,1] == Sigma[2,2] in finite samples, and the AHR package
-  // tests each share with its own diagonal entry, so this is computed too.
+  // Variance of the second (comparison) group share, used to test that share
+  // as the AHR package does. Because theta2 = 1 - theta1,
+  // Sigma[2,2] - Sigma[1,1] = C2 (1 - theta1 - theta2) +
+  // C1 (theta1 + theta2 - 1) = 0, so it equals Sigma[1,1] up to rounding.
   double Vx22 = B211 + B122 + C2 - 2.0 * A21;
   double VxG2 = A21 - A12 - C2;
   double Sigma22 = Vx22 + 2.0 * theta2 * VxG2 + theta2 * theta2 * VG;

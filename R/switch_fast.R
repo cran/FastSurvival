@@ -115,7 +115,10 @@
 #'   \code{hazard}.
 #' @param time Breakpoints for a piecewise \code{hazard}, starting at 0 and
 #'   ending with \code{Inf}, measured from the switch.
-#' @param seed Optional integer seed for the \code{dqrng} generator.
+#' @param seed Optional integer seed for the \code{dqrng} generator. If
+#'   \code{NULL} (default), the draws come from the current state of that
+#'   generator, which \code{set.seed()} does not control; supply \code{seed}
+#'   for reproducible results (see \code{\link{simdata_fast}}).
 #' @param stream Optional non-negative whole number selecting a \code{dqrng}
 #'   stream; requires \code{seed}. See \code{\link{simdata_fast}}.
 #'
@@ -125,9 +128,10 @@
 #'   subjects who did not switch) added or updated.
 #'
 #' @references
-#' Robins, J. M. and Tsiatis, A. A. (1991). Correcting for non-compliance in
+#' Robins, J. M., & Tsiatis, A. A. (1991). Correcting for non-compliance in
 #' randomized trials using rank preserving structural failure time models.
-#' \emph{Communications in Statistics - Theory and Methods}, 20(8), 2609-2631.
+#' \emph{Communications in Statistics - Theory and Methods}, \emph{20}(8),
+#' 2609-2631.
 #'
 #' @examples
 #' # Crossover at an interim analysis: control subjects still on study at the
@@ -307,6 +311,8 @@ switch_fast <- function(data, group, prob = 1,
          abs(stream - round(stream)) > 1e-8)) {
       stop("'stream' must be a single non-negative whole number")
     }
+    # dqrng would truncate a value such as 100 * 0.29 to the integer below.
+    if (!is.null(stream)) stream <- round(stream)
     dqrng::dqset.seed(seed, stream = stream)
   }
 

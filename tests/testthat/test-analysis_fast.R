@@ -320,9 +320,11 @@ test_that("analysis_fast: new statistic arguments are validated", {
                              stat = "medsurv", medsurv.bw = 0), "medsurv.bw")
   # match.arg guards the method and weight selectors.
   expect_error(analysis_fast(dat, control = 1, event.looks = 50,
-                             stat = "medsurv", medsurv.method = "bogus"))
+                             stat = "medsurv", medsurv.method = "bogus"),
+               "should be one of")
   expect_error(analysis_fast(dat, control = 1, event.looks = 50,
-                             stat = "wkm", wkm.weight = "bogus"))
+                             stat = "wkm", wkm.weight = "bogus"),
+               "should be one of")
 })
 
 test_that("analysis_fast milestone and ahsw p-values follow side as the wrappers do", {
@@ -493,8 +495,9 @@ test_that("analysis_fast max-combo with two or three weights matches maxcombo_fa
                             presorted = TRUE)
         expect_equal(res$maxcombo.stat[s], unname(mc["statistic"]),
                      tolerance = 1e-8)
-        # TVPACK (one-sided) is deterministic; GenzBretz (two-sided) is
-        # accurate to about abseps = 1e-5.
+        # TVPACK (one-sided) is deterministic; the GenzBretz integral
+        # (two-sided) carries a randomized integration error, of the
+        # order of 1e-4 for singular weight sets (see maxcombo_fast()).
         tol <- if (sd == 1) 1e-8 else 1e-3
         expect_lt(abs(res$maxcombo.p[s] - unname(mc["p.value"])), tol)
       }
@@ -564,4 +567,185 @@ test_that("analysis_fast: an event target beyond the integer range is not reache
   expect_true(all(!res$reached))
   expect_true(all(is.na(res$cutoff)))
   expect_equal(res$look.value, rep(3e9, 3))
+})
+
+test_that("analysis_fast: wkm is NA at an unreached look with infinite times", {
+  # Cure model without dropout: subjects without an event have tte = Inf, so
+  # at a look that is not reached their observed time is infinite and the
+  # integral of the weighted Kaplan-Meier test has no finite upper limit.
+  d <- simdata_fast(nsim = 5, n = c(100, 100), a.time = c(0, 12),
+                    a.rate = 200 / 12, e.hazard = list(c(0.1, 0), c(0.1, 0)),
+                    e.time = c(0, 24, Inf), seed = 5)
+  expect_true(any(is.infinite(d$tte)))
+  r <- analysis_fast(d, control = 1, event.looks = c(30, 1000),
+                     stat = c("logrank", "wkm"))
+  un <- r[!r$reached, ]
+  expect_equal(nrow(un), 5L)
+  # The weighted difference comes from the C++ core without arithmetic, so
+  # it is NA and not NaN; the derived columns are NA.
+  expect_true(all(is.na(un[["wkm.wdiff"]]) & !is.nan(un[["wkm.wdiff"]])))
+  for (cn in c("wkm.lower", "wkm.upper", "wkm.z", "wkm.p")) {
+    expect_true(all(is.na(un[[cn]])), info = cn)
+  }
+  expect_true(all(is.finite(un[["logrank.z"]])))
+  # Reached looks (finite observed times) are unaffected.
+  rc <- r[r$reached, ]
+  expect_equal(nrow(rc), 5L)
+  expect_true(all(is.finite(rc[["wkm.wdiff"]]) & is.finite(rc[["wkm.z"]])))
+})
+
+test_that("analysis_fast: medsurv is NA when a median at 0.5 runs up to Inf", {
+  # The look is not reached, so the full data are used. In the treatment group
+  # the Kaplan-Meier estimate is exactly 0.5 after time 5 and the remaining
+  # subjects have tte = Inf, so its median is not defined (see medsurv_fast).
+  d <- data.frame(sim = 1L, group = rep(1:2, each = 10), accrual_time = 0,
+                  tte = c(1:10, 1:5, rep(Inf, 5)),
+                  event = c(rep(1L, 10), rep(1L, 5), rep(0L, 5)))
+  for (m in c("km", "nph")) {
+    r <- analysis_fast(d, control = 1, event.looks = 1000, stat = "medsurv",
+                       medsurv.method = m)
+    expect_false(r$reached)
+    expect_equal(r$medsurv.ctrl, 5.5)
+    for (cn in c("medsurv.trt", "medsurv.diff", "medsurv.diff.lower",
+                 "medsurv.diff.upper", "medsurv.z", "medsurv.p")) {
+      expect_true(is.na(r[[cn]]), info = paste(m, cn))
+    }
+  }
+})
+
+test_that("analysis_fast: mwlrt is not capped when the pooled curve reaches 0 before t_star", {
+  # Same data as in test-survdiff_fast.R; the expected values were computed
+  # independently in Python (see survdiff_fast).
+  d <- data.frame(sim = 1L, group = c(0, 1, 0, 1, 0, 1), accrual_time = 0,
+                  tte = 1:6, event = 1L)
+  r <- analysis_fast(d, control = 0, time.looks = 100, weight = "mwlrt",
+                     t_star = 10)
+  expect_equal(r$logrank.z, -0.7734668523, tolerance = 1e-8)
+  d2 <- rbind(cbind(d, s = 1L),
+              data.frame(sim = 1L, group = c(1, 0, 1, 0, 1, 0),
+                         accrual_time = 0, tte = c(2, 4, 6, 8, 10, 12),
+                         event = c(1L, 1L, 1L, 0L, 1L, 0L), s = 2L))
+  r2 <- analysis_fast(d2, control = 0, time.looks = 100, weight = "mwlrt",
+                      t_star = 10, strata = "s")
+  expect_equal(r2$logrank.z, 0.0655990630, tolerance = 1e-8)
+})
+
+test_that("analysis_fast: tte must be non-negative and -0 is treated as 0", {
+  d <- data.frame(sim = 1L, group = rep(0:1, each = 4), accrual_time = 0,
+                  tte = c(-0, 1, 2, 4, 0.5, 1.5, 3, 5), event = 1L)
+  # The first time is a negative zero.
+  expect_identical(1 / d$tte[1], -Inf)
+  r <- analysis_fast(d, control = 0, time.looks = 100)
+  z_ref <- as.numeric(survdiff_fast(d$tte, d$event, d$group, control = 0,
+                                    side = 1))
+  expect_equal(r$logrank.z, z_ref, tolerance = 1e-12)
+  # Python, with the event at time 0 first: -0.6414478 (+0.6414478 when the
+  # negative zero is sorted last).
+  expect_equal(r$logrank.z, -0.6414478072, tolerance = 1e-8)
+  d_neg <- d
+  d_neg$tte[1] <- -0.3
+  expect_error(analysis_fast(d_neg, control = 0, time.looks = 100),
+               "non-negative")
+  d_chr <- d
+  d_chr$tte <- as.character(d_chr$tte)
+  expect_error(analysis_fast(d_chr, control = 0, time.looks = 100),
+               "numeric and non-negative")
+  d_fac <- d
+  d_fac$event <- factor(d_fac$event)
+  expect_error(analysis_fast(d_fac, control = 0, time.looks = 100),
+               "numeric or logical")
+})
+
+test_that("analysis_fast: no warning when tau exceeds the follow-up at a look", {
+  d <- simdata_fast(nsim = 1, n = c(100, 100), a.time = c(0, 12), a.prop = 1,
+                    e.median = list(12, 18), seed = 3)
+  expect_warning(
+    r <- analysis_fast(d, control = 1, time.looks = 10, stat = "rmst",
+                       tau = 24),
+    regexp = NA)
+  inc <- d$accrual_time <= 10
+  obs <- pmin(d$tte, 10 - d$accrual_time)[inc]
+  evt <- as.integer(d$event == 1 & d$accrual_time + d$tte <= 10)[inc]
+  # The stand-alone function warns, and gives the same values.
+  expect_warning(f <- rmst_fast(obs, evt, d$group[inc], control = 1, tau = 24),
+                 "carried forward")
+  expect_equal(r$rmst.ctrl, unname(f["rmst.ctrl"]), tolerance = 1e-10)
+  expect_equal(r$rmst.trt, unname(f["rmst.trt"]), tolerance = 1e-10)
+})
+
+test_that("analysis_fast: conf.level applies to every confidence interval", {
+  dat <- simdata_fast(nsim = 2, n = c(150, 150), a.time = c(0, 12),
+                      a.prop = 1,
+                      e.hazard = list(log(2) / 10, log(2) / 16), seed = 404)
+  res <- analysis_fast(dat, control = 1, time.looks = 1e6,
+                       stat = c("milestone", "wmst"), tau = 12,
+                       conf.level = 0.9)
+  for (s in 1:2) {
+    d  <- dat[dat$sim == s, ]
+    ms <- milestone_fast(d$tte, d$event, d$group, control = 1, tau = 12,
+                         conf.level = 0.9)
+    expect_equal(res$milestone.diff.lower[s], ms$diff.lower, tolerance = 1e-10)
+    expect_equal(res$milestone.diff.upper[s], ms$diff.upper, tolerance = 1e-10)
+    wm <- wmst_fast(d$tte, d$event, d$group, control = 1, tau2 = 12,
+                    conf.level = 0.9)
+    expect_equal(res$wmst.diff.lower[s], unname(wm["lower.diff"]),
+                 tolerance = 1e-10)
+    expect_equal(res$wmst.diff.upper[s], unname(wm["upper.diff"]),
+                 tolerance = 1e-10)
+  }
+})
+
+test_that("analysis_fast: ahsw reports finite average hazards as ahsw_fast does", {
+  # No treatment-group event up to tau = 5, so the treatment average hazard is
+  # 0 and the contrasts are not defined.
+  d <- data.frame(sim = 1L, group = rep(1:2, each = 6), accrual_time = 0,
+                  tte = c(1:6, 6.5:11.5), event = 1L)
+  ah <- ahsw_fast(d$tte, d$event, d$group, control = 1, tau = 5)
+  r <- analysis_fast(d, control = 1, time.looks = 100, stat = "ahsw", tau = 5)
+  expect_equal(unname(ah["ah.trt"]), 0)
+  expect_equal(r$ahsw.ah.ctrl, unname(ah["ah.ctrl"]), tolerance = 1e-12)
+  expect_equal(r$ahsw.ah.trt, 0)
+  expect_true(is.na(r$ahsw.rah) && is.na(r$ahsw.dah))
+})
+
+test_that("analysis_fast: several strata columns do not merge on their labels", {
+  # The pasted labels of ("a.b", "c") and ("a", "b.c") are both "a.b.c".
+  # Python (independent): Z = -0.8839063432 with the three strata, and
+  # -0.5590990412 if the first two were merged.
+  d <- data.frame(
+    sim = 1L, accrual_time = 0,
+    group = rep(rep(0:1, each = 4), 3),
+    tte = c(1, 3, 5, 7, 2, 4, 6, 8, 10, 12, 14, 16, 11, 13, 15, 17,
+            2.5, 4.5, 6.5, 8.5, 3.5, 5.5, 7.5, 9.5),
+    event = c(1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0,
+              1, 0, 1, 1, 1, 1, 0, 1),
+    s1 = rep(c("a.b", "a", "a"), each = 8),
+    s2 = rep(c("c", "b.c", "c"), each = 8),
+    stringsAsFactors = FALSE)
+  r <- analysis_fast(d, control = 0, time.looks = 100,
+                     strata = c("s1", "s2"))
+  z_ref <- as.numeric(survdiff_fast(d$tte, d$event, d$group, control = 0,
+                                    side = 1,
+                                    strata = paste(d$s1, d$s2, sep = "|")))
+  expect_equal(r$logrank.z, z_ref, tolerance = 1e-12)
+  expect_equal(r$logrank.z, -0.8839063432, tolerance = 1e-8)
+})
+
+test_that("analysis_fast: further arguments are validated", {
+  dat <- simdata_fast(nsim = 3, n = c(40, 40), a.time = c(0, 6), a.prop = 1,
+                      e.hazard = list(log(2) / 10, log(2) / 12), seed = 91)
+  expect_error(analysis_fast(dat, control = 1, time.looks = 10,
+                             stat = "maxcombo", mc.rho = numeric(0),
+                             mc.gamma = numeric(0)),
+               "at least one Fleming-Harrington weight")
+  expect_error(analysis_fast(dat, control = 1, time.looks = -1),
+               "'time.looks' must be positive")
+  expect_error(analysis_fast(dat, control = 1, event.looks = Inf),
+               "'event.looks' must be positive")
+  expect_error(analysis_fast(dat, control = 1, time.looks = 10,
+                             conf.level = NA), "conf.level")
+  expect_error(analysis_fast(dat, control = 1, time.looks = 10,
+                             conf.level = c(0.9, 0.95)), "conf.level")
+  expect_error(analysis_fast(dat, control = 1, time.looks = 10,
+                             by.subgroup = "yes"), "by.subgroup")
 })

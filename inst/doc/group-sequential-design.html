@@ -356,8 +356,8 @@ under proportional hazards, where gsDesign and similar packages are
 accurate, but that once the simulation agrees on a case they can handle,
 the same machinery can be trusted for cases they cannot, such as
 non-proportional hazards or data-dependent analysis timing. The whole
-vignette, with 10,000 simulated trials for the main design, runs in a
-few seconds.</p>
+vignette, with 10,000 simulated trials for the main design, runs in well
+under a minute.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(FastSurvival)</span></code></pre></div>
 </div>
 <div id="the-innovatv-301-trial" class="section level1">
@@ -367,15 +367,17 @@ tisotumab vedotin versus the investigator’s choice of chemotherapy in
 patients with recurrent or metastatic cervical cancer (Vergote et al.,
 2024). The primary end point was overall survival, with patients
 randomly assigned in a 1:1 ratio.</p>
-<p>The design enrolled approximately 482 patients and was powered at 90%
-on the occurrence of 336 total deaths, with one prespecified interim
-efficacy analysis at about 75% of information (252 of 336 events). The
-overall two-sided type I error was controlled at 5% using the Lan-DeMets
-spending function with an O’Brien-Fleming boundary. For planning we take
-an exponential overall survival with a median of 12.9 months in the
-tisotumab vedotin group and 9.0 months in the chemotherapy group (a
-hazard ratio of about 0.70), accrual over 23 months, and a 5% annual
-dropout rate in each group.</p>
+<p>The design planned to enroll approximately 482 patients and was
+powered at 90% on the occurrence of 336 total deaths, with one
+prespecified interim efficacy analysis at about 75% of information (252
+of 336 events). Overall survival was tested at a two-sided 5% level with
+the Lan-DeMets spending function with an O’Brien-Fleming boundary. For
+planning we take an exponential overall survival with a median of 12.9
+months in the tisotumab vedotin group and 9.0 months in the chemotherapy
+group (a hazard ratio of about 0.70), accrual over 23 months, and a 5%
+annual dropout rate in each group, the assumptions in Section 9.2 of the
+trial protocol, which is available with the full text of Vergote et al.
+(2024).</p>
 </div>
 <div id="simulating-the-trial" class="section level1">
 <h1>Simulating the trial</h1>
@@ -458,6 +460,10 @@ analysis time across the looks.</p>
 <span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">#&gt;   Expected events at stop:        278.2</span></span>
 <span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="co">#&gt;   Expected sample size at stop:   482.0</span></span>
 <span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt;   Expected analysis time at stop: 27.31</span></span></code></pre></div>
+<p><code>plot()</code> draws the cumulative probability of stopping for
+efficacy at each look, here against the expected number of events.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">plot</span>(oc, <span class="at">xaxis =</span> <span class="st">&quot;events&quot;</span>)</span></code></pre></div>
+<p><img role="img" src="data:image/png;base64,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" /><!-- --></p>
 </div>
 <div id="comparison-with-the-closed-form-design" class="section level1">
 <h1>Comparison with the closed-form design</h1>
@@ -471,50 +477,50 @@ gives the crossing probabilities for this drift. The expected calendar
 time of each look is the time at which the expected number of deaths,
 under uniform accrual, exponential survival, and exponential dropout,
 reaches the event target.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>looks <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">252</span>, <span class="dv">336</span>)</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>theta <span class="ot">&lt;-</span> <span class="fu">log</span>(<span class="fl">12.9</span> <span class="sc">/</span> <span class="fl">9.0</span>) <span class="sc">/</span> <span class="dv">2</span></span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>gp <span class="ot">&lt;-</span> gsDesign<span class="sc">::</span><span class="fu">gsProbability</span>(<span class="at">k =</span> <span class="dv">2</span>, <span class="at">theta =</span> theta, <span class="at">n.I =</span> looks,</span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>                              <span class="at">a =</span> <span class="fu">rep</span>(<span class="sc">-</span><span class="dv">20</span>, <span class="dv">2</span>), <span class="at">b =</span> gsd<span class="sc">$</span>upper<span class="sc">$</span>bound)</span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>p_cross <span class="ot">&lt;-</span> gp<span class="sc">$</span>upper<span class="sc">$</span>prob[, <span class="dv">1</span>]</span>
-<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a></span>
-<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co"># Expected number of deaths by calendar time t: uniform accrual of 482</span></span>
-<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co"># subjects over 23 months, exponential survival and dropout in each group.</span></span>
-<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>lam <span class="ot">&lt;-</span> <span class="fu">log</span>(<span class="dv">2</span>) <span class="sc">/</span> <span class="fu">c</span>(<span class="fl">12.9</span>, <span class="fl">9.0</span>)</span>
-<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>exp_events <span class="ot">&lt;-</span> <span class="cf">function</span>(t, <span class="at">n_tot =</span> <span class="dv">482</span>, <span class="at">r_acc =</span> <span class="dv">23</span>) {</span>
-<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>  a_end <span class="ot">&lt;-</span> <span class="fu">min</span>(t, r_acc)</span>
-<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>  <span class="fu">sum</span>(<span class="fu">vapply</span>(lam, <span class="cf">function</span>(l) {</span>
-<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>    cc <span class="ot">&lt;-</span> l <span class="sc">+</span> eta</span>
-<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>    (n_tot <span class="sc">/</span> <span class="dv">2</span>) <span class="sc">/</span> r_acc <span class="sc">*</span> l <span class="sc">/</span> cc <span class="sc">*</span></span>
-<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>      (a_end <span class="sc">-</span> (<span class="fu">exp</span>(<span class="sc">-</span>cc <span class="sc">*</span> (t <span class="sc">-</span> a_end)) <span class="sc">-</span> <span class="fu">exp</span>(<span class="sc">-</span>cc <span class="sc">*</span> t)) <span class="sc">/</span> cc)</span>
-<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>  }, <span class="fu">numeric</span>(<span class="dv">1</span>)))</span>
-<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>}</span>
-<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>t_look <span class="ot">&lt;-</span> <span class="fu">vapply</span>(looks, <span class="cf">function</span>(d) {</span>
-<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>  stats<span class="sc">::</span><span class="fu">uniroot</span>(<span class="cf">function</span>(t) <span class="fu">exp_events</span>(t) <span class="sc">-</span> d, <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">200</span>))<span class="sc">$</span>root</span>
-<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>}, <span class="fu">numeric</span>(<span class="dv">1</span>))</span>
-<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a></span>
-<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a>sim_val <span class="ot">&lt;-</span> <span class="cf">function</span>(lk, col) <span class="fu">as.numeric</span>(oc[oc<span class="sc">$</span>look <span class="sc">==</span> lk, col])</span>
-<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a>z1 <span class="ot">&lt;-</span> <span class="sc">-</span>res<span class="sc">$</span>logrank.z[res<span class="sc">$</span>look <span class="sc">==</span> <span class="dv">1</span>]</span>
-<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a>cmp <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a>  <span class="at">quantity =</span> <span class="fu">c</span>(<span class="st">&quot;Mean log-rank Z at the interim&quot;</span>,</span>
-<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a>               <span class="st">&quot;Probability of crossing at the interim&quot;</span>,</span>
-<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a>               <span class="st">&quot;Overall power&quot;</span>,</span>
-<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a>               <span class="st">&quot;Expected number of events at stop&quot;</span>,</span>
-<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a>               <span class="st">&quot;Expected analysis time at stop (months)&quot;</span>),</span>
-<span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a>  <span class="at">simulation =</span> <span class="fu">c</span>(<span class="fu">mean</span>(z1),</span>
-<span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a>                 <span class="fu">sim_val</span>(<span class="st">&quot;1&quot;</span>, <span class="st">&quot;prob.stop.efficacy&quot;</span>),</span>
-<span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a>                 <span class="fu">sim_val</span>(<span class="st">&quot;overall&quot;</span>, <span class="st">&quot;cum.reject&quot;</span>),</span>
-<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a>                 <span class="fu">sim_val</span>(<span class="st">&quot;overall&quot;</span>, <span class="st">&quot;n.event.mean&quot;</span>),</span>
-<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a>                 <span class="fu">sim_val</span>(<span class="st">&quot;overall&quot;</span>, <span class="st">&quot;cutoff.mean&quot;</span>)),</span>
-<span id="cb6-35"><a href="#cb6-35" tabindex="-1"></a>  <span class="at">closed_form =</span> <span class="fu">c</span>(theta <span class="sc">*</span> <span class="fu">sqrt</span>(looks[<span class="dv">1</span>]),</span>
-<span id="cb6-36"><a href="#cb6-36" tabindex="-1"></a>                  p_cross[<span class="dv">1</span>],</span>
-<span id="cb6-37"><a href="#cb6-37" tabindex="-1"></a>                  <span class="fu">sum</span>(p_cross),</span>
-<span id="cb6-38"><a href="#cb6-38" tabindex="-1"></a>                  <span class="fu">sum</span>(looks <span class="sc">*</span> <span class="fu">c</span>(p_cross[<span class="dv">1</span>], <span class="dv">1</span> <span class="sc">-</span> p_cross[<span class="dv">1</span>])),</span>
-<span id="cb6-39"><a href="#cb6-39" tabindex="-1"></a>                  <span class="fu">sum</span>(t_look <span class="sc">*</span> <span class="fu">c</span>(p_cross[<span class="dv">1</span>], <span class="dv">1</span> <span class="sc">-</span> p_cross[<span class="dv">1</span>])))</span>
-<span id="cb6-40"><a href="#cb6-40" tabindex="-1"></a>)</span>
-<span id="cb6-41"><a href="#cb6-41" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(cmp, <span class="at">digits =</span> <span class="dv">3</span>,</span>
-<span id="cb6-42"><a href="#cb6-42" tabindex="-1"></a>             <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;Quantity&quot;</span>,</span>
-<span id="cb6-43"><a href="#cb6-43" tabindex="-1"></a>                           <span class="fu">paste0</span>(<span class="st">&quot;FastSurvival (&quot;</span>, nsim, <span class="st">&quot; trials)&quot;</span>),</span>
-<span id="cb6-44"><a href="#cb6-44" tabindex="-1"></a>                           <span class="st">&quot;Closed form&quot;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>looks <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">252</span>, <span class="dv">336</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>theta <span class="ot">&lt;-</span> <span class="fu">log</span>(<span class="fl">12.9</span> <span class="sc">/</span> <span class="fl">9.0</span>) <span class="sc">/</span> <span class="dv">2</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>gp <span class="ot">&lt;-</span> gsDesign<span class="sc">::</span><span class="fu">gsProbability</span>(<span class="at">k =</span> <span class="dv">2</span>, <span class="at">theta =</span> theta, <span class="at">n.I =</span> looks,</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>                              <span class="at">a =</span> <span class="fu">rep</span>(<span class="sc">-</span><span class="dv">20</span>, <span class="dv">2</span>), <span class="at">b =</span> gsd<span class="sc">$</span>upper<span class="sc">$</span>bound)</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>p_cross <span class="ot">&lt;-</span> gp<span class="sc">$</span>upper<span class="sc">$</span>prob[, <span class="dv">1</span>]</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co"># Expected number of deaths by calendar time t: uniform accrual of 482</span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co"># subjects over 23 months, exponential survival and dropout in each group.</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>lam <span class="ot">&lt;-</span> <span class="fu">log</span>(<span class="dv">2</span>) <span class="sc">/</span> <span class="fu">c</span>(<span class="fl">12.9</span>, <span class="fl">9.0</span>)</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>exp_events <span class="ot">&lt;-</span> <span class="cf">function</span>(t, <span class="at">n_tot =</span> <span class="dv">482</span>, <span class="at">r_acc =</span> <span class="dv">23</span>) {</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>  a_end <span class="ot">&lt;-</span> <span class="fu">min</span>(t, r_acc)</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>  <span class="fu">sum</span>(<span class="fu">vapply</span>(lam, <span class="cf">function</span>(l) {</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>    cc <span class="ot">&lt;-</span> l <span class="sc">+</span> eta</span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>    (n_tot <span class="sc">/</span> <span class="dv">2</span>) <span class="sc">/</span> r_acc <span class="sc">*</span> l <span class="sc">/</span> cc <span class="sc">*</span></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>      (a_end <span class="sc">-</span> (<span class="fu">exp</span>(<span class="sc">-</span>cc <span class="sc">*</span> (t <span class="sc">-</span> a_end)) <span class="sc">-</span> <span class="fu">exp</span>(<span class="sc">-</span>cc <span class="sc">*</span> t)) <span class="sc">/</span> cc)</span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a>  }, <span class="fu">numeric</span>(<span class="dv">1</span>)))</span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>}</span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a>t_look <span class="ot">&lt;-</span> <span class="fu">vapply</span>(looks, <span class="cf">function</span>(d) {</span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a>  stats<span class="sc">::</span><span class="fu">uniroot</span>(<span class="cf">function</span>(t) <span class="fu">exp_events</span>(t) <span class="sc">-</span> d, <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">200</span>))<span class="sc">$</span>root</span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a>}, <span class="fu">numeric</span>(<span class="dv">1</span>))</span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a></span>
+<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a>sim_val <span class="ot">&lt;-</span> <span class="cf">function</span>(lk, col) <span class="fu">as.numeric</span>(oc[oc<span class="sc">$</span>look <span class="sc">==</span> lk, col])</span>
+<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a>z1 <span class="ot">&lt;-</span> <span class="sc">-</span>res<span class="sc">$</span>logrank.z[res<span class="sc">$</span>look <span class="sc">==</span> <span class="dv">1</span>]</span>
+<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a>cmp <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a>  <span class="at">quantity =</span> <span class="fu">c</span>(<span class="st">&quot;Mean log-rank Z at the interim&quot;</span>,</span>
+<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a>               <span class="st">&quot;Probability of crossing at the interim&quot;</span>,</span>
+<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a>               <span class="st">&quot;Overall power&quot;</span>,</span>
+<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a>               <span class="st">&quot;Expected number of events at stop&quot;</span>,</span>
+<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a>               <span class="st">&quot;Expected analysis time at stop (months)&quot;</span>),</span>
+<span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a>  <span class="at">simulation =</span> <span class="fu">c</span>(<span class="fu">mean</span>(z1),</span>
+<span id="cb7-31"><a href="#cb7-31" tabindex="-1"></a>                 <span class="fu">sim_val</span>(<span class="st">&quot;1&quot;</span>, <span class="st">&quot;prob.stop.efficacy&quot;</span>),</span>
+<span id="cb7-32"><a href="#cb7-32" tabindex="-1"></a>                 <span class="fu">sim_val</span>(<span class="st">&quot;overall&quot;</span>, <span class="st">&quot;cum.reject&quot;</span>),</span>
+<span id="cb7-33"><a href="#cb7-33" tabindex="-1"></a>                 <span class="fu">sim_val</span>(<span class="st">&quot;overall&quot;</span>, <span class="st">&quot;n.event.mean&quot;</span>),</span>
+<span id="cb7-34"><a href="#cb7-34" tabindex="-1"></a>                 <span class="fu">sim_val</span>(<span class="st">&quot;overall&quot;</span>, <span class="st">&quot;cutoff.mean&quot;</span>)),</span>
+<span id="cb7-35"><a href="#cb7-35" tabindex="-1"></a>  <span class="at">closed_form =</span> <span class="fu">c</span>(theta <span class="sc">*</span> <span class="fu">sqrt</span>(looks[<span class="dv">1</span>]),</span>
+<span id="cb7-36"><a href="#cb7-36" tabindex="-1"></a>                  p_cross[<span class="dv">1</span>],</span>
+<span id="cb7-37"><a href="#cb7-37" tabindex="-1"></a>                  <span class="fu">sum</span>(p_cross),</span>
+<span id="cb7-38"><a href="#cb7-38" tabindex="-1"></a>                  <span class="fu">sum</span>(looks <span class="sc">*</span> <span class="fu">c</span>(p_cross[<span class="dv">1</span>], <span class="dv">1</span> <span class="sc">-</span> p_cross[<span class="dv">1</span>])),</span>
+<span id="cb7-39"><a href="#cb7-39" tabindex="-1"></a>                  <span class="fu">sum</span>(t_look <span class="sc">*</span> <span class="fu">c</span>(p_cross[<span class="dv">1</span>], <span class="dv">1</span> <span class="sc">-</span> p_cross[<span class="dv">1</span>])))</span>
+<span id="cb7-40"><a href="#cb7-40" tabindex="-1"></a>)</span>
+<span id="cb7-41"><a href="#cb7-41" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(cmp, <span class="at">digits =</span> <span class="dv">3</span>,</span>
+<span id="cb7-42"><a href="#cb7-42" tabindex="-1"></a>             <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">&quot;Quantity&quot;</span>,</span>
+<span id="cb7-43"><a href="#cb7-43" tabindex="-1"></a>                           <span class="fu">paste0</span>(<span class="st">&quot;FastSurvival (&quot;</span>, nsim, <span class="st">&quot; trials)&quot;</span>),</span>
+<span id="cb7-44"><a href="#cb7-44" tabindex="-1"></a>                           <span class="st">&quot;Closed form&quot;</span>))</span></code></pre></div>
 <table>
 <colgroup>
 <col width="50%" />
@@ -584,43 +590,44 @@ analysis timing in the same way, and it checks such approximations.</p>
 every simulated trial and look, which dominates the computing time. When
 only the decisions at the nominal levels are needed,
 <code>mc.alpha</code> computes the integral only for the p-values that
-the Bonferroni bounds do not already place on one side of the level; the
-decisions are the same as with every p-value integrated. The nominal
-levels below are those of the log-rank design and are used for
-illustration only: the correlation between the max-combo statistics at
-the two looks differs from that of the log-rank statistic, so a formal
-design would derive its boundaries for the max-combo statistic
-itself.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>nsim_nph <span class="ot">&lt;-</span> <span class="dv">2000</span></span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>df_delay <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(</span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="at">nsim     =</span> nsim_nph,</span>
-<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">n        =</span> <span class="fu">c</span>(<span class="dv">241</span>, <span class="dv">241</span>),</span>
-<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="at">a.time   =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">23</span>),</span>
-<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>  <span class="at">a.prop   =</span> <span class="dv">1</span>,</span>
-<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>  <span class="at">e.hazard =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="fl">0.077</span>, <span class="fl">0.045</span>), <span class="fu">c</span>(<span class="fl">0.077</span>, <span class="fl">0.077</span>)),</span>
-<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>  <span class="at">e.time   =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">3</span>, <span class="cn">Inf</span>),</span>
-<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>  <span class="at">d.hazard =</span> <span class="fu">list</span>(eta, eta),</span>
-<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>  <span class="at">seed     =</span> <span class="dv">1</span></span>
-<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>)</span>
-<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a></span>
-<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
-<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>res_delay <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(</span>
-<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>  df_delay, <span class="at">control =</span> <span class="dv">2</span>,</span>
-<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a>  <span class="at">event.looks =</span> looks,</span>
-<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>  <span class="at">stat =</span> <span class="fu">c</span>(<span class="st">&quot;logrank&quot;</span>, <span class="st">&quot;maxcombo&quot;</span>), <span class="at">side =</span> <span class="dv">2</span>,</span>
-<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a>  <span class="at">mc.alpha =</span> spend_alpha</span>
-<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a>)</span>
-<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a></span>
-<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a>oc_lr <span class="ot">&lt;-</span> <span class="fu">simsummary_fast</span>(res_delay, <span class="at">p.col =</span> <span class="st">&quot;logrank.p&quot;</span>,  <span class="at">alpha =</span> spend_alpha)</span>
-<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a>oc_mc <span class="ot">&lt;-</span> <span class="fu">simsummary_fast</span>(res_delay, <span class="at">p.col =</span> <span class="st">&quot;maxcombo.p&quot;</span>, <span class="at">alpha =</span> spend_alpha)</span>
-<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
-<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a>  <span class="at">test  =</span> <span class="fu">c</span>(<span class="st">&quot;Log-rank&quot;</span>, <span class="st">&quot;Max-combo&quot;</span>),</span>
-<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a>  <span class="at">power =</span> <span class="fu">round</span>(<span class="fu">c</span>(oc_lr[oc_lr<span class="sc">$</span>look <span class="sc">==</span> <span class="st">&quot;overall&quot;</span>, <span class="st">&quot;cum.reject&quot;</span>],</span>
-<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a>                  oc_mc[oc_mc<span class="sc">$</span>look <span class="sc">==</span> <span class="st">&quot;overall&quot;</span>, <span class="st">&quot;cum.reject&quot;</span>]), <span class="dv">3</span>)</span>
-<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a>)</span>
-<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a><span class="co">#&gt;        test power</span></span>
-<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a><span class="co">#&gt; 1  Log-rank 0.924</span></span>
-<span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a><span class="co">#&gt; 2 Max-combo 0.959</span></span></code></pre></div>
+the Bonferroni bounds do not already place on one side of the level. The
+decisions that the bounds settle are those of the exact p-values, and
+the others carry the error of the randomized integration, as without
+<code>mc.alpha</code>. The nominal levels below are those of the
+log-rank design and are used for illustration only: the correlation
+between the max-combo statistics at the two looks differs from that of
+the log-rank statistic, so a formal design would derive its boundaries
+for the max-combo statistic itself.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>nsim_nph <span class="ot">&lt;-</span> <span class="dv">2000</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>df_delay <span class="ot">&lt;-</span> <span class="fu">simdata_fast</span>(</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="at">nsim     =</span> nsim_nph,</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="at">n        =</span> <span class="fu">c</span>(<span class="dv">241</span>, <span class="dv">241</span>),</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="at">a.time   =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">23</span>),</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  <span class="at">a.prop   =</span> <span class="dv">1</span>,</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>  <span class="at">e.hazard =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="fl">0.077</span>, <span class="fl">0.045</span>), <span class="fu">c</span>(<span class="fl">0.077</span>, <span class="fl">0.077</span>)),</span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>  <span class="at">e.time   =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">3</span>, <span class="cn">Inf</span>),</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>  <span class="at">d.hazard =</span> <span class="fu">list</span>(eta, eta),</span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>  <span class="at">seed     =</span> <span class="dv">1</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>)</span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>res_delay <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(</span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>  df_delay, <span class="at">control =</span> <span class="dv">2</span>,</span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a>  <span class="at">event.looks =</span> looks,</span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a>  <span class="at">stat =</span> <span class="fu">c</span>(<span class="st">&quot;logrank&quot;</span>, <span class="st">&quot;maxcombo&quot;</span>), <span class="at">side =</span> <span class="dv">2</span>,</span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a>  <span class="at">mc.alpha =</span> spend_alpha</span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a>)</span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a></span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a>oc_lr <span class="ot">&lt;-</span> <span class="fu">simsummary_fast</span>(res_delay, <span class="at">p.col =</span> <span class="st">&quot;logrank.p&quot;</span>,  <span class="at">alpha =</span> spend_alpha)</span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a>oc_mc <span class="ot">&lt;-</span> <span class="fu">simsummary_fast</span>(res_delay, <span class="at">p.col =</span> <span class="st">&quot;maxcombo.p&quot;</span>, <span class="at">alpha =</span> spend_alpha)</span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a>  <span class="at">test  =</span> <span class="fu">c</span>(<span class="st">&quot;Log-rank&quot;</span>, <span class="st">&quot;Max-combo&quot;</span>),</span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a>  <span class="at">power =</span> <span class="fu">round</span>(<span class="fu">c</span>(oc_lr[oc_lr<span class="sc">$</span>look <span class="sc">==</span> <span class="st">&quot;overall&quot;</span>, <span class="st">&quot;cum.reject&quot;</span>],</span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a>                  oc_mc[oc_mc<span class="sc">$</span>look <span class="sc">==</span> <span class="st">&quot;overall&quot;</span>, <span class="st">&quot;cum.reject&quot;</span>]), <span class="dv">3</span>)</span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a>)</span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt;        test power</span></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt; 1  Log-rank 0.924</span></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt; 2 Max-combo 0.959</span></span></code></pre></div>
 <p>Of the 4,000 max-combo p-values (two looks per simulated trial), 10%
 required the multivariate normal integral.</p>
 </div>

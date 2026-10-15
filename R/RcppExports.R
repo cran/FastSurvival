@@ -288,8 +288,8 @@ rmst_core <- function(t_sorted, e_sorted, tau) {
 #' @description
 #' Internal C++ function that computes, in a single pass over a pooled sorted
 #' dataset, the two component statistics of the robust modestly-weighted (rMW)
-#' log-rank test of Magirr and Ohrn together with their null covariance. The
-#' first component is the standard log-rank statistic (weight one at every
+#' log-rank test of Magirr and \enc{Öhrn}{Ohrn} together with their null
+#' covariance. The first component is the standard log-rank statistic (weight one at every
 #' event time); the second is a modestly-weighted log-rank statistic with
 #' weight \code{min(1 / S(t-), 1 / s_star)}, where \code{S(t-)} is the
 #' left-continuous pooled Kaplan-Meier estimate just prior to each event time
@@ -391,17 +391,18 @@ stratified_logrank_core <- function(time_sorted, event_sorted, j_sorted, strata_
 #' logic as \code{weighted_logrank_core}, with weights derived from the
 #' within-stratum pooled Kaplan-Meier estimate, and the per-stratum numerator U
 #' and variance V are accumulated into the returned totals. The overall
-#' statistic is Z = sum U / sqrt(sum V). This matches the stratified weighted
-#' log-rank test of Magirr, which sums the per-stratum U and V and standardizes
-#' once. Not intended to be called directly by users; use
-#' \code{survdiff_fast()} with both \code{weight} and \code{strata} instead.
+#' statistic is Z = sum U / sqrt(sum V), the usual stratified form, which sums
+#' the per-stratum U and V and standardizes once. Not intended to be called
+#' directly by users; use \code{survdiff_fast()} with both \code{weight} and
+#' \code{strata} instead.
 #'
 #' @details
 #' The scheme codes match \code{weighted_logrank_core}: 0 = Fleming-Harrington
 #' G(rho, gamma); 1 = modestly-weighted with cap \code{1 / S(t_star-)}, the
 #' pooled Kaplan-Meier value just before \code{t_star}, computed within each
-#' stratum; 2 = Gehan-Breslow; 3 = Tarone-Ware. The left-continuous
-#' pooled Kaplan-Meier estimate is restarted at 1 at the beginning of every
+#' stratum (no cap when that value is 0); 2 = Gehan-Breslow; 3 = Tarone-Ware.
+#' The left-continuous pooled Kaplan-Meier estimate is restarted at 1 at the
+#' beginning of every
 #' stratum, so the weights of each stratum depend only on that stratum's
 #' pooled data. For the modestly-weighted scheme the weight cap is determined
 #' in a first pass within each stratum before accumulation.
@@ -450,7 +451,8 @@ stratified_weighted_logrank_core <- function(time_sorted, event_sorted, j_sorted
 #' with weight \code{min(1 / S_minus, max_weight)}, where \code{max_weight}
 #' is the reciprocal of the pooled Kaplan-Meier value just before
 #' \code{t_star}, i.e. the product over event times strictly less than
-#' \code{t_star} as in nphRCT (and is 1 when \code{t_star = 0});
+#' \code{t_star} as in nphRCT (and is 1 when \code{t_star = 0}, and infinite,
+#' so that the weights are not capped, when that product is 0);
 #' 2 = Gehan-Breslow with weight \code{n_j}; 3 = Tarone-Ware with weight
 #' \code{sqrt(n_j)}. Here \code{S_minus} is the left-continuous pooled
 #' Kaplan-Meier estimate just prior to each event time, initialized at 1.

@@ -237,3 +237,16 @@ test_that("switch_fast: subjects without a finite event or dropout time stay cen
   expect_true(any(sw$switched == 1 & !is.finite(sw$surv_time)))
   expect_equal(sw$event, as.integer(is.finite(sw$surv_time)))
 })
+
+test_that("switch_fast: a stream within rounding error of a whole number is rounded", {
+  nsim <- 5
+  df <- simdata_fast(nsim = nsim, n = c(50, 50), a.time = c(0, 6),
+                     a.prop = 1, e.median = list(12, 18), seed = 43)
+  sw <- function(stream) {
+    switch_fast(df, group = 1, when = "cutoff", cutoff = rep(6, nsim),
+                aft.factor = 1.5, prob = 0.5, seed = 7, stream = stream)
+  }
+  s_f <- sw(100 * 0.29)
+  expect_identical(s_f, sw(29))
+  expect_false(identical(s_f, sw(28)))
+})

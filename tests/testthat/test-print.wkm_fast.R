@@ -19,3 +19,13 @@ test_that("print.wkm_fast prints the weighted Kaplan-Meier test", {
   xn["z"] <- NA_real_
   expect_output(print(xn), "Test statistic not available")
 })
+
+test_that("print.wkm_fast labels the one-sided p-value Pr(>z)", {
+  d <- make_print_data()
+  x2 <- wkm_fast(d$tte, d$event, d$group, control = 1)
+  expect_output(print(x2), "Pr(>|z|)", fixed = TRUE)
+  x1 <- wkm_fast(d$tte, d$event, d$group, control = 1, side = 1)
+  out1 <- utils::capture.output(print(x1))
+  expect_true(any(grepl("Pr(>z)", out1, fixed = TRUE)))
+  expect_false(any(grepl("Pr(>|z|)", out1, fixed = TRUE)))
+})

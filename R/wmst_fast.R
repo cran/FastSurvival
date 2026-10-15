@@ -20,17 +20,24 @@
 #' treatment.
 #'
 #' @param time Numeric vector of event or censoring times.
+#'   Alternatively, a formula \code{Surv(time, event) ~ group} or
+#'   \code{Surv(time, event) ~ 1}, with the variables in
+#'   \code{data}; see \code{\link{formula_interface}}.
 #' @param event Integer vector, 1 for an event and 0 for censoring.
 #' @param group Optional grouping vector with exactly two distinct levels for a
 #'   two-group comparison. If omitted, a single-group WMST is returned.
 #' @param control The level of \code{group} that denotes the control group.
 #'   Required when \code{group} is supplied.
+#'   With the formula interface it defaults to the first level of the
+#'   group variable.
 #' @param tau1 Lower limit of the window. Defaults to 0.
 #' @param tau2 Upper limit of the window. If omitted, the largest time common
 #'   to both groups is used (the minimum over groups of the maximum observed
 #'   time), or the maximum observed time for a single group. A supplied value
 #'   larger than that gives a warning, because the Kaplan-Meier curve is not
-#'   estimated beyond it.
+#'   estimated beyond it. The window must be finite: when that default is
+#'   infinite (for example when each group has a subject without a finite
+#'   event or dropout time in simulated data), \code{tau2} must be supplied.
 #' @param side Either 2 for a two-sided test or 1 for a one-sided test of
 #'   treatment superiority (difference greater than 0).
 #' @param conf.level Confidence level for the intervals.
@@ -38,12 +45,18 @@
 #'   and \code{group} are already sorted in ascending order of \code{time}, to
 #'   skip the internal sort. Defaults to \code{FALSE}.
 #'   The order is checked, and an error is given when it does not hold.
+#' @param data A data frame in which the variables of a formula given as
+#'   \code{time} are evaluated. Used only with the formula interface; see
+#'   \code{\link{formula_interface}}.
 #'
 #' @return A named numeric vector of class \code{"wmst_fast"}. For a single
 #'   group the elements are the WMST, its standard error and confidence limits.
 #'   For two groups the elements are the control and treatment WMST values,
 #'   their difference, the standard errors, the confidence limits and the Wald
 #'   statistics for the difference.
+#'   The object also has the class \code{"fastsurv"}, whose
+#'   \code{as.data.frame()}, \code{coef()}, and \code{confint()} methods
+#'   are described in \code{\link{as.data.frame.fastsurv}}.
 #'
 #' @examples
 #' set.seed(1)
@@ -55,15 +68,32 @@
 #' event <- as.integer(tt <= cc)
 #' wmst_fast(time, event, group = g, control = 0, tau1 = 2, tau2 = 12)
 #'
+#' # Formula interface
+#' d <- data.frame(time, event, g)
+#' wmst_fast(Surv(time, event) ~ g, data = d, tau1 = 2, tau2 = 12)
+#'
 #' @references
-#' Paukner, M., & Chappell, R. (2021). Window mean survival time. Statistics in
-#' Medicine, 40(25), 5521-5533.
+#' Paukner, M., & Chappell, R. (2021). Window mean survival time.
+#' \emph{Statistics in Medicine}, \emph{40}(25), 5521-5533.
 #'
 #' @importFrom stats qnorm pnorm
 #' @export
 wmst_fast <- function(time, event, group = NULL, control = NULL,
                       tau1 = 0, tau2 = NULL, side = 2, conf.level = 0.95,
-                      presorted = FALSE) {
+                      presorted = FALSE, data = NULL) {
+  # Formula interface: Surv(time, event) ~ group or ~ 1 evaluated in 'data'
+  if (inherits(time, "formula")) {
+    f <- fastsurv_formula(time, data,
+                          event = if (!missing(event)) event,
+                          group = group, group_mode = "optional",
+                          fun = "wmst_fast()")
+    if (is.null(control)) control <- f$control
+    return(wmst_fast(f$time, f$event, group = f$group, control = control,
+                     tau1 = tau1, tau2 = tau2, side = side,
+                     conf.level = conf.level, presorted = presorted))
+  }
+  if (!is.null(data)) stop("'data' is used only with a formula")
+
   n_obs <- length(time)
   if (length(event) != n_obs) {
     stop("time and event must have the same length.")
@@ -77,6 +107,10 @@ wmst_fast <- function(time, event, group = NULL, control = NULL,
   if (!all(event %in% c(0, 1))) {
     stop("event must be coded as 0 (censored) or 1 (event).")
   }
+  # Type, sign, and coding of the inputs, as in the other analysis functions
+  # (a factor 'event' would otherwise be replaced by its integer codes, and a
+  # character 'time' sorted as text).
+  check_time_event(time, event)
   if (!(side %in% c(1, 2))) {
     stop("side must be 1 or 2.")
   }
@@ -123,7 +157,14 @@ wmst_fast <- function(time, event, group = NULL, control = NULL,
     } else {
       tau2 <- max(time)
     }
+    if (!is.finite(tau2)) {
+      stop("tau2 must be supplied, because its default (the largest observed ",
+           "time common to the groups) is infinite.")
+    }
   } else {
+    if (length(tau2) != 1L || !is.numeric(tau2) || !is.finite(tau2)) {
+      stop("tau2 must be a single finite value.")
+    }
     check_tau_follow_up(time, if (two_group) gcode else NULL, tau2,
                         arg = "tau2")
   }
@@ -197,6 +238,6 @@ wmst_fast <- function(time, event, group = NULL, control = NULL,
   attr(out, "control") <- control_label
   attr(out, "treatment") <- treatment_label
   attr(out, "method") <- "Kaplan-Meier"
-  class(out) <- "wmst_fast"
+  class(out) <- c("wmst_fast", "fastsurv")
   out
 }

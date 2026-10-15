@@ -173,3 +173,15 @@ test_that("cutoff_fast: a later look before the previous one gives a warning", {
   expect_true(any(cut[, 2] < cut[, 1], na.rm = TRUE))
   expect_warning(cutoff_fast(df, event.looks = c(150, 220)), NA)
 })
+
+test_that("cutoff_fast: the time and event columns are validated", {
+  df <- data.frame(sim = 1L, accrual_time = 0, tte = c(1, 2, 3, 4),
+                   event = c(1L, 1L, 0L, 1L))
+  df_neg <- df
+  df_neg$tte[2] <- -1
+  expect_error(cutoff_fast(df_neg, event.looks = 2), "non-negative")
+  df_fac <- df
+  df_fac$event <- factor(df_fac$event)
+  expect_error(cutoff_fast(df_fac, event.looks = 2), "numeric or logical")
+  expect_equal(as.numeric(cutoff_fast(df, event.looks = 2)), 2)
+})

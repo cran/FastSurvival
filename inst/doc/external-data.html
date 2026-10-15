@@ -482,8 +482,10 @@ log-rank test. The nominal one-sided levels 0.002 and 0.024 are close to
 those of an O’Brien-Fleming-type spending function at these looks and
 are used for illustration. With <code>mc.alpha</code> set to these
 levels, the max-combo p-value is integrated only when the Bonferroni
-bounds do not decide the comparison with the level, which leaves the
-decisions unchanged.</p>
+bounds do not decide the comparison with the level. The decisions that
+the bounds settle are those of the exact p-values, and the others carry
+the error of the randomized integration, as without
+<code>mc.alpha</code>.</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>alpha_look <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">0.002</span>, <span class="fl">0.024</span>)</span>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
 <span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">analysis_fast</span>(dat, <span class="at">control =</span> <span class="dv">1</span>, <span class="at">cutoff.looks =</span> cut,</span>

@@ -23,8 +23,10 @@
 #' The input \code{data} is the data frame returned by
 #' \code{\link{simdata_fast}} for a two-group trial. The columns \code{sim},
 #' \code{group}, \code{accrual_time}, \code{tte}, and \code{event} are
-#' required, must not contain missing values, and \code{group} must have
-#' exactly two distinct values, one of which is \code{control}. For a
+#' required and must not contain missing values. The \code{tte} column must be
+#' numeric and non-negative, \code{event} must be numeric or logical and coded
+#' as 0 or 1, and \code{group} must have exactly two distinct values, one of
+#' which is \code{control}. For a
 #' multi-arm trial, subset the data to two arms first or use
 #' \code{\link{pairwise_fast}}.
 #'
@@ -40,7 +42,9 @@
 #' simulated trial, counted over the whole trial population. If a simulation
 #' contains fewer than \code{d} events, the target is never reached: the full
 #' data are used, so the statistics are those of the final data, \code{reached}
-#' is \code{FALSE}, and \code{cutoff} is \code{NA}. When \code{time.looks} is supplied, the cutoff is the specified
+#' is \code{FALSE}, and \code{cutoff} is \code{NA}. When several events occur
+#' at the calendar time of the \code{d}-th event, all of them are included, so
+#' the number of events analyzed can exceed the target. When \code{time.looks} is supplied, the cutoff is the specified
 #' calendar time and \code{reached} is always \code{TRUE}. In both cases the
 #' cutoff is determined once on the whole population and then used for the
 #' overall analysis and for every subgroup analysis at that look.
@@ -64,7 +68,9 @@
 #' The statistics are selected with \code{stat}, which may name one or more of
 #' \code{"logrank"}, \code{"coxph"}, \code{"rmst"}, \code{"km"},
 #' \code{"maxcombo"}, \code{"ahsw"}, \code{"milestone"}, \code{"rmw"},
-#' \code{"ahr"}, \code{"medsurv"}, \code{"wkm"}, and \code{"wmst"}.
+#' \code{"ahr"}, \code{"medsurv"}, \code{"wkm"}, and \code{"wmst"}. The
+#' references for each statistic are given on the help page of the
+#' corresponding function listed under See Also.
 #'
 #' The \code{"logrank"} statistic is configurable. By default it is the
 #' ordinary unweighted, unstratified two-group log-rank test and reproduces the
@@ -81,9 +87,11 @@
 #' \code{strata} names one or more subgroup columns of \code{data} used as the
 #' stratification variable. The stratification is determined on the whole cut
 #' data, independently of the \code{population} marginalization, so a stratified
-#' overall analysis is the canonical primary test; in a single-subgroup
-#' population the stratum is constant and the stratified test degenerates to the
-#' ordinary one within that subset. The same \code{strata} also stratify the
+#' overall analysis is the canonical primary test. When \code{strata} names
+#' the subgroup column that defines a subgroup population, the stratum is
+#' constant within that population and the stratified test there reduces to
+#' the ordinary one. Several columns define their combinations as strata.
+#' The same \code{strata} also stratify the
 #' \code{"coxph"} statistic, which is then the stratified Pike-Halley estimate
 #' of \code{\link{coxph_fast}} (a common hazard ratio with a separate baseline
 #' hazard in each stratum).
@@ -98,7 +106,10 @@
 #' three weights is computed by the deterministic TVPACK algorithm, and
 #' otherwise by the randomized quasi-Monte-Carlo GenzBretz algorithm of
 #' mvtnorm, which uses R's random-number generator; call \code{set.seed()}
-#' beforehand for p-values that are reproducible to the last digit.
+#' beforehand for p-values that are reproducible to the last digit. The
+#' correlation matrix of the default weights is singular, and the GenzBretz
+#' p-values then carry an integration error of the order of 1e-4 with the
+#' default \code{maxpts} (see \code{\link{maxcombo_fast}}).
 #'
 #' The multivariate normal integration dominates the computing time of the
 #' \code{"maxcombo"} statistic in a large simulation. When only the decision
@@ -110,11 +121,17 @@
 #' \code{p_min <= p <= min(1, K * p_min)} (the Bonferroni inequality). When
 #' \code{p_min > mc.alpha}, \code{p_min} is reported; when
 #' \code{K * p_min <= mc.alpha}, \code{K * p_min} is reported; otherwise the
-#' p-value is computed by integration. The reported value is therefore on the
-#' same side of \code{mc.alpha} as the exact p-value, so the rejection
-#' decision \code{maxcombo.p <= mc.alpha} (as in \code{\link{simsummary_fast}}
-#' with \code{alpha = mc.alpha}) is the same as with exact p-values, but the
-#' reported value is a bound unless \code{maxcombo.p.exact} is \code{TRUE}.
+#' p-value is computed by integration. A bound is reported only when it is on
+#' the same side of \code{mc.alpha} as the exact p-value, so the rejection
+#' decisions \code{maxcombo.p <= mc.alpha} (as in \code{\link{simsummary_fast}}
+#' with \code{alpha = mc.alpha}) that the bounds settle are those of the exact
+#' p-values, and the reported value is a bound unless
+#' \code{maxcombo.p.exact} is \code{TRUE}. The remaining p-values are
+#' integrated as without \code{mc.alpha}. When the randomized GenzBretz
+#' algorithm is used, the random numbers of each integral change with the
+#' number of integrals, so near the level a decision can differ from that of
+#' a run without \code{mc.alpha}, as it can between two runs with different
+#' seeds.
 #' Use exact p-values (the default \code{mc.alpha = NULL}) when the p-values
 #' themselves, or decisions at other levels such as Bonferroni-adjusted levels,
 #' are needed.
@@ -123,7 +140,9 @@
 #' and Horiguchi on the window from 0 to \code{tau}. It reports the per-group
 #' average hazards, the ratio (RAH) and difference (DAH) contrasts with their
 #' confidence intervals, and p-values for both contrasts that follow
-#' \code{side}, matching \code{\link{ahsw_fast}}. The benefit direction is a
+#' \code{side}, matching \code{\link{ahsw_fast}}. As there, a group without
+#' an event up to \code{tau} has an average hazard of 0, and the contrasts
+#' are then \code{NA}. The benefit direction is a
 #' ratio below 1 (a negative log ratio) and a negative difference, so the
 #' one-sided p-values are lower-tail probabilities.
 #'
@@ -137,14 +156,18 @@
 #' \code{"mover"} a positive Z favors treatment; for \code{"loglog"} the
 #' statistic is the difference of the complementary log-log transforms, so a
 #' negative Z favors treatment, and the one-sided p-value is the lower tail as
-#' in \code{\link{milestone_fast}}. When the Kaplan-Meier estimate of a group
+#' in \code{\link{milestone_fast}}. The \code{"mover"} statistic is obtained
+#' by inverting the MOVER interval at \code{conf.level}, so its p-value depends
+#' on \code{conf.level}, consistently with the interval (see
+#' \code{\link{milestone_fast}}). When the Kaplan-Meier estimate of a group
 #' is 0 or 1 at \code{tau}, its one-sample interval degenerates to the
 #' estimate, so the interval of the difference is still reported, while the
 #' \code{"loglog"} statistic is \code{NA}.
 #'
 #' The \code{"rmw"} statistic is the robust modestly-weighted log-rank test of
-#' Magirr and Ohrn, the maximum of the standard log-rank component and a single
-#' modestly-weighted component with survival-threshold \code{s_star}. Its
+#' Magirr and \enc{Öhrn}{Ohrn}, the maximum of the standard log-rank component
+#' and a single modestly-weighted component with survival-threshold
+#' \code{s_star}. Its
 #' \code{rmw.stat} is the most extreme standardized component (the minimum when
 #' \code{side = 1}, so a negative value favors treatment, and the maximum
 #' absolute component when \code{side = 2}), and \code{rmw.p} is the joint
@@ -166,14 +189,21 @@
 #' \code{\link{medsurv_fast}}; \code{medsurv.bw} optionally overrides the kernel
 #' bandwidth used by \code{medsurv.method = "km"}. The benefit direction is a
 #' positive difference (a longer median under treatment), so a positive Z favors
-#' treatment.
+#' treatment. When the Kaplan-Meier estimate of a group stays at 0.5 up to an
+#' infinite observed time, as for subjects with \code{tte = Inf} at a look
+#' that is not reached, the median of that group is not defined and the
+#' \code{"medsurv"} columns that depend on it are \code{NA}.
 #'
 #' The \code{"wkm"} statistic is the weighted Kaplan-Meier (Pepe-Fleming) test.
 #' It reports the weighted integrated survival difference (treatment minus
 #' control) with its confidence interval, the Wald statistic, and the p-value.
 #' The weight is selected with \code{wkm.weight} (\code{"PF"}, \code{"sqrtPF"},
 #' or \code{"constant"}), matching \code{\link{wkm_fast}}. The benefit direction
-#' is a positive weighted difference (a positive Z favors treatment).
+#' is a positive weighted difference (a positive Z favors treatment). The
+#' integral runs over the observed range, so all the \code{"wkm"} columns are
+#' \code{NA} when an observed time is infinite, as for a subject without a
+#' finite event or dropout time (\code{tte = Inf}) at a look that is not
+#' reached.
 #'
 #' The \code{"wmst"} statistic compares the window mean survival time, the area
 #' under the Kaplan-Meier curve between \code{wmst.tau1} and \code{wmst.tau2}.
@@ -227,18 +257,26 @@
 #'   \code{"rmst"}, the truncation time for \code{"ahsw"} and \code{"ahr"}, and
 #'   the milestone timepoint for \code{"milestone"}. Required only when
 #'   \code{"rmst"}, \code{"ahsw"}, \code{"milestone"}, or \code{"ahr"} is
-#'   requested.
+#'   requested. No warning is given when it exceeds the largest observed time
+#'   of a group at a look (for example at an early interim analysis); the
+#'   Kaplan-Meier curve of that group is then carried forward flat, whereas the
+#'   stand-alone functions such as \code{\link{rmst_fast}} give a warning.
 #' @param t.eval A single positive numeric value, the landmark time for
-#'   \code{"km"}. Required only when \code{"km"} is requested.
-#' @param conf.level A single numeric value in (0, 1), the confidence level for
-#'   \code{"coxph"}, \code{"rmst"}, and \code{"ahsw"}. Defaults to 0.95.
+#'   \code{"km"}. Required only when \code{"km"} is requested. As for
+#'   \code{tau}, no warning is given when it exceeds the follow-up of a group
+#'   at a look.
+#' @param conf.level A single numeric value in (0, 1), the confidence level of
+#'   all the confidence-interval columns (and of the \code{"mover"} milestone
+#'   statistic). Defaults to 0.95.
 #' @param side An integer, either 1 or 2. When \code{side = 2} (default),
 #'   two-sided p-values \code{2 pnorm(-|z|)} are reported for log-rank, Cox, and
 #'   RMST, and the two-sided max-combo test is used. When \code{side = 1}, the
 #'   one-sided p-value in the direction of treatment benefit is reported for
 #'   each of those statistics, and the one-sided max-combo test is used. The
 #'   test statistics themselves are always reported with their natural sign, so
-#'   the choice of \code{side} affects only the p-value columns. For log-rank
+#'   the choice of \code{side} affects only the p-value columns, except
+#'   \code{maxcombo.stat} and \code{rmw.stat}, whose definition depends on
+#'   \code{side} (see Details). For log-rank
 #'   and Cox the benefit direction is a negative Z (the one-sided p-value is the
 #'   lower tail \code{pnorm(z)}); for RMST it is a positive Z (the upper tail
 #'   \code{pnorm(-z)}). The other statistics follow the benefit directions
@@ -263,7 +301,9 @@
 #'   \code{weight = "fh"}. Defaults to 0.
 #' @param t_star A single non-negative numeric value, the timepoint of the
 #'   modestly-weighted log-rank test. Required only when \code{weight =
-#'   "mwlrt"}.
+#'   "mwlrt"}. The weight is capped at the reciprocal of the pooled
+#'   Kaplan-Meier value just before \code{t_star}, and is not capped when that
+#'   value is 0 (see \code{\link{survdiff_fast}}).
 #' @param strata An optional character vector naming one or more subgroup
 #'   columns of \code{data} to use as the stratification variable for the
 #'   \code{"logrank"} and \code{"coxph"} statistics. \code{NULL} (default)
@@ -273,7 +313,9 @@
 #'   \code{"coxph"} statistics; the other statistics ignore it.
 #' @param ms.method A character string naming the inference method for the
 #'   \code{"milestone"} statistic, one of \code{"wald"} (default),
-#'   \code{"loglog"}, or \code{"mover"}. See \code{\link{milestone_fast}}.
+#'   \code{"loglog"}, or \code{"mover"}. See \code{\link{milestone_fast}};
+#'   the \code{"mover"} statistic and its p-value depend on
+#'   \code{conf.level}.
 #' @param s_star A single numeric value in (0, 1], the survival-probability
 #'   threshold of the modestly-weighted component of the \code{"rmw"} statistic.
 #'   The weight is capped at \code{1 / s_star}. Defaults to 0.5. See
@@ -286,11 +328,14 @@
 #'   \code{c(0, 1, 0, 1)}.
 #' @param abseps A single positive numeric value, the absolute error tolerance
 #'   passed to the multivariate normal integration of the \code{"maxcombo"}
-#'   p-value. Defaults to 1e-5.
+#'   p-value. Defaults to 1e-5. With the default weights the quasi-Monte-Carlo
+#'   integration usually stops at \code{maxpts} before reaching it (see
+#'   \code{\link{maxcombo_fast}}).
 #' @param maxpts A single positive integer, the maximum number of function
 #'   evaluations for the quasi-Monte-Carlo integration used by the
 #'   \code{"maxcombo"} p-value with four or more weights or with a two-sided
-#'   test (see Details). Defaults to 25000.
+#'   test (see Details). Defaults to 25000. Larger values reduce the
+#'   integration error at a higher computing cost.
 #' @param medsurv.method A character string naming the variance method for the
 #'   \code{"medsurv"} statistic, one of \code{"km"} (default) or \code{"nph"}.
 #'   See \code{\link{medsurv_fast}}.
@@ -300,13 +345,16 @@
 #'   computed per group from the cut data, matching \code{\link{medsurv_fast}}.
 #' @param wkm.weight A character string naming the weight for the \code{"wkm"}
 #'   statistic, one of \code{"PF"} (default, Pepe-Fleming combined censoring
-#'   weight), \code{"sqrtPF"}, or \code{"constant"}. See \code{\link{wkm_fast}}.
+#'   weight), \code{"sqrtPF"}, or \code{"constant"}. See \code{\link{wkm_fast}},
+#'   which explains why the \code{"PF"} weight is recommended when follow-up
+#'   differs between the groups.
 #' @param wmst.tau1 A single non-negative numeric value, the lower window limit
 #'   for the \code{"wmst"} statistic. Defaults to 0.
 #' @param wmst.tau2 A single positive numeric value, the upper window limit for
 #'   the \code{"wmst"} statistic, which must exceed \code{wmst.tau1}. \code{NULL}
 #'   (default) falls back to \code{tau}. Required (through either argument) only
-#'   when \code{"wmst"} is requested.
+#'   when \code{"wmst"} is requested. As for \code{tau}, no warning is given
+#'   when it exceeds the follow-up of a group at a look.
 #' @param mc.alpha An optional numeric vector of nominal levels in (0, 1), one
 #'   per look or a single value for all looks, at which the \code{"maxcombo"}
 #'   p-value is compared. When supplied, the p-value is computed by
@@ -467,7 +515,8 @@ analysis_fast <- function(data, control,
     looks     <- if (has_event) event.looks else time.looks
     look_type <- if (has_event) 0L else 1L
     if (length(looks) < 1L || any(!is.finite(looks)) || any(looks <= 0)) {
-      stop("'looks' must be positive and finite")
+      stop("'", if (has_event) "event.looks" else "time.looks",
+           "' must be positive and finite")
     }
   }
   if (has_event && any(abs(looks - round(looks)) > 1e-8 | looks < 1)) {
@@ -477,6 +526,13 @@ analysis_fast <- function(data, control,
   if (anyNA(data$sim) || anyNA(data$accrual_time) || anyNA(data$tte)) {
     stop("columns 'sim', 'accrual_time', and 'tte' of 'data' must not ",
          "contain missing values")
+  }
+  if (!is.numeric(data$tte) || any(data$tte < 0)) {
+    stop("column 'tte' of 'data' must be numeric and non-negative")
+  }
+  if (!(is.numeric(data$event) || is.logical(data$event))) {
+    stop("column 'event' of 'data' must be numeric or logical, not a factor ",
+         "or a character vector")
   }
   if (anyNA(data$event) || !all(data$event == 0 | data$event == 1)) {
     stop("column 'event' of 'data' must be coded as 0 (censored) or 1 (event)")
@@ -492,7 +548,14 @@ analysis_fast <- function(data, control,
   }
   stat <- unique(stat)
 
-  if (conf.level <= 0 || conf.level >= 1) stop("'conf.level' must be in (0, 1)")
+  if (!is.numeric(conf.level) || length(conf.level) != 1L ||
+      is.na(conf.level) || conf.level <= 0 || conf.level >= 1) {
+    stop("'conf.level' must be in (0, 1)")
+  }
+  if (!is.logical(by.subgroup) || length(by.subgroup) != 1L ||
+      is.na(by.subgroup)) {
+    stop("'by.subgroup' must be TRUE or FALSE")
+  }
   if (length(side) != 1L || !side %in% c(1, 2)) {
     stop("'side' must be either 1 (one-sided) or 2 (two-sided)")
   }
@@ -515,6 +578,10 @@ analysis_fast <- function(data, control,
   }
   if ("maxcombo" %in% stat && length(mc.rho) != length(mc.gamma)) {
     stop("'mc.rho' and 'mc.gamma' must have the same length")
+  }
+  if ("maxcombo" %in% stat && length(mc.rho) < 1L) {
+    stop("at least one Fleming-Harrington weight must be supplied in ",
+         "'mc.rho' and 'mc.gamma'")
   }
   if ("maxcombo" %in% stat && !is.null(mc.alpha)) {
     if (!is.numeric(mc.alpha) || anyNA(mc.alpha) || any(mc.alpha <= 0) ||
@@ -649,7 +716,9 @@ analysis_fast <- function(data, control,
   }
 
   accrual <- reidx(as.numeric(data$accrual_time))
-  tte     <- reidx(as.numeric(data$tte))
+  # Adding 0 turns a negative zero into +0: the kernel sorts the observed times
+  # by their bit patterns, in which -0 would come after every positive time.
+  tte     <- reidx(as.numeric(data$tte) + 0)
   event   <- reidx(as.integer(data$event))
 
   j_all <- reidx(j_raw)
@@ -666,13 +735,19 @@ analysis_fast <- function(data, control,
 
   # Stratum identifiers (integer codes), aligned to ordered data.
   if (use_strata) {
-    st_lab <- if (length(strata) == 1L) {
-      as.character(data[[strata]])
-    } else {
-      do.call(paste, c(lapply(strata, function(cn) data[[cn]]), sep = "."))
-    }
     if (any(vapply(strata, function(cn) anyNA(data[[cn]]), logical(1L)))) {
       stop("'strata' columns must not contain missing values")
+    }
+    # Several columns are combined through their integer codes rather than a
+    # pasted label, so that values containing the separator (for example
+    # ("a.b", "c") and ("a", "b.c")) cannot merge two strata.
+    st_codes <- lapply(strata, function(cn) {
+      as.integer(factor(as.character(data[[cn]])))
+    })
+    st_lab <- if (length(strata) == 1L) {
+      st_codes[[1L]]
+    } else {
+      do.call(paste, c(st_codes, sep = "_"))
     }
     strata_int <- reidx(as.integer(factor(st_lab)))
   } else {
@@ -848,8 +923,9 @@ analysis_fast <- function(data, control,
       if (nw == 1L) {
         joint <- pnorm(upper) - pnorm(lower)
       } else if (nw <= 3L && side == 1L) {
-        # TVPACK handles only half-space regions (one-sided test); the
-        # two-sided rectangle uses GenzBretz, as in maxcombo_fast().
+        # TVPACK handles only orthants (all upper limits infinite, the
+        # one-sided test); the two-sided rectangle uses GenzBretz, as in
+        # maxcombo_fast().
         joint <- mvtnorm::pmvnorm(lower = lower, upper = upper, corr = corr,
                                   algorithm = mvtnorm::TVPACK(abseps = abseps))[1L]
       } else {
@@ -873,8 +949,11 @@ analysis_fast <- function(data, control,
     se_rah  <- ifelse(ok, sqrt(vQ1 / n1 + vQ0 / n0), NA_real_)
     dah     <- ifelse(ok, a1 - a0, NA_real_)
     se_dah  <- ifelse(ok, sqrt(vU1 / n1 + vU0 / n0), NA_real_)
-    out$ahsw.ah.ctrl   <- ifelse(ok, a0, NA_real_)
-    out$ahsw.ah.trt    <- ifelse(ok, a1, NA_real_)
+    # Finite per-group average hazards are reported even when the contrasts
+    # are not defined (for example a group without events up to tau), as in
+    # ahsw_fast().
+    out$ahsw.ah.ctrl   <- ifelse(is.finite(a0), a0, NA_real_)
+    out$ahsw.ah.trt    <- ifelse(is.finite(a1), a1, NA_real_)
     out$ahsw.rah       <- ifelse(ok, exp(log_rah), NA_real_)
     out$ahsw.rah.lower <- ifelse(ok, exp(log_rah - z_mult * se_rah), NA_real_)
     out$ahsw.rah.upper <- ifelse(ok, exp(log_rah + z_mult * se_rah), NA_real_)

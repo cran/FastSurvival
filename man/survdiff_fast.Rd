@@ -15,11 +15,15 @@ survdiff_fast(
   weight = c("logrank", "fh", "mwlrt", "gehan", "tarone-ware"),
   rho = 0,
   gamma = 0,
-  t_star = NULL
+  t_star = NULL,
+  data = NULL
 )
 }
 \arguments{
-\item{time}{A numeric vector of follow-up times for all subjects.}
+\item{time}{A numeric vector of follow-up times for all subjects.
+Alternatively, a formula \code{Surv(time, event) ~ group}, optionally with
+\code{strata()} terms, with the variables in
+\code{data}; see \code{\link{formula_interface}}.}
 
 \item{event}{An integer or numeric vector of event indicators
 (1 = event, 0 = censored), aligned with \code{time}.}
@@ -27,7 +31,9 @@ survdiff_fast(
 \item{group}{A vector of group labels aligned with \code{time}.}
 
 \item{control}{A scalar value indicating which level of \code{group}
-represents the control group.}
+represents the control group.
+With the formula interface it defaults to the first level of the
+group variable.}
 
 \item{side}{An integer, either 1 or 2 (default 2). If \code{side = 1}, returns
 the standardized log-rank statistic (Z-score), defined as
@@ -57,7 +63,9 @@ behavior of earlier versions of this function exactly. \code{"fh"} is the
 Fleming-Harrington G(rho, gamma) test with weight
 \code{S(t-)^rho (1 - S(t-))^gamma}. \code{"mwlrt"} is the modestly-weighted
 log-rank test of Magirr and Burman with weight
-\code{1 / max(S(t-), S(t_star-))}. \code{"gehan"} is the Gehan-Breslow test
+\code{1 / max(S(t-), S(t_star-))}, the left-continuous form used by
+nphRCT (Magirr and Burman define the weight with \code{S(t)} and
+\code{S(t_star)}). \code{"gehan"} is the Gehan-Breslow test
 with weight equal to the at-risk count, and \code{"tarone-ware"} uses the
 square root of the at-risk count. Here \code{S(t-)} is the left-continuous
 pooled Kaplan-Meier estimate just prior to each event time.}
@@ -75,8 +83,13 @@ modestly-weighted log-rank test. Required only when \code{weight =
 "mwlrt"}. The weight is capped at \code{1 / S(t_star-)}, where
 \code{S(t_star-)} is the pooled Kaplan-Meier value just before
 \code{t_star} (the product over event times strictly less than
-\code{t_star}, as in nphRCT).
+\code{t_star}, as in nphRCT). When that value is 0 (the pooled curve
+reaches 0 before \code{t_star}), the weight is not capped.
 A value of 0 yields the ordinary log-rank test.}
+
+\item{data}{A data frame in which the variables of a formula given as
+\code{time} are evaluated. Used only with the formula interface; see
+\code{\link{formula_interface}}.}
 }
 \value{
 An object of class \code{"survdiff_fast"}, which is a length-one
@@ -90,7 +103,10 @@ An object of class \code{"survdiff_fast"}, which is a length-one
   observed event counts, and \code{E0} and \code{E1} are \code{NA} because a
   single unweighted expected count is not defined for a weighted test.
   Returns \code{NA_real_} (still with class \code{"survdiff_fast"}) when the
-  variance is zero (e.g., all events in one group).
+  variance is zero (e.g., no event time at which both groups are at risk).
+  The object also has the class \code{"fastsurv"}, whose
+  \code{as.data.frame()}, \code{coef()}, and \code{confint()} methods
+  are described in \code{\link{as.data.frame.fastsurv}}.
 }
 \description{
 Computes the log-rank test statistic for comparing survival curves between
@@ -205,6 +221,9 @@ survdiff_fast(ovarian$futime, ovarian$fustat, ovarian$rx, 2, side = 1,
 survdiff_fast(ovarian$futime, ovarian$fustat, ovarian$rx, 2, side = 1,
               weight = "fh", rho = 0, gamma = 1, strata = ovarian$resid.ds)
 
+# Formula interface (the first level of rx, 1, is the control group)
+survdiff_fast(Surv(futime, fustat) ~ rx + strata(resid.ds), data = ovarian)
+
 \donttest{
 # Speed comparison against survdiff()
 if (requireNamespace("microbenchmark", quietly = TRUE)) {
@@ -220,14 +239,14 @@ if (requireNamespace("microbenchmark", quietly = TRUE)) {
 }
 \references{
 Gehan, E. A. (1965). A generalized Wilcoxon test for comparing arbitrarily
-singly-censored samples. \emph{Biometrika}, \emph{52}, 203-223.
+singly-censored samples. \emph{Biometrika}, \emph{52}(1-2), 203-224.
 
 Mantel, N. (1966). Evaluation of survival data and two new rank order
 statistics arising in its consideration. \emph{Cancer Chemotherapy
 Reports}, \emph{50}(3), 163-170.
 
 Tarone, R. E., & Ware, J. (1977). On distribution-free tests for equality of
-survival distributions. \emph{Biometrika}, \emph{64}, 156-160.
+survival distributions. \emph{Biometrika}, \emph{64}(1), 156-160.
 
 Fleming, T. R., & Harrington, D. P. (1991). \emph{Counting Processes and
 Survival Analysis}. New York: John Wiley & Sons.

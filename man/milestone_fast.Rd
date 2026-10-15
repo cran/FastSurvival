@@ -13,11 +13,14 @@ milestone_fast(
   conf.level = 0.95,
   tau,
   method = c("wald", "loglog", "mover"),
-  presorted = FALSE
+  presorted = FALSE,
+  data = NULL
 )
 }
 \arguments{
-\item{time}{A numeric vector of follow-up times.}
+\item{time}{A numeric vector of follow-up times.
+Alternatively, a formula \code{Surv(time, event) ~ group}, with the
+variables in \code{data}; see \code{\link{formula_interface}}.}
 
 \item{event}{An integer vector of event indicators, 1 for an event and 0
 for a censored observation.}
@@ -27,7 +30,9 @@ group.}
 
 \item{control}{The value of \code{group} that denotes the control group. The
 other value is the treatment group and the difference is reported as
-treatment minus control.}
+treatment minus control.
+With the formula interface it defaults to the first level of the
+group variable.}
 
 \item{side}{1 for a one-sided test in the direction of treatment benefit
 (treatment milestone survival larger than control) or 2 for a two-sided
@@ -48,11 +53,18 @@ one of \code{"wald"}, \code{"loglog"}, or \code{"mover"}.}
 by \code{time} in ascending order and the internal sort is skipped. This
 is intended for repeated calls inside simulation loops.
 The order is checked, and an error is given when it does not hold.}
+
+\item{data}{A data frame in which the variables of a formula given as
+\code{time} are evaluated. Used only with the formula interface; see
+\code{\link{formula_interface}}.}
 }
 \value{
 An object of class \code{"milestone_fast"}, a list with the
   per-group milestone survival estimates and standard errors, the difference
   estimate with its confidence interval, the test statistic, and the p-value.
+  The object also has the class \code{"fastsurv"}, whose
+  \code{as.data.frame()}, \code{coef()}, and \code{confint()} methods
+  are described in \code{\link{as.data.frame.fastsurv}}.
 }
 \description{
 Compares the Kaplan-Meier survival probabilities of two groups at a
@@ -69,12 +81,32 @@ given; the \code{"loglog"} test statistic is then \code{NA}. See Tang
 (2021) for the MOVER difference interval and Tang (2022) for the use of
 milestone survival in trial design.
 }
+\details{
+The \code{"wald"} statistic is the difference divided by its Greenwood
+standard error. The \code{"loglog"} statistic is the difference of the
+complementary log-log transforms of the two estimates divided by its
+standard error, so it is negative when the treatment group has the higher
+milestone survival, and its one-sided p-value is the lower tail. The
+\code{"mover"} statistic is the upper \code{(1 - conf.level) / 2} quantile
+of the standard normal distribution (1.96 for \code{conf.level = 0.95})
+times the difference divided by the half-width of the MOVER interval on the
+side of zero. It is obtained by inverting the interval at
+\code{conf.level}, so the statistic and its p-value depend on
+\code{conf.level}, and the two-sided p-value is below
+\code{1 - conf.level} exactly when the interval excludes zero. For
+\code{"wald"} and \code{"mover"} a positive statistic favors treatment and
+the one-sided p-value is the upper tail.
+}
 \examples{
 set.seed(1)
 time <- c(rexp(50, 0.1), rexp(50, 0.07))
 event <- rep(1, 100)
 group <- rep(c(0, 1), each = 50)
 milestone_fast(time, event, group, control = 0, tau = 10, method = "loglog")
+
+# Formula interface
+d <- data.frame(time, event, group)
+milestone_fast(Surv(time, event) ~ group, data = d, tau = 10)
 
 }
 \references{

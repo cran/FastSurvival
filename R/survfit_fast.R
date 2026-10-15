@@ -57,6 +57,8 @@
 #'
 #' @param t_sorted A numeric vector of event or censoring times. Must be
 #'   sorted in ascending order when \code{presorted = TRUE}.
+#'   Alternatively, a formula \code{Surv(time, event) ~ 1}, with the
+#'   variables in \code{data}; see \code{\link{formula_interface}}.
 #' @param e_sorted An integer or numeric vector of event indicators
 #'   (1 = event, 0 = censored), aligned with \code{t_sorted}.
 #' @param t_eval A single numeric value specifying the time point at which
@@ -69,6 +71,10 @@
 #' @param presorted A logical value. If \code{TRUE} (default), \code{t_sorted}
 #'   and \code{e_sorted} are assumed to be sorted in ascending order of time.
 #'   If \code{FALSE}, the vectors are sorted internally before computation.
+#'   With the formula interface the default is \code{FALSE}.
+#' @param data A data frame in which the variables of a formula given as
+#'   \code{t_sorted} are evaluated. Used only with the formula interface; see
+#'   \code{\link{formula_interface}}.
 #'
 #' @return An object of class \code{"survfit_fast"}, which is a named numeric
 #'   vector of length 4 with elements \code{surv}, \code{std.err},
@@ -79,6 +85,9 @@
 #'   \code{t_eval}, \code{conf.level}, and \code{conf.type}.
 #'   Returns a vector of \code{NA_real_} values (still with class
 #'   \code{"survfit_fast"}) when \code{n} is zero.
+#'   The object also has the class \code{"fastsurv"}, whose
+#'   \code{as.data.frame()}, \code{coef()}, and \code{confint()} methods
+#'   are described in \code{\link{as.data.frame.fastsurv}}.
 #'
 #' @examples
 #' set.seed(42)
@@ -101,6 +110,10 @@
 #' fit <- survfit(Surv(t_raw, e_raw) ~ 1, conf.type = "plain")
 #' summary(fit, times = 10)
 #'
+#' # Formula interface (the data are sorted internally)
+#' d <- data.frame(time = t_raw, status = e_raw)
+#' survfit_fast(Surv(time, status) ~ 1, data = d, t_eval = 10)
+#'
 #' @seealso
 #' \code{\link[survival]{survfit}} for the standard Kaplan-Meier estimator.
 #' \code{\link{print.survfit_fast}} for the print method.
@@ -114,7 +127,19 @@
 #' @export
 survfit_fast <- function(t_sorted, e_sorted, t_eval,
                          conf.level = 0.95, conf.type = "log",
-                         presorted = TRUE) {
+                         presorted = TRUE, data = NULL) {
+  # Formula interface: Surv(time, event) ~ 1 evaluated in 'data'
+  if (inherits(t_sorted, "formula")) {
+    f <- fastsurv_formula(t_sorted, data,
+                          event = if (!missing(e_sorted)) e_sorted,
+                          group_mode = "none", fun = "survfit_fast()")
+    if (missing(presorted)) presorted <- FALSE
+    return(survfit_fast(f$time, f$event, t_eval = t_eval,
+                        conf.level = conf.level, conf.type = conf.type,
+                        presorted = presorted))
+  }
+  if (!is.null(data)) stop("'data' is used only with a formula")
+
   conf.type <- match.arg(conf.type, choices = c("plain", "log", "log-log"))
   na_out <- c(surv = NA_real_, std.err = NA_real_,
               lower = NA_real_, upper = NA_real_)
@@ -123,7 +148,7 @@ survfit_fast <- function(t_sorted, e_sorted, t_eval,
               t_eval    = t_eval,
               conf.level  = conf.level,
               conf.type = conf.type,
-              class     = "survfit_fast")
+              class     = c("survfit_fast", "fastsurv"))
   }
 
   if (length(conf.level) != 1L || !is.finite(conf.level) ||

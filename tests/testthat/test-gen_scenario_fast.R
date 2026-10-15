@@ -88,3 +88,27 @@ test_that("gen_scenario_fast validates its input", {
                                  labels = c("a", "b")),
                "length\\(labels\\)")
 })
+
+test_that("gen_scenario_fast: a scenario median replaces a shared hazard", {
+  sc <- gen_scenario_fast(
+    scenarios = list(list(e.median = list(12, 24))),
+    shared = list(e.hazard = list(log(2) / 12, log(2) / 12),
+                  d.median = list(60, 60))
+  )
+  args <- sc$scenarios[[1]]$args
+  expect_null(args$e.hazard)
+  expect_equal(args$e.median, list(12, 24))
+  expect_equal(args$d.median, list(60, 60))
+  out <- utils::capture.output(print(sc))
+  expect_true(any(grepl("24", out, fixed = TRUE)))
+  d <- do.call(simdata_fast, c(list(nsim = 1, n = c(10, 10), a.time = c(0, 1),
+                                    a.prop = 1, seed = 1), args))
+  expect_equal(nrow(d), 20L)
+  # The same rule for dropout: a scenario hazard replaces a shared median.
+  sc2 <- gen_scenario_fast(
+    scenarios = list(list(e.median = list(12, 18), d.hazard = 0.01)),
+    shared = list(d.median = list(60, 60))
+  )
+  expect_null(sc2$scenarios[[1]]$args$d.median)
+  expect_equal(sc2$scenarios[[1]]$args$d.hazard, 0.01)
+})

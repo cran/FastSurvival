@@ -85,7 +85,14 @@ groups is determined.}
 
 \item{d.time}{Dropout breakpoints for piecewise hazards.}
 
-\item{seed}{Optional integer seed for the \code{dqrng} generator.}
+\item{seed}{Optional integer seed for the \code{dqrng} generator. If
+\code{NULL} (default), the data are drawn from the current state of that
+generator, which \code{set.seed()} does not control: the state is
+initialized from R's random-number generator when \code{dqrng} is
+loaded, so repeated calls give different data, and processes forked from
+one R session (for example by \code{parallel::mclapply()}) start from the
+same state. Supply \code{seed} (and \code{stream} for parallel batches)
+for reproducible data.}
 
 \item{prevalence}{Optional subgroup prevalence specification (numeric
 vector, list of vectors, array, or a named \code{control}/\code{treatment}
@@ -93,7 +100,10 @@ list for group-specific prevalence), for the single-endpoint and the
 illness-death models.}
 
 \item{fixed.alloc}{Logical; when \code{TRUE} subgroup sizes are
-deterministic rather than drawn.}
+deterministic rather than drawn. In a group of \code{n} subjects, each
+cell with probability \code{p} receives \code{floor(n * p)} subjects, and
+the remaining subjects are added one at a time to the cells in order,
+starting from the first cell.}
 
 \item{h01.hazard}{Transition hazard(s) for the non-terminal (intermediate)
 event (state 0 to state 1) in the illness-death model. A scalar or vector
@@ -119,11 +129,14 @@ conventions as \code{h01.hazard}.}
 
 \item{h12.hazard}{Transition hazard(s) for the terminal event after an
 intermediate event (state 1 to state 2) for subjects who do not switch.
-Defaults to \code{h02.hazard}, which gives the Fleischer
-maximal-independence model (Fleischer Theorem 1 when there is no switching
-and the hazards are constant; with a piecewise \code{h02.hazard} the
-clock-reset \code{h12} restarts the piecewise profile at the intermediate
-event).}
+Defaults to \code{h02.hazard}, which gives the maximal-independence model
+of Fleischer, Gaschler-Markefski, and Bluhmki (2009): with constant
+hazards and no switching, the time to the intermediate event and the time
+to the terminal event are independent exponential variables, and their
+Theorem 1 gives the correlation of the two endpoints (PFS and OS) as the
+ratio of their medians. A different constant \code{h12.hazard} gives their
+more general model. With a piecewise \code{h02.hazard} the clock-reset
+\code{h12} restarts the piecewise profile at the intermediate event.}
 
 \item{h12.median}{Median(s) for the post-event terminal event; an alternative
 to \code{h12.hazard}.}
@@ -411,8 +424,9 @@ df5 <- simdata_fast(
 )
 head(df5)
 
-# Two correlated endpoints, no switching (reduces to Fleischer Theorem 1
-# because h12 defaults to h02). In oncology e1 is PFS and e2 is OS; here the
+# Two correlated endpoints, no switching (the maximal-independence model of
+# Fleischer et al., 2009, because h12 defaults to h02). In oncology e1 is PFS
+# and e2 is OS; here the
 # control has faster intermediate events and faster direct terminal events.
 dfid <- simdata_fast(
   nsim       = 100,
@@ -469,6 +483,11 @@ sub12 <- dfk[dfk$group \%in\% c(1, 2), ]
 res12 <- analysis_fast(sub12, control = 1, time.looks = 24, side = 1)
 head(res12)
 
+}
+\references{
+Fleischer, F., Gaschler-Markefski, B., & Bluhmki, E. (2009). A statistical
+model for the dependence between progression-free survival and overall
+survival. \emph{Statistics in Medicine}, \emph{28}(21), 2669-2686.
 }
 \seealso{
 \code{\link{analysis_fast}}, \code{\link{cutoff_fast}},

@@ -18,21 +18,21 @@ test_that("medsurv_fast returns the expected structure for two groups", {
 
 test_that("median estimate matches survival::survfit", {
   skip_if_not_installed("survival")
-  result <- tryCatch({
-    set.seed(2)
-    n <- 300
-    tt <- rexp(n, 0.08)
-    cc <- rexp(n, 0.02)
-    time <- pmin(tt, cc)
-    event <- as.integer(tt <= cc)
+  set.seed(2)
+  n <- 300
+  tt <- rexp(n, 0.08)
+  cc <- rexp(n, 0.02)
+  time <- pmin(tt, cc)
+  event <- as.integer(tt <= cc)
+  # Only the reference computation is protected; an error in medsurv_fast
+  # fails the test instead of skipping it.
+  est <- unname(medsurv_fast(time, event)["median"])
+  ref <- tryCatch({
     sf <- survival::survfit(survival::Surv(time, event) ~ 1)
-    ref <- unname(summary(sf)$table["median"])
-    est <- unname(medsurv_fast(time, event)["median"])
-    list(ref = ref, est = est)
+    unname(summary(sf)$table["median"])
   }, error = function(e) NULL)
-  skip_if(is.null(result) || !is.finite(result$ref),
-          "survival comparison unavailable")
-  expect_equal(result$est, result$ref, tolerance = 1e-6)
+  skip_if(is.null(ref) || !is.finite(ref), "survival comparison unavailable")
+  expect_equal(est, ref, tolerance = 1e-6)
 })
 
 test_that("difference confidence interval matches diff plus or minus z times se", {
@@ -148,7 +148,7 @@ test_that("method = 'nph' reproduces nph::nphparams median inference", {
 
 test_that("input validation works", {
   expect_error(medsurv_fast(1:5, c(0, 1, 0, 1)), "same length")
-  expect_error(medsurv_fast(1:5, rep(2L, 5)), "0")
+  expect_error(medsurv_fast(1:5, rep(2L, 5)), "coded as 0")
   expect_error(
     medsurv_fast(1:6, rep(0:1, 3), group = rep(1:3, 2), control = 1),
     "two distinct"
@@ -159,7 +159,8 @@ test_that("input validation works", {
   )
   expect_error(
     medsurv_fast(1:6, rep(0:1, 3), group = rep(0:1, 3), control = 0,
-                 method = "foo")
+                 method = "foo"),
+    "should be one of"
   )
 })
 
@@ -196,4 +197,73 @@ test_that("medsurv_fast: presorted = TRUE checks the order", {
   event <- c(1, 1, 0, 1, 1, 0)
   group <- c(0, 1, 0, 1, 0, 1)
   expect_error(medsurv_fast(time, event, group, control = 0, presorted = TRUE), "presorted = FALSE")
+})
+
+test_that("medsurv_fast: a median at 0.5 up to an infinite time is NA", {
+  # In the treatment group 5 of 10 subjects have events at times 1 to 5, so the
+  # Kaplan-Meier estimate is exactly 0.5 after time 5, and the other 5 have an
+  # infinite time (no finite event or dropout time). The midpoint of the flat
+  # stretch at 0.5 is not defined. The control group reaches 0.5 at time 5 and
+  # its next event is at time 6, so its median is 5.5.
+  time  <- c(1:10, 1:5, rep(Inf, 5))
+  event <- c(rep(1, 10), rep(1, 5), rep(0, 5))
+  group <- rep(0:1, each = 10)
+  for (m in c("km", "nph")) {
+    res <- medsurv_fast(time, event, group = group, control = 0, method = m)
+    expect_equal(unname(res["median.control"]), 5.5)
+    for (nm in c("median.treatment", "diff", "se.diff", "z", "p")) {
+      expect_true(is.na(res[[nm]]), info = paste(m, nm))
+    }
+  }
+  one <- medsurv_fast(time[group == 1], event[group == 1])
+  expect_true(is.na(one[["median"]]))
+  # The same data with the infinite times replaced by a finite censoring time
+  # give a finite median (the midpoint of 5 and 20).
+  time_f <- time
+  time_f[is.infinite(time_f)] <- 20
+  res_f <- medsurv_fast(time_f, event, group = group, control = 0)
+  expect_equal(unname(res_f["median.treatment"]), 12.5)
+})
+
+test_that("medsurv_fast: time and event must be numeric and time non-negative", {
+  set.seed(1)
+  tt <- rexp(40, 0.1)
+  ee <- rbinom(40, 1, 0.7)
+  expect_error(medsurv_fast(as.character(tt), ee), "numeric")
+  expect_error(medsurv_fast(c(-1, tt[-1]), ee), "non-negative")
+  expect_error(medsurv_fast(tt, factor(ee)), "numeric or logical")
+  # A logical event indicator is accepted and gives the same result.
+  expect_equal(unclass(medsurv_fast(tt, ee == 1)), unclass(medsurv_fast(tt, ee)))
+})
+
+test_that("medsurv_fast: the formula interface gives the vector result", {
+  set.seed(67)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1), ee = rbinom(n, 1, 0.8),
+                  g = rep(c(1, 0), n / 2))
+  for (m in c("km", "nph")) {
+    expect_identical(
+      medsurv_fast(Surv(tt, ee) ~ g, data = d, method = m),
+      medsurv_fast(d$tt, d$ee, group = d$g, control = 0, method = m))
+  }
+  ref1 <- medsurv_fast(d$tt, d$ee)
+  expect_identical(medsurv_fast(Surv(tt, ee) ~ 1, data = d), ref1)
+  expect_identical(class(ref1), c("medsurv_fast", "fastsurv"))
+  expect_error(medsurv_fast(d$tt, d$ee, data = d), "only with a formula")
+})
+
+test_that("medsurv_fast: the formula interface passes every argument", {
+  set.seed(60)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1) + 0.1, ee = rbinom(n, 1, 0.8),
+                  g = rep(c("b", "a"), n / 2), s = rep(c("x", "y", "z"), n / 3))
+  d1 <- d[order(d$tt), ]
+  d2 <- d[order(d$s, d$tt), ]
+  expect_identical(
+    medsurv_fast(Surv(tt, ee) ~ g, d1, control = "b", side = 1,
+                 conf.level = 0.9, conf.type = "plain", method = "nph",
+                 bw = c(2, 3), presorted = TRUE),
+    medsurv_fast(d1$tt, d1$ee, d1$g, "b", side = 1, conf.level = 0.9,
+                 conf.type = "plain", method = "nph", bw = c(2, 3),
+                 presorted = TRUE))
 })

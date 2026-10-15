@@ -68,8 +68,8 @@ An object of class \code{"simsummary_fast"}: a data frame with one row
   sum, and \code{cum.reject} again the total rejection rate; its timing columns
   are the expected counts and calendar time at the stopping look. The number of
   simulations is stored in the attribute \code{nsim} (one value per block when
-  the blocks differ) and the boundary settings in the attribute
-  \code{boundary}.
+  the blocks differ) and the boundary settings, with the look labels and a
+  copy of the rows of the result, in the attribute \code{boundary}.
 }
 \description{
 Aggregates the per-simulation, per-look output of \code{\link{analysis_fast}}
@@ -179,5 +179,5 @@ simsummary_fast(res, p.col = "logrank.p",
 }
 \seealso{
 \code{\link{analysis_fast}}, \code{\link{simdata_fast}},
-  \code{\link{print.simsummary_fast}}.
+  \code{\link{print.simsummary_fast}}, \code{\link{plot.simsummary_fast}}.
 }

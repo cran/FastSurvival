@@ -122,7 +122,7 @@ including the ordinary log-rank test recovered at `rho = 0, gamma = 0`.
 
 # Cox hazard ratio
 
-`coxph_fast()` returns the Pike-Halley Estimator (Homma, 2025), a closed-form
+`coxph_fast()` returns the Pike-Halley Estimator, a closed-form
 approximation to the maximizer of the Cox partial likelihood with the Breslow method for
 ties. The reference is therefore `coxph()` with `ties = "breslow"` (its default
 is the Efron method). We report the log hazard ratio from both; the sign
@@ -567,10 +567,7 @@ Fleming, T. R., & Harrington, D. P. (1991). *Counting Processes and Survival
 Analysis*. New York: John Wiley & Sons.
  
 Cox, D. R. (1972). Regression models and life-tables. *Journal of the Royal
-Statistical Society. Series B (Methodological)*, 34(2), 187-220.
- 
-Homma, G. (2025). One step from Pike to Cox: a closed-form hazard ratio
-estimator. *Manuscript under review.*
+Statistical Society. Series B (Methodological)*, 34(2), 187-202.
  
 Royston, P., & Parmar, M. K. B. (2013). Restricted mean survival time: an
 alternative to the hazard ratio for the design and analysis of randomized

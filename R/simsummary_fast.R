@@ -123,8 +123,8 @@
 #'   sum, and \code{cum.reject} again the total rejection rate; its timing columns
 #'   are the expected counts and calendar time at the stopping look. The number of
 #'   simulations is stored in the attribute \code{nsim} (one value per block when
-#'   the blocks differ) and the boundary settings in the attribute
-#'   \code{boundary}.
+#'   the blocks differ) and the boundary settings, with the look labels and a
+#'   copy of the rows of the result, in the attribute \code{boundary}.
 #'
 #' @examples
 #' df <- simdata_fast(
@@ -153,7 +153,7 @@
 #'                 alpha = c(0.0006, 0.0151, 0.0245))
 #'
 #' @seealso \code{\link{analysis_fast}}, \code{\link{simdata_fast}},
-#'   \code{\link{print.simsummary_fast}}.
+#'   \code{\link{print.simsummary_fast}}, \code{\link{plot.simsummary_fast}}.
 #'
 #' @export
 simsummary_fast <- function(data,
@@ -224,9 +224,11 @@ simsummary_fast <- function(data,
   bdesc <- if (use_z) {
     list(mode = "z", eff.col = eff.col, efficacy = efficacy,
          fut.col = if (use_fut) fut.col else NA_character_,
-         futility = futility, direction = direction)
+         futility = futility, direction = direction,
+         looks = as.character(looks))
   } else {
-    list(mode = "p", p.col = p.col, alpha = alpha)
+    list(mode = "p", p.col = p.col, alpha = alpha,
+         looks = as.character(looks))
   }
 
   # ------------------------------------------------------------------ #
@@ -399,6 +401,11 @@ simsummary_fast <- function(data,
 
   out <- do.call(rbind, blocks)
   rownames(out) <- NULL
+
+  # The rows of this result, so that the print method can recognize rows
+  # that come from another result (for example after rbind()), whose
+  # boundaries are not stored here.
+  bdesc$rows <- out
 
   structure(out,
             nsim = if (length(unique(nsim_v)) == 1L) nsim_v[1L] else nsim_v,

@@ -4,8 +4,11 @@
 #' Formats and prints a \code{coxph_fast} object similarly to
 #' \code{summary(survival::coxph(...))}, showing the point estimate of the
 #' log hazard ratio, the hazard ratio, the standard error on the log scale,
-#' the Wald z-statistic, the corresponding two-sided p-value, and the Wald
-#' confidence interval for the hazard ratio.
+#' the Wald z-statistic, the p-value that follows the \code{side} recorded in
+#' the object, and the Wald confidence interval for the hazard ratio.
+#' The p-value column is labeled \code{Pr(>|z|)} for a two-sided test and
+#' \code{Pr(<z)} for a one-sided test, whose p-value is the lower tail in the
+#' direction of treatment benefit.
 #'
 #' @param x An object of class \code{"coxph_fast"} returned by
 #'   \code{\link{coxph_fast}}.
@@ -67,7 +70,8 @@ print.coxph_fast <- function(x, digits = max(1L, getOption("digits") - 3L), ...)
     nrow = 1L,
     dimnames = list(
       "group",
-      c("coef", "exp(coef)", "se(coef)", "z", "Pr(>|z|)")
+      c("coef", "exp(coef)", "se(coef)", "z",
+        if (side == 1L) "Pr(<z)" else "Pr(>|z|)")
     )
   )
 

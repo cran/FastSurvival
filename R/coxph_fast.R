@@ -2,7 +2,7 @@
 #'
 #' @description
 #' Estimates the hazard ratio for a two-group parallel trial using the
-#' Pike-Halley Estimator (Homma, 2025), a pure closed-form approximation to the Cox partial
+#' Pike-Halley Estimator, a pure closed-form approximation to the Cox partial
 #' likelihood maximizer. The function returns the point estimate, its standard
 #' error on the log scale, and a Wald-type confidence interval, using output
 #' names consistent with \code{summary(survival::coxph(...))}. The C++ backend
@@ -27,19 +27,20 @@
 #' I_0 = sum O_k p_k (1 - p_k)
 #' J_0 = sum O_k p_k (1 - p_k) (1 - 2 p_k)
 #'
-#' Third, the closed-form Halley correction is applied:
+#' Third, a single Halley correction to the score is applied, expanded to
+#' second order so that it is in closed form (a third-order correction):
 #'
 #' delta_hat = U_0 / I_0 - J_0 U_0^2 / (2 I_0^3)
 #' theta_hat = theta_0 exp(delta_hat)
 #'
-#' The Halley step converges cubically, so the residual error
+#' This correction converges cubically, so the residual error
 #' |log(theta_hat) - log(theta_Cox)| is of the order of the cube of the error
 #' of the Pike anchor. Near the null hypothesis the anchor is
 #' already close to the Cox estimate and the residual error is negligible. At
-#' a fixed hazard ratio away from 1 the Pike anchor has a bias that does not
-#' vanish as the sample size grows (Berry, Kitchin, and Mock, 1991), so the
-#' residual error levels off at a small value that depends on the hazard ratio
-#' and the censoring pattern instead of decreasing with the sample size.
+#' a fixed hazard ratio away from 1 the error of the Pike anchor relative to
+#' the Cox estimate does not vanish as the sample size grows, so the residual
+#' error levels off at a small value that depends on the hazard ratio and the
+#' censoring pattern instead of decreasing with the sample size.
 #'
 #' The Wald standard error on the log scale is SE = 1 / sqrt(I_0), where I_0
 #' is the observed information evaluated at the Pike anchor. The Wald
@@ -76,6 +77,9 @@
 #'
 #' @param time A numeric vector of follow-up times for all subjects (pooled
 #'   over both groups).
+#'   Alternatively, a formula \code{Surv(time, event) ~ group}, optionally with
+#'   \code{strata()} terms, with the variables in
+#'   \code{data}; see \code{\link{formula_interface}}.
 #' @param event An integer or numeric vector of event indicators
 #'   (1 = event, 0 = censored), aligned with \code{time}.
 #' @param group A vector of group labels aligned with \code{time}. Any type
@@ -83,6 +87,8 @@
 #' @param control A scalar value indicating which level of \code{group}
 #'   represents the control group. Subjects with \code{group != control} are
 #'   treated as the treatment group.
+#'   With the formula interface it defaults to the first level of the
+#'   group variable.
 #' @param side 1 for a one-sided test in the direction of treatment benefit
 #'   (hazard ratio below 1, i.e. a negative coefficient) or 2 for a two-sided
 #'   test (default 2). The returned vector has no p-value: \code{side} is
@@ -103,6 +109,9 @@
 #'   estimator described in Details is computed. Several stratification
 #'   factors can be combined with \code{interaction()}. \code{NULL} (default)
 #'   gives the unstratified estimator.
+#' @param data A data frame in which the variables of a formula given as
+#'   \code{time} are evaluated. Used only with the formula interface; see
+#'   \code{\link{formula_interface}}.
 #'
 #' @return An object of class \code{"coxph_fast"}, which is a named numeric
 #'   vector of length 5 with elements matching the column names of
@@ -123,6 +132,9 @@
 #' Returns a vector of \code{NA_real_} values (still with class
 #' \code{"coxph_fast"}) when the estimate cannot be computed (e.g., no
 #' events, all events in one group, or \code{I_0 = 0}).
+#'   The object also has the class \code{"fastsurv"}, whose
+#'   \code{as.data.frame()}, \code{coef()}, and \code{confint()} methods
+#'   are described in \code{\link{as.data.frame.fastsurv}}.
 #'
 #' @examples
 #' library(survival)
@@ -148,6 +160,11 @@
 #' coxph_fast(ovarian$futime[ord], ovarian$fustat[ord], ovarian$rx[ord],
 #'            control = 1, presorted = TRUE)
 #'
+#' # Formula interface, and the result as a data frame (log hazard ratio)
+#' fit_f <- coxph_fast(Surv(futime, fustat) ~ rx, data = ovarian)
+#' as.data.frame(fit_f)
+#' exp(confint(fit_f))
+#'
 #' \donttest{
 #' # Speed comparison against coxph()
 #' if (requireNamespace("microbenchmark", quietly = TRUE)) {
@@ -166,19 +183,32 @@
 #' @references
 #' Cox, D. R. (1972). Regression models and life-tables. \emph{Journal of the
 #' Royal Statistical Society. Series B (Methodological)}, \emph{34}(2),
-#' 187-220.
+#' 187-202.
 #'
 #' Berry, G., Kitchin, R. M., & Mock, P. A. (1991). A comparison of two simple
 #' hazard ratio estimators based on the logrank test. \emph{Statistics in
 #' Medicine}, \emph{10}(5), 749-755.
 #'
-#' Homma, G. (2025). One step from Pike to Cox: a closed-form hazard ratio
-#' estimator. Manuscript under review.
-#'
 #' @importFrom stats qnorm setNames
 #' @export
 coxph_fast <- function(time, event, group, control, side = 2,
-                       conf.level = 0.95, presorted = FALSE, strata = NULL) {
+                       conf.level = 0.95, presorted = FALSE, strata = NULL,
+                       data = NULL) {
+
+  # Formula interface: Surv(time, event) ~ group + strata(s) evaluated in
+  # 'data'
+  if (inherits(time, "formula")) {
+    f <- fastsurv_formula(time, data,
+                          event = if (!missing(event)) event,
+                          group = if (!missing(group)) group,
+                          strata = strata, group_mode = "required",
+                          strata_ok = TRUE, fun = "coxph_fast()")
+    if (missing(control) || is.null(control)) control <- f$control
+    return(coxph_fast(f$time, f$event, f$group, control = control,
+                      side = side, conf.level = conf.level,
+                      presorted = presorted, strata = f$strata))
+  }
+  if (!is.null(data)) stop("'data' is used only with a formula")
 
   if (!side %in% c(1L, 2L)) {
     stop("'side' must be either 1 (one-sided) or 2 (two-sided)")
@@ -215,7 +245,7 @@ coxph_fast <- function(time, event, group, control, side = 2,
   # Attach the attributes of a result (the number of strata when stratified)
   wrap <- function(v, n_strata = NULL) {
     out <- structure(v, conf.level = conf.level, side = side,
-                     control = control, class = "coxph_fast")
+                     control = control, class = c("coxph_fast", "fastsurv"))
     if (use_strata) attr(out, "strata") <- n_strata
     out
   }

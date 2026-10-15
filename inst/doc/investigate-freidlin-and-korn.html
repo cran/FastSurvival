@@ -368,10 +368,11 @@ arm that is uniformly worse is one point in this strong null.</p>
 year. In the weak null the experimental arm is identical to the control
 arm. In the strong null the experimental arm has a very large hazard for
 a short initial period (early harm) and a slightly lower hazard
-thereafter; the parameters follow the Freidlin and Korn (2019) example
-as implemented in the <code>simtrial</code> package documentation,
-namely an experimental hazard ratio of 16 for the first 0.1 year
-followed by 0.76 afterwards. The analysis is at 5 years.</p>
+thereafter; the parameters are those of Fig. A1 in the Appendix of
+Freidlin and Korn (2019), which the <code>simtrial</code> package
+documentation also uses, namely an experimental hazard ratio of 16 for
+the first 0.1 year (1.2 months) followed by 0.76 afterwards. The
+analysis is at 5 years.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>e_time <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.1</span>, <span class="cn">Inf</span>)         <span class="co"># change point at 0.1 year</span></span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>cut    <span class="ot">&lt;-</span> <span class="dv">5</span>                      <span class="co"># analysis at 5 years</span></span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>N_HALF <span class="ot">&lt;-</span> <span class="dv">1000</span><span class="dt">L</span>                  <span class="co"># subjects per arm</span></span>
@@ -424,8 +425,10 @@ analysis is a calendar-time cut at 5 years and testing is one-sided in
 the direction of experimental benefit. Only the decision at the 2.5%
 level is needed from the MaxCombo test, so <code>mc.alpha = ALPHA</code>
 evaluates the multivariate normal integral only for the p-values that
-the Bonferroni bounds do not place on one side of that level; the
-decisions are the same as with every p-value integrated.</p>
+the Bonferroni bounds do not place on one side of that level. The
+decisions that the bounds settle are those of the exact p-values, and
+the others carry the error of the randomized integration, as without
+<code>mc.alpha</code>.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>NSIM    <span class="ot">&lt;-</span> <span class="dv">2000</span><span class="dt">L</span>     <span class="co"># raise (e.g. 5000) for tighter Monte Carlo error</span></span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>N_TOTAL <span class="ot">&lt;-</span> <span class="dv">2</span><span class="dt">L</span> <span class="sc">*</span> N_HALF</span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>ALPHA   <span class="ot">&lt;-</span> <span class="fl">0.025</span></span>
@@ -555,13 +558,13 @@ to this failure.</p>
 </div>
 <div id="notes" class="section level2">
 <h2>Notes</h2>
-<p>The strong null parameters follow the Freidlin and Korn (2019)
-example as given in the <code>simtrial</code> package documentation. The
-modestly-weighted log-rank delay <code>T_STAR</code> and the number of
-simulated trials <code>NSIM</code> are set at the top of the design
-chunk and can be changed; <code>NSIM</code> is kept modest so the
-vignette builds quickly, and a larger value tightens the Monte Carlo
-error on the reported rates.</p>
+<p>The strong null parameters are those of Fig. A1 in the Appendix of
+Freidlin and Korn (2019), which the <code>simtrial</code> package
+documentation also uses. The modestly-weighted log-rank delay
+<code>T_STAR</code> and the number of simulated trials <code>NSIM</code>
+are set at the top of the design chunk and can be changed;
+<code>NSIM</code> is kept modest so the vignette builds quickly, and a
+larger value tightens the Monte Carlo error on the reported rates.</p>
 </div>
 <div id="references" class="section level2">
 <h2>References</h2>

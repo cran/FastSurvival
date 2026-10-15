@@ -36,6 +36,9 @@
   main_km = "Kaplan-Meier",
   main_hr = "Hazard ratio",
   group_labels = NULL,
+  risk_table = FALSE,
+  risk_times = NULL,
+  conf.style = c("lines", "band"),
   ...
 )
 }
@@ -57,7 +60,7 @@ derived from the spread of the event times.}
 \item{n_grid}{Number of grid points for the smoothed hazard ratio.}
 
 \item{conf.int}{Logical. If \code{TRUE}, add pointwise confidence limits to
-the survival curves.}
+the survival curves, drawn as set by \code{conf.style}.}
 
 \item{hr_max}{Upper limit of the hazard-ratio axis. Defaults to a value
 derived from the estimated hazard ratio.}
@@ -99,7 +102,19 @@ average-hazard-ratio line.}
 \item{main_km, main_hr}{Panel titles.}
 
 \item{group_labels}{Optional length-two character vector of legend labels for
-the control and treatment groups.}
+the control and treatment groups. They also label the rows of the
+number-at-risk table, which are otherwise labeled \code{Control} and
+\code{Treatment} (or by the group label for a single group).}
+
+\item{risk_table}{Logical. If \code{TRUE}, print the numbers at risk below
+the survival panel. Defaults to \code{FALSE}.}
+
+\item{risk_times}{Times at which the numbers at risk are given. Defaults to
+the tick marks of the time axis.}
+
+\item{conf.style}{How the pointwise confidence limits are drawn when
+\code{conf.int = TRUE}: \code{"lines"} (default) as dashed step functions,
+or \code{"band"} as a shaded band.}
 
 \item{...}{Further arguments, currently ignored.}
 }
@@ -114,7 +129,8 @@ panel shows the smoothed time-varying hazard ratio together with the constant
 Cox proportional-hazards estimate and, optionally, the average hazard ratio,
 in the style of stylized nonproportional-hazards figures. For a single-group
 object only one survival curve is drawn; \code{hr = TRUE} is ignored because a
-hazard ratio requires two groups.
+hazard ratio requires two groups. With \code{risk_table = TRUE} the numbers at
+risk are printed below the survival panel.
 }
 \details{
 The smoothed hazard ratio is obtained by kernel smoothing the Nelson-Aalen
@@ -130,7 +146,16 @@ effectively zero are dropped.
 The constant Cox hazard ratio is taken from \code{\link{coxph_fast}}, the
 average hazard ratio from \code{\link{ahr_fast}}, and the restricted mean
 survival time difference from \code{\link{rmst_fast}}.
+
+The number at risk at a time is the number of subjects whose observed time is
+at or after it, as reported by \code{summary()} of a
+\code{survival::survfit()} object. The table has one row per group, in the
+colors of the curves, at the tick marks of the time axis or at
+\code{risk_times}; the bottom margin (and, for long group labels, the left
+margin) is enlarged to hold it. The curves themselves are available as a data
+frame from \code{\link{as.data.frame.kmcurve_fast}}.
 }
 \seealso{
-\code{\link{kmcurve_fast}}, \code{\link{print.kmcurve_fast}}
+\code{\link{kmcurve_fast}}, \code{\link{print.kmcurve_fast}},
+  \code{\link{as.data.frame.kmcurve_fast}}
 }

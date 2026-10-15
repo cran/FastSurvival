@@ -175,7 +175,7 @@ OS comparison more.
 ## Computing time
 
 The whole study, from data generation to the OS analysis of one scenario, runs
-in a few seconds.
+in about a second.
 
 ```{r timing}
 system.time({
@@ -270,7 +270,7 @@ this approach.
 Allison, A., White, I. R., & Bond, S. (2017). rpsftm: an R package for rank
 preserving structural failure time models. *The R Journal*, 9(2), 342-353.
 
-Robins, J. M. and Tsiatis, A. A. (1991). Correcting for non-compliance in
+Robins, J. M., & Tsiatis, A. A. (1991). Correcting for non-compliance in
 randomized trials using rank preserving structural failure time models.
 *Communications in Statistics - Theory and Methods*, 20(8), 2609-2631.
 

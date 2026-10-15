@@ -37,7 +37,7 @@ The estimation and testing functions operate on a single dataset and return
 an S3 object with a `print()` method. `survfit_fast()` evaluates the
 Kaplan-Meier estimate at a single time point. `survdiff_fast()` computes the
 log-rank test and its weighted and stratified variants. `coxph_fast()`
-returns a closed-form hazard ratio, the Pike-Halley Estimator (Homma, 2025). `rmst_fast()` returns the restricted mean
+returns a closed-form hazard ratio, the Pike-Halley Estimator. `rmst_fast()` returns the restricted mean
 survival time, and `wmst_fast()` the window mean survival time over an
 interval. `milestone_fast()` compares survival at a milestone timepoint, and
 `medsurv_fast()` compares median survival times. `maxcombo_fast()` computes the
@@ -81,6 +81,33 @@ coxph_fast(ovarian$futime, ovarian$fustat, ovarian$rx,
            control = 1, side = 1)
 ```
 
+# Formulas, data frames, and plots
+
+For the analysis of a single data set the functions also accept a model
+formula with a data frame, as the functions of the survival package do. The
+control group is then the first level of the group variable, unless
+`control` is given. Inside simulation loops the vector interface remains the
+faster choice. Every result has an `as.data.frame()` method that returns its
+estimates and tests with the same columns, and `coef()` and `confint()`
+methods for the estimates; ratios are reported on the log scale.
+
+```{r formula, eval = requireNamespace("survival", quietly = TRUE)}
+fit <- coxph_fast(Surv(futime, fustat) ~ rx, data = ovarian, side = 1)
+as.data.frame(fit)
+exp(confint(fit))
+
+as.data.frame(rmst_fast(Surv(futime, fustat) ~ rx, data = ovarian,
+                        tau = 500))
+```
+
+`kmcurve_fast()` builds the Kaplan-Meier curves of a data set, and its
+`plot()` method can add the numbers at risk below the curves.
+
+```{r km-plot, eval = requireNamespace("survival", quietly = TRUE), fig.width = 7, fig.height = 5}
+km <- kmcurve_fast(Surv(futime, fustat) ~ rx, data = ovarian)
+plot(km, risk_table = TRUE, conf.style = "band")
+```
+
 # Where to go next
 
 Several further vignettes cover the package in depth. *Validation of
@@ -95,9 +122,6 @@ generator* analyzes data generated outside the package with the same
 functions.
 
 # References
-
-Homma, G. (2025). One step from Pike to Cox: a closed-form hazard ratio
-estimator. *Manuscript under review.*
 
 Collett, D. (2014). *Modelling Survival Data in Medical Research* (3rd ed.).
 Chapman and Hall/CRC.

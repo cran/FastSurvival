@@ -378,7 +378,7 @@ exponentials, <code>PFS</code> is exponential with hazard
 OS hazard is <code>lam2 = log(2) / median_OS</code> and the PFS hazard
 is <code>Lambda = log(2) / median_PFS</code>, so the implied TTP hazard
 is <code>lam1 = Lambda - lam2</code>, which must be positive (median OS
-at least median PFS in each group). The dependence between the two
+longer than median PFS in each group). The dependence between the two
 endpoints is induced entirely through the shared <code>OS</code>
 component.</p>
 </div>
@@ -640,27 +640,31 @@ overall row is the power of that endpoint considered on its own.</p>
 <span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt;   Boundaries: efficacy on &#39;logrank.z&#39; (direction = lower), futility on &#39;logrank.z&#39;</span></span>
 <span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt; Stopping Boundaries: Look by Look</span></span>
-<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Events (s) Sample (n) Efficacy Z Futility Z Cum. Cross. Eff.</span></span>
-<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt;     1        0.50      200.0      490.9         NA     0.0000           0.0000</span></span>
-<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt;     2        0.75      300.0      599.9    -2.3397         NA           0.8668</span></span>
-<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt;     3        1.00      400.0      600.0    -2.0118         NA           0.9766</span></span>
-<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co">#&gt; Events, Sample Size, Dropouts, Pipeline and Analysis Times: Look by Look</span></span>
-<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Sample (n) Events (s) Dropouts (d) Pipeline Analysis Time</span></span>
-<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="co">#&gt;     1        0.50      490.9      200.0         18.4    272.4         15.26</span></span>
-<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt;     2        0.75      599.9      300.0         27.8    272.1         18.97</span></span>
-<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt;     3        1.00      600.0      400.0         37.3    162.7         24.01</span></span>
-<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="co">#&gt;  Cross. Eff. Cross. Fut.</span></span>
-<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="co">#&gt;       0.0000      0.0030</span></span>
-<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a><span class="co">#&gt;       0.8668      0.0000</span></span>
-<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt;       0.1098      0.0000</span></span>
-<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt; Overall</span></span>
-<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt;   Rejection rate (efficacy):      0.9766</span></span>
-<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt;   Futility-stop rate:             0.0030</span></span>
-<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="co">#&gt;   Expected events at stop:        312.7</span></span>
-<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="co">#&gt;   Expected sample size at stop:   599.6</span></span>
-<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="co">#&gt;   Expected analysis time at stop: 19.60</span></span></code></pre></div>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Events (s) Sample (n) Efficacy Bound Futility Bound</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt;     1        0.50      200.0      490.9             NA         0.0000</span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt;     2        0.75      300.0      599.9        -2.3397             NA</span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt;     3        1.00      400.0      600.0        -2.0118             NA</span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt;  Cum. Cross. Eff.</span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co">#&gt;            0.0000</span></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co">#&gt;            0.8668</span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="co">#&gt;            0.9766</span></span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt; Events, Sample Size, Dropouts, Pipeline and Analysis Times: Look by Look</span></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Sample (n) Events (s) Dropouts (d) Pipeline Analysis Time</span></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="co">#&gt;     1        0.50      490.9      200.0         18.4    272.4         15.26</span></span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a><span class="co">#&gt;     2        0.75      599.9      300.0         27.8    272.1         18.97</span></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt;     3        1.00      600.0      400.0         37.3    162.7         24.01</span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt;  Cross. Eff. Cross. Fut.</span></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt;       0.0000      0.0030</span></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt;       0.8668      0.0000</span></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt;       0.1098      0.0000</span></span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="co">#&gt; Overall</span></span>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="co">#&gt;   Rejection rate (efficacy):      0.9766</span></span>
+<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a><span class="co">#&gt;   Futility-stop rate:             0.0030</span></span>
+<span id="cb8-35"><a href="#cb8-35" tabindex="-1"></a><span class="co">#&gt;   Expected events at stop:        312.7</span></span>
+<span id="cb8-36"><a href="#cb8-36" tabindex="-1"></a><span class="co">#&gt;   Expected sample size at stop:   599.6</span></span>
+<span id="cb8-37"><a href="#cb8-37" tabindex="-1"></a><span class="co">#&gt;   Expected analysis time at stop: 19.60</span></span></code></pre></div>
 <div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>oc_OS <span class="ot">&lt;-</span> <span class="fu">simsummary_fast</span>(</span>
 <span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  os_res,</span>
 <span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="at">eff.col =</span> <span class="st">&quot;logrank.z&quot;</span>, <span class="at">efficacy =</span> eff_OS,</span>
@@ -672,10 +676,10 @@ overall row is the power of that endpoint considered on its own.</p>
 <span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt;   Boundaries: efficacy on &#39;logrank.z&#39; (direction = lower)</span></span>
 <span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt; Stopping Boundaries: Look by Look</span></span>
-<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Events (s) Sample (n) Efficacy Z Cum. Cross. Eff.</span></span>
-<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt;     1        0.45      111.7      490.9         NA           0.0000</span></span>
-<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt;     2        0.70      174.7      599.9    -2.0599           0.3376</span></span>
-<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt;     3        1.00      250.4      600.0    -2.2516           0.4604</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Events (s) Sample (n) Efficacy Bound Cum. Cross. Eff.</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt;     1        0.45      111.7      490.9             NA           0.0000</span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt;     2        0.70      174.7      599.9        -2.0599           0.3376</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt;     3        1.00      250.4      600.0        -2.2516           0.4604</span></span>
 <span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt; Events, Sample Size, Dropouts, Pipeline and Analysis Times: Look by Look</span></span>
 <span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt;  Look Info. Frac. Sample (n) Events (s) Dropouts (d) Pipeline Analysis Time</span></span>
@@ -863,16 +867,16 @@ seconds. Raising <code>nsim</code> tightens the correlation and power
 estimates at a proportional cost.</p>
 <div id="references" class="section level3">
 <h3>References</h3>
-<p>Fleischer, F., Gaschler-Markefski, B., and Bluhmki, E. (2009). A
+<p>Fleischer, F., Gaschler-Markefski, B., &amp; Bluhmki, E. (2009). A
 statistical model for the dependence between progression-free survival
 and overall survival. <em>Statistics in Medicine</em>, 28(21),
 2669-2686.</p>
-<p>Glimm, E., Maurer, W., and Bretz, F. (2010). Hierarchical testing of
-multiple endpoints in group-sequential trials. <em>Statistics in
+<p>Glimm, E., Maurer, W., &amp; Bretz, F. (2010). Hierarchical testing
+of multiple endpoints in group-sequential trials. <em>Statistics in
 Medicine</em>, 29(2), 219-228.</p>
-<p>Lan, K. K. G. and DeMets, D. L. (1983). Discrete sequential
+<p>Lan, K. K. G., &amp; DeMets, D. L. (1983). Discrete sequential
 boundaries for clinical trials. <em>Biometrika</em>, 70(3), 659-663.</p>
-<p>O’Brien, P. C. and Fleming, T. R. (1979). A multiple testing
+<p>O’Brien, P. C., &amp; Fleming, T. R. (1979). A multiple testing
 procedure for clinical trials. <em>Biometrics</em>, 35(3), 549-556.</p>
 <p>Pocock, S. J. (1977). Group sequential methods in the design and
 analysis of clinical trials. <em>Biometrika</em>, 64(2), 191-199.</p>

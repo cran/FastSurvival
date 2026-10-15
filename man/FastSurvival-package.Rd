@@ -22,7 +22,13 @@ arithmetic, subsetting, and aggregation after stripping the class with
 and \code{\link{ahr_fast}}, which return named lists whose elements are
 extracted with \code{$}. Each class has a \code{print()} method that
 formats the result similarly to the corresponding \pkg{survival} package
-output.
+output. All these results also have the class \code{"fastsurv"}, whose
+\code{as.data.frame()} method returns any of them as a data frame with the
+same columns, and whose \code{coef()} and \code{confint()} methods return
+the estimates and their confidence limits
+(\code{\link{as.data.frame.fastsurv}}). Besides vectors, the functions
+accept a model formula \code{Surv(time, event) ~ group} with a data frame
+(\code{\link{formula_interface}}).
 
 Estimation and testing:
 \describe{
@@ -88,7 +94,8 @@ Simulation and sequential analysis:
     experimental arm against a shared control in a multi-arm trial.}
   \item{\code{\link{simsummary_fast}}}{Aggregation of replicate-level
     results into operating characteristics, given efficacy and futility
-    boundaries computed elsewhere.}
+    boundaries computed elsewhere, with \code{print()} and \code{plot()}
+    methods.}
 }
 
 Visualization:
@@ -98,14 +105,11 @@ Visualization:
     methods.}
   \item{\code{\link{kmcurve_fast}}}{Analysis-stage Kaplan-Meier curves of a
     single data set, with \code{plot()} (optionally with restricted-mean
-    shading and a smoothed hazard-ratio panel) and \code{print()}
-    methods.}
+    shading, a smoothed hazard-ratio panel, and a number-at-risk table),
+    \code{print()}, and \code{as.data.frame()} methods.}
 }
 }
 \references{
-Homma, G. (2025). One step from Pike to Cox: a closed-form hazard ratio
-estimator. Manuscript under review.
-
 Collett, D. (2014). \emph{Modelling Survival Data in Medical Research}
 (3rd ed.). Chapman and Hall/CRC.
 }

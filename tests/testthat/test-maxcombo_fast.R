@@ -112,14 +112,17 @@ test_that("statistic, correlation, and p-value match the pure-R reference", {
   ov  <- survival::ovarian
   jj  <- as.integer(ov$rx != 1)
   rho <- c(0, 0, 1, 1); gamma <- c(0, 1, 0, 1)
+  # Both p-values are randomized quasi-Monte-Carlo integrals whose error is of
+  # the order of 1e-4 here (singular correlation), so the seed is fixed and the
+  # absolute difference is compared with 2e-3.
+  set.seed(1)
   ref <- ref_combo(ov$futime, ov$fustat, jj, rho, gamma, side = 1)
   fit <- maxcombo_fast(ov$futime, ov$fustat, ov$rx, 1, side = 1,
                        rho = rho, gamma = gamma)
   expect_equal(as.numeric(fit["statistic"]), ref$statistic, tolerance = 1e-8)
   expect_equal(as.numeric(attr(fit, "corr")), as.numeric(ref$corr),
                tolerance = 1e-8)
-  # p-values from QMC carry Monte Carlo error; allow a loose tolerance
-  expect_equal(as.numeric(fit["p.value"]), ref$p.value, tolerance = 1e-3)
+  expect_lt(abs(as.numeric(fit["p.value"]) - ref$p.value), 2e-3)
 })
 
 test_that("two-sided statistic and p-value match the pure-R reference", {
@@ -127,11 +130,13 @@ test_that("two-sided statistic and p-value match the pure-R reference", {
   ov  <- survival::ovarian
   jj  <- as.integer(ov$rx != 1)
   rho <- c(0, 0, 1, 1); gamma <- c(0, 1, 0, 1)
+  # Randomized integrals on both sides: fixed seed, absolute tolerance 2e-3.
+  set.seed(1)
   ref <- ref_combo(ov$futime, ov$fustat, jj, rho, gamma, side = 2)
   fit <- maxcombo_fast(ov$futime, ov$fustat, ov$rx, 1, side = 2,
                        rho = rho, gamma = gamma)
   expect_equal(as.numeric(fit["statistic"]), ref$statistic, tolerance = 1e-8)
-  expect_equal(as.numeric(fit["p.value"]), ref$p.value, tolerance = 1e-3)
+  expect_lt(abs(as.numeric(fit["p.value"]) - ref$p.value), 2e-3)
 })
 
 test_that("two-sided with two weights matches the pure-R reference", {
@@ -139,11 +144,13 @@ test_that("two-sided with two weights matches the pure-R reference", {
   ov  <- survival::ovarian
   jj  <- as.integer(ov$rx != 1)
   rho <- c(0, 0); gamma <- c(0, 1)
+  # Randomized integrals on both sides: fixed seed, absolute tolerance 2e-3.
+  set.seed(1)
   ref <- ref_combo(ov$futime, ov$fustat, jj, rho, gamma, side = 2)
   fit <- maxcombo_fast(ov$futime, ov$fustat, ov$rx, 1, side = 2,
                        rho = rho, gamma = gamma)
   expect_equal(as.numeric(fit["statistic"]), ref$statistic, tolerance = 1e-8)
-  expect_equal(as.numeric(fit["p.value"]), ref$p.value, tolerance = 1e-3)
+  expect_lt(abs(as.numeric(fit["p.value"]) - ref$p.value), 2e-3)
 })
 
 test_that("two-sided with three weights matches the pure-R reference", {
@@ -151,11 +158,13 @@ test_that("two-sided with three weights matches the pure-R reference", {
   ov  <- survival::ovarian
   jj  <- as.integer(ov$rx != 1)
   rho <- c(0, 0, 1); gamma <- c(0, 1, 0)
+  # Randomized integrals on both sides: fixed seed, absolute tolerance 2e-3.
+  set.seed(1)
   ref <- ref_combo(ov$futime, ov$fustat, jj, rho, gamma, side = 2)
   fit <- maxcombo_fast(ov$futime, ov$fustat, ov$rx, 1, side = 2,
                        rho = rho, gamma = gamma)
   expect_equal(as.numeric(fit["statistic"]), ref$statistic, tolerance = 1e-8)
-  expect_equal(as.numeric(fit["p.value"]), ref$p.value, tolerance = 1e-3)
+  expect_lt(abs(as.numeric(fit["p.value"]) - ref$p.value), 2e-3)
 })
 
 test_that("a single FH weight reduces to the one-sided weighted Z p-value", {
@@ -310,4 +319,117 @@ test_that("maxcombo_fast: presorted = TRUE checks the order", {
   event <- c(1, 1, 0, 1, 1, 0)
   group <- c(0, 1, 0, 1, 0, 1)
   expect_error(maxcombo_fast(time, event, group, control = 0, presorted = TRUE), "presorted = FALSE")
+})
+
+# ------------------------------------------------------------------ #
+#  Singular correlation of the Fleming-Harrington weights
+# ------------------------------------------------------------------ #
+
+# The weights of G(0,1) and G(1,0) add up to that of G(0,0) at every time
+# ((1 - S) + S = 1), so Z00 = c1 Z01 + c2 Z10 exactly and the correlation
+# matrix of these components is singular. The one-sided p-value
+# 1 - P(Z_k >= m for all k) then reduces to a one-dimensional (three weights)
+# or two-dimensional (four weights) integral of normal densities and
+# distribution functions, evaluated here with stats::integrate() as a
+# reference independent of mvtnorm. The formulas were checked against a
+# quasi-Monte-Carlo integral with 1e7 points in Python (agreement within
+# 2e-5). The components are ordered FH(0,0), FH(0,1), FH(1,0) and, with four
+# weights, FH(1,1).
+ref_singular_p <- function(m, corr) {
+  S  <- corr[2:3, 2:3]
+  cc <- solve(S, corr[1, 2:3])
+  r  <- S[1, 2]
+  sr <- sqrt(1 - r^2)
+  # Lower limit of Z10 given Z01 = x; its kink at x0 splits the outer range.
+  lower_y <- function(x) pmax(m, (m - cc[1] * x) / cc[2])
+  x0  <- m * (1 - cc[2]) / cc[1]
+  brk <- if (x0 > m) c(m, x0, Inf) else c(m, Inf)
+  pieces <- function(f, rel) {
+    sum(vapply(seq_len(length(brk) - 1L), function(k) {
+      integrate(f, brk[k], brk[k + 1L], rel.tol = rel, abs.tol = 1e-12)$value
+    }, numeric(1)))
+  }
+  if (nrow(corr) == 3L) {
+    f <- function(x) {
+      dnorm(x) * pnorm((lower_y(x) - r * x) / sr, lower.tail = FALSE)
+    }
+    joint <- pieces(f, 1e-10)
+  } else {
+    beta <- solve(S, corr[4, 2:3])
+    s11  <- sqrt(1 - sum(beta * (S %*% beta)))
+    inner <- function(x) {
+      g <- function(y) {
+        dnorm((y - r * x) / sr) / sr *
+          pnorm((m - beta[1] * x - beta[2] * y) / s11, lower.tail = FALSE)
+      }
+      integrate(g, lower_y(x), Inf, rel.tol = 1e-10, abs.tol = 1e-13)$value
+    }
+    f <- function(x) dnorm(x) * vapply(x, inner, numeric(1))
+    joint <- pieces(f, 1e-7)
+  }
+  list(p = 1 - joint, resid = 1 - sum(cc * (S %*% cc)))
+}
+
+test_that("one-sided p-values with singular weight sets match an independent integral", {
+  skip_if_not_installed("survival")
+  ov <- survival::ovarian
+  # Three weights: TVPACK (deterministic).
+  f3 <- maxcombo_fast(ov$futime, ov$fustat, ov$rx, control = 1, side = 1,
+                      rho = c(0, 0, 1), gamma = c(0, 1, 0))
+  m3 <- unname(f3["statistic"])
+  r3 <- ref_singular_p(m3, attr(f3, "corr"))
+  expect_lt(abs(r3$resid), 1e-8)
+  expect_lt(abs(unname(f3["p.value"]) - r3$p), 2e-5)
+  # Four weights: GenzBretz with the default maxpts, whose error is of the
+  # order of 1e-4 for this singular problem.
+  set.seed(1)
+  f4 <- maxcombo_fast(ov$futime, ov$fustat, ov$rx, control = 1, side = 1)
+  m4 <- unname(f4["statistic"])
+  r4 <- ref_singular_p(m4, attr(f4, "corr"))
+  expect_lt(abs(r4$resid), 1e-8)
+  expect_lt(abs(unname(f4["p.value"]) - r4$p), 2e-3)
+  # The reference is sensitive at these tolerances.
+  expect_gt(abs(ref_singular_p(m3 + 0.05, attr(f3, "corr"))$p - r3$p), 2e-3)
+  expect_gt(abs(ref_singular_p(m4 + 0.05, attr(f4, "corr"))$p - r4$p), 2e-3)
+})
+
+test_that("maxcombo_fast: the formula interface gives the vector result", {
+  set.seed(68)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1), ee = rbinom(n, 1, 0.8),
+                  g = rep(c(1, 0), n / 2))
+  # The quasi-Monte-Carlo p-value of four weights uses R's random numbers
+  set.seed(1)
+  f4 <- maxcombo_fast(Surv(tt, ee) ~ g, data = d, side = 1)
+  set.seed(1)
+  v4 <- maxcombo_fast(d$tt, d$ee, d$g, control = 0, side = 1)
+  expect_identical(f4, v4)
+  expect_identical(
+    maxcombo_fast(Surv(tt, ee) ~ g, d, rho = c(0, 0), gamma = c(0, 1)),
+    maxcombo_fast(d$tt, d$ee, d$g, 0, rho = c(0, 0), gamma = c(0, 1)))
+  expect_identical(class(v4), c("maxcombo_fast", "fastsurv"))
+  expect_error(maxcombo_fast(d$tt, d$ee, d$g, 0, data = d),
+               "only with a formula")
+})
+
+test_that("maxcombo_fast: the formula interface passes every argument", {
+  set.seed(60)
+  n <- 120
+  d <- data.frame(tt = round(rexp(n, 0.1), 1) + 0.1, ee = rbinom(n, 1, 0.8),
+                  g = rep(c("b", "a"), n / 2), s = rep(c("x", "y", "z"), n / 3))
+  d1 <- d[order(d$tt), ]
+  d2 <- d[order(d$s, d$tt), ]
+  # The quasi-Monte-Carlo p-value of four weights uses R's random numbers
+  set.seed(1)
+  mc_f <- maxcombo_fast(Surv(tt, ee) ~ g, d1, control = "b", side = 1,
+                        presorted = TRUE, abseps = 1e-4, maxpts = 5000)
+  set.seed(1)
+  mc_v <- maxcombo_fast(d1$tt, d1$ee, d1$g, "b", side = 1, presorted = TRUE,
+                        abseps = 1e-4, maxpts = 5000)
+  expect_identical(mc_f, mc_v)
+  expect_identical(
+    maxcombo_fast(Surv(tt, ee) ~ g, d, control = "b", side = 1,
+                  rho = c(0, 1), gamma = c(1, 0), abseps = 1e-7),
+    maxcombo_fast(d$tt, d$ee, d$g, "b", side = 1, rho = c(0, 1),
+                  gamma = c(1, 0), abseps = 1e-7))
 })

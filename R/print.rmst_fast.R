@@ -6,7 +6,11 @@
 #' Wald confidence interval at the requested horizon. In two-group mode it
 #' shows the per-group restricted mean survival times together with the
 #' difference (treatment minus control) and ratio (treatment over control)
-#' contrasts, each with a Wald z-statistic and two-sided p-value.
+#' contrasts, each with a Wald z-statistic and a p-value that follows the
+#' \code{side} recorded in the object.
+#' The p-value column is labeled \code{Pr(>|z|)} for a two-sided test and
+#' \code{Pr(>z)} for a one-sided test, whose p-value is the upper tail in the
+#' direction of treatment benefit.
 #'
 #' @param x An object of class \code{"rmst_fast"} returned by
 #'   \code{\link{rmst_fast}}.
@@ -94,7 +98,7 @@ print.rmst_fast <- function(x, digits = max(1L, getOption("digits") - 3L), ...) 
       c("Est.",
         sprintf("lower %g%%", ci_lab),
         sprintf("upper %g%%", ci_lab),
-        "z", "Pr(>|z|)")
+        "z", if (side == 1L) "Pr(>z)" else "Pr(>|z|)")
     )
   )
   printCoefmat(con_mat, digits = digits, has.Pvalue = TRUE, P.values = TRUE,
